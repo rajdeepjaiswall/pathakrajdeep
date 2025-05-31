@@ -400,8 +400,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/super-admin/logo", requireSuperAdmin, (req, res) => {
+  app.post("/api/super-admin/logo", authenticateToken, (req, res) => {
     try {
+      // Check if user is super admin
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       const { imageData } = req.body;
       if (!imageData) {
         return res.status(400).json({ message: "No image data provided" });

@@ -186,10 +186,20 @@ export default function LogoManager() {
                 <div>
                   <h3 className="font-semibold mb-3">Current Logo</h3>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <div className="text-2xl font-bold text-orange-600 mb-2">
+                    <img 
+                      src={`/api/logo?v=${Date.now()}`}
+                      alt="Current Logo"
+                      className="max-w-full max-h-32 mx-auto object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'block';
+                      }}
+                    />
+                    <div className="text-2xl font-bold text-orange-600 mb-2 hidden">
                       Pathak Bhandar
                     </div>
-                    <p className="text-gray-500">Current bakery branding</p>
                   </div>
                 </div>
 

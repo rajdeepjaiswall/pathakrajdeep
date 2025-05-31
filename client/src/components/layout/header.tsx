@@ -26,19 +26,19 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center overflow-hidden">
               <img 
                 src={`/api/logo?v=${Date.now()}`} 
                 alt="Pathak Bhandar Logo" 
-                className="w-8 h-8 object-contain rounded"
+                className="w-full h-full object-cover rounded"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                   const fallback = target.nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = 'block';
+                  if (fallback) fallback.style.display = 'flex';
                 }}
               />
-              <span className="text-white font-bold text-lg hidden">PB</span>
+              <span className="text-white font-bold text-lg hidden items-center justify-center w-full h-full">PB</span>
             </div>
             <div>
               <h1 className="text-xl font-bold text-navy">{COMPANY_INFO.name}</h1>

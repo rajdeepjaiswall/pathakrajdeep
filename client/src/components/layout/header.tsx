@@ -63,9 +63,12 @@ export default function Header() {
               variant="ghost"
               size="sm"
               onClick={openCart}
-              className="p-3 text-navy hover:bg-almond/30 hover:text-champagne transition-all duration-300 rounded-xl"
+              className="relative p-3 text-navy hover:bg-almond/30 hover:text-champagne transition-all duration-300 rounded-xl"
             >
               <ShoppingCart className="h-5 w-5 text-navy" />
+              {summary.itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full"></span>
+              )}
             </Button>
 
             {isAuthenticated ? (

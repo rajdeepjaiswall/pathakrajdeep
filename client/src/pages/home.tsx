@@ -61,7 +61,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
             {CATEGORIES.map((category) => (
               <Link key={category.id} href={`/products?category=${category.id}`}>
                 <div className="group cursor-pointer">

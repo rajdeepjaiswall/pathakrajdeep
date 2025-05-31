@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
 import { COMPANY_INFO } from '@/lib/constants';
+import pathakLogo from '@assets/project_20250528_0859055-02.png';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -27,7 +28,7 @@ export default function Header() {
           {/* Combined Logo */}
           <Link href="/" className="flex items-center">
             <img 
-              src="/attached_assets/project_20250530_0051420-02.png"
+              src={pathakLogo}
               alt="Pathak Bhandar Logo" 
               className="h-12 object-contain"
             />

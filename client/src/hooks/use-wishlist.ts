@@ -44,11 +44,19 @@ export function useWishlist() {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      if (error.message.includes('login')) {
+        toast({
+          title: 'Login Required',
+          description: 'Please login to add items to your wishlist.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -65,11 +73,19 @@ export function useWishlist() {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      if (error.message.includes('login')) {
+        toast({
+          title: 'Login Required',
+          description: 'Please login to manage your wishlist.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 

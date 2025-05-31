@@ -378,6 +378,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logo management routes
+  let currentLogo: Buffer | null = null;
+  
+  app.get("/api/logo", (req, res) => {
+    if (currentLogo) {
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.send(currentLogo);
+    } else {
+      // Default logo SVG
+      const defaultLogo = `<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="6" fill="#ea580c"/>
+        <text x="16" y="20" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="white">PB</text>
+      </svg>`;
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.send(defaultLogo);
+    }
+  });
+
+  app.post("/api/super-admin/logo", requireSuperAdmin, (req, res) => {
+    try {
+      const { imageData } = req.body;
+      if (!imageData) {
+        return res.status(400).json({ message: "No image data provided" });
+      }
+      
+      // Convert base64 to buffer
+      const base64Data = imageData.replace(/^data:image\/[a-z]+;base64,/, '');
+      currentLogo = Buffer.from(base64Data, 'base64');
+      
+      res.json({ message: "Logo updated successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,13 +25,74 @@ export default function LogoManager() {
     }
   };
 
-  const handleSaveLogo = () => {
-    if (logoUrl || logoFile) {
-      // In a real implementation, this would upload to server
-      toast({
-        title: "Logo Updated",
-        description: "Your bakery logo has been successfully updated.",
+  const uploadLogo = useMutation({
+    mutationFn: async (file: File) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const response = await fetch('/api/super-admin/logo', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              },
+              body: JSON.stringify({
+                imageData: reader.result
+              }),
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to upload logo');
+            }
+            
+            const result = await response.json();
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
       });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Logo uploaded successfully and is now live across the platform",
+      });
+      setPreviewUrl('');
+      setLogoFile(null);
+      // Force reload to show new logo immediately
+      setTimeout(() => window.location.reload(), 1000);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveLogo = () => {
+    if (logoFile) {
+      uploadLogo.mutate(logoFile);
+    } else if (logoUrl) {
+      // Handle URL upload - convert to file first
+      fetch(logoUrl)
+        .then(res => res.blob())
+        .then(blob => {
+          const file = new File([blob], 'logo.png', { type: blob.type });
+          uploadLogo.mutate(file);
+        })
+        .catch(() => {
+          toast({
+            title: "Error",
+            description: "Could not fetch image from URL",
+            variant: "destructive",
+          });
+        });
     } else {
       toast({
         title: "No Logo Selected",
@@ -101,10 +163,11 @@ export default function LogoManager() {
               {/* Save Button */}
               <Button 
                 onClick={handleSaveLogo}
+                disabled={uploadLogo.isPending}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Save Logo
+                {uploadLogo.isPending ? 'Uploading...' : 'Save Logo'}
               </Button>
             </CardContent>
           </Card>

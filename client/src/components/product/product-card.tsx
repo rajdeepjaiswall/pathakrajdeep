@@ -1,8 +1,9 @@
-import { Star, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Plus, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/hooks/use-cart';
+import { useWishlist } from '@/hooks/use-wishlist';
 import { formatPrice } from '@/lib/cart';
 import { Link } from 'wouter';
 import { Product } from '@shared/schema';
@@ -14,6 +15,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist, isAdding, isRemoving } = useWishlist();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Create a media array with 4 images and 1 video
@@ -111,6 +113,25 @@ export default function ProductCard({ product }: ProductCardProps) {
               Bestseller
             </Badge>
           )}
+
+          {/* Wishlist heart icon */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWishlist(product.id);
+            }}
+            disabled={isAdding || isRemoving}
+            className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+          >
+            <Heart 
+              className={`h-4 w-4 transition-colors ${
+                isInWishlist(product.id) 
+                  ? 'fill-red-500 text-red-500' 
+                  : 'text-gray-600 hover:text-red-500'
+              }`} 
+            />
+          </button>
         </div>
         
         <CardContent className="p-3">

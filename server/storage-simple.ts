@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct, type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem, type CartItem, type InsertCartItem, type Review, type InsertReview, type Banner, type InsertBanner } from "@shared/schema";
+import { type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct, type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem, type CartItem, type InsertCartItem, type WishlistItem, type InsertWishlistItem, type Review, type InsertReview, type Banner, type InsertBanner } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -95,6 +95,7 @@ class MemStorage implements IStorage {
   ];
   
   private cartItemsData: CartItem[] = [];
+  private wishlistItemsData: WishlistItem[] = [];
   private addressesData: Address[] = [];
   private ordersData: Order[] = [];
   private orderItemsData: OrderItem[] = [];

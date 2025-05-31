@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { register } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { MapPin, Loader2 } from 'lucide-react';
+import newLogo from '@assets/Screenshot_2025-05-30-23-52-51-45_10a3d211b678d435d51c62b8010e86c1.jpg';
 
 export default function CustomerRegister() {
   const [, setLocation] = useLocation();
@@ -241,8 +242,13 @@ export default function CustomerRegister() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-almond via-champagne/10 to-navy/5 p-4">
       <Card className="w-full max-w-lg shadow-xl border-champagne/20">
         <CardHeader className="text-center pb-6">
-          <div className="w-16 h-16 bg-navy rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-champagne font-bold text-xl">PB</span>
+          <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <img 
+              src={newLogo}
+              alt="Pathak Bhandar Logo" 
+              className="w-12 h-12 object-contain"
+              style={{ backgroundColor: 'transparent' }}
+            />
           </div>
           <CardTitle className="text-2xl font-bold text-navy">Join Pathak Bhandar</CardTitle>
           <CardDescription className="text-navy/70">Create your account to start shopping for authentic sweets and snacks</CardDescription>

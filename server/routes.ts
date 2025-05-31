@@ -5,7 +5,7 @@ import path from "path";
 import { storage } from "./storage-simple";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema } from "@shared/schema";
+import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
 
@@ -429,6 +429,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       currentLogo = Buffer.from(base64Data, 'base64');
       
       res.json({ message: "Logo updated successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Banner routes
+  app.get("/api/banners", async (req, res) => {
+    try {
+      const activeOnly = req.query.active === 'true';
+      const banners = await storage.getBanners(activeOnly);
+      res.json(banners);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/banners/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const banner = await storage.getBanner(id);
+      if (!banner) {
+        return res.status(404).json({ message: "Banner not found" });
+      }
+      res.json(banner);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/banners", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const bannerData = insertBannerSchema.parse(req.body);
+      const banner = await storage.createBanner(bannerData);
+      res.status(201).json(banner);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const bannerData = insertBannerSchema.partial().parse(req.body);
+      const banner = await storage.updateBanner(id, bannerData);
+      res.json(banner);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteBanner(id);
+      res.json({ message: "Banner deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

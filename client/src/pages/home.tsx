@@ -53,7 +53,7 @@ export default function Home() {
       <CategoryShowcase />
 
       {/* Featured Categories */}
-      <section className="pt-4 pb-8 bg-almond">
+      <section className="pt-2 pb-8 bg-almond">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">Our Specialties</h2>

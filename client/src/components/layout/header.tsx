@@ -63,14 +63,9 @@ export default function Header() {
               variant="ghost"
               size="sm"
               onClick={openCart}
-              className="relative p-3 text-navy hover:bg-almond/30 hover:text-champagne transition-all duration-300 rounded-xl"
+              className="p-3 text-navy hover:bg-almond/30 hover:text-champagne transition-all duration-300 rounded-xl"
             >
-              <ShoppingCart className="h-5 w-5" />
-              {summary.itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-champagne text-navy text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
-                  {summary.itemCount}
-                </span>
-              )}
+              <ShoppingCart className="h-5 w-5 text-navy" />
             </Button>
 
             {isAuthenticated ? (
@@ -88,7 +83,7 @@ export default function Header() {
             ) : (
               <Link href="/login">
                 <Button className="hidden md:flex bg-champagne text-navy hover:bg-champagne/90 rounded-lg px-4 py-2 font-semibold transition-all duration-300 shadow-sm">
-                  <User className="h-4 w-4 mr-2" />
+                  <User className="h-4 w-4 mr-2 text-navy" />
                   Login
                 </Button>
               </Link>
@@ -98,9 +93,9 @@ export default function Header() {
               variant="ghost"
               size="sm"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-navy"
+              className="md:hidden text-navy hover:bg-almond/30 rounded-xl p-3 transition-all duration-300"
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? <X className="h-6 w-6 text-navy" /> : <Menu className="h-6 w-6 text-navy" />}
             </Button>
           </div>
         </div>

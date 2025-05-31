@@ -9,6 +9,7 @@ import CartSidebar from '@/components/cart/cart-sidebar';
 import ProductCard from '@/components/product/product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
+import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
 import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
 
@@ -52,7 +53,7 @@ export default function Home() {
       <CategoryShowcase />
 
       {/* Featured Categories */}
-      <section className="py-16 bg-almond">
+      <section className="py-8 bg-almond">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">Our Specialties</h2>
@@ -80,6 +81,13 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Mini Banner Slideshow */}
+      <div className="py-8 bg-background">
+        <div className="max-w-7xl mx-auto">
+          <MiniBannerSlideshow />
+        </div>
+      </div>
 
       {/* Featured Products */}
       <section className="py-16 bg-background">

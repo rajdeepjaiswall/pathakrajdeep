@@ -61,18 +61,18 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div className="grid grid-cols-2 gap-3 max-w-xl mx-auto">
             {CATEGORIES.map((category) => (
               <Link key={category.id} href={`/products?category=${category.id}`}>
                 <div className="group cursor-pointer">
-                  <div className="bg-almond rounded-2xl p-6 text-center hover:shadow-lg transition-all duration-300 group-hover:scale-105">
+                  <div className="bg-almond rounded-2xl p-4 text-center hover:shadow-lg transition-all duration-300 group-hover:scale-105">
                     <img 
                       src={`https://images.unsplash.com/photo-1486427944299-d1955d23e34d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300`} 
                       alt={category.name}
-                      className="w-full h-32 object-cover rounded-lg mb-4" 
+                      className="w-full h-28 object-cover rounded-lg mb-3" 
                     />
-                    <h3 className="text-xl font-semibold text-navy mb-2">{category.name}</h3>
-                    <p className="text-navy/70 text-sm mb-4">{category.description}</p>
+                    <h3 className="text-lg font-semibold text-navy mb-1">{category.name}</h3>
+                    <p className="text-navy/70 text-sm mb-3">{category.description}</p>
                     <div className="flex items-center justify-center text-champagne font-medium">
                       <span className="mr-2">View Products</span>
                       <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />

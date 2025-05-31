@@ -12,7 +12,7 @@ export default function MobileNav() {
     { icon: Home, label: 'Home', href: '/' },
     { icon: Search, label: 'Search', href: '/products?search=true' },
     { icon: Grid3X3, label: 'Categories', href: '/products' },
-    { icon: ShoppingCart, label: 'Cart', href: '/cart', badge: summary.itemCount },
+    { icon: ShoppingCart, label: 'Cart', href: '/cart' },
     { icon: User, label: 'Account', href: isAuthenticated ? '/account' : '/login' },
   ];
 
@@ -40,10 +40,8 @@ export default function MobileNav() {
             >
               <Icon className="h-5 w-5" />
               <span className="text-xs mt-1">{item.label}</span>
-              {item.badge && item.badge > 0 && (
-                <div className="absolute -top-1 right-3 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">{item.badge}</span>
-                </div>
+              {isCart && summary.itemCount > 0 && (
+                <div className="absolute -top-1 right-3 w-3 h-3 bg-red-500 rounded-full"></div>
               )}
             </Link>
           );

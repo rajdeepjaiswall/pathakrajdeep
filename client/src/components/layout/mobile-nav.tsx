@@ -35,9 +35,7 @@ export default function MobileNav() {
               key={item.label}
               href={item.href}
               onClick={isCart ? handleCartClick : undefined}
-              className={`flex flex-col items-center justify-center py-2 relative ${
-                isActive ? 'text-cream' : 'text-navy'
-              }`}
+              className="flex flex-col items-center justify-center py-2 relative text-navy"
             >
               {isLogo ? (
                 <div className="relative -top-2">
@@ -45,7 +43,7 @@ export default function MobileNav() {
                     src={`/api/logo?v=${Date.now()}`} 
                     alt="KB Logo" 
                     className="h-8 w-8 object-contain"
-                    style={{ filter: 'brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(356deg) brightness(95%) contrast(112%)' }}
+                    style={{ filter: 'brightness(0) saturate(100%) invert(17%) sepia(25%) saturate(1315%) hue-rotate(195deg) brightness(94%) contrast(96%)' }}
                   />
                 </div>
               ) : (

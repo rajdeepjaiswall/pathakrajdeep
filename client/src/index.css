@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: 42 16% 97%; /* #FCE8D5 */
+  --background: 33 25% 91%; /* #E6C7A6 - Toasted Almond */
   --foreground: 215 25% 20%; /* #2B2E3C */
   --muted: 33 25% 91%; /* #E6C7A6 */
   --muted-foreground: 215 15% 45%;

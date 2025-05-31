@@ -52,7 +52,7 @@ export default function Home() {
       <CategoryShowcase />
 
       {/* Featured Categories */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-almond">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">Our Specialties</h2>
@@ -86,7 +86,7 @@ export default function Home() {
       </section>
 
       {/* Featured Products */}
-      <section className="py-16 bg-cream">
+      <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-12">
             <div>
@@ -117,7 +117,7 @@ export default function Home() {
       </section>
 
       {/* Trust Indicators */}
-      <section className="py-12 bg-white">
+<section className="py-12 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">

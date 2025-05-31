@@ -15,26 +15,70 @@ export default function CustomerRegister() {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
+    confirmPassword: '',
     email: '',
-    phone: ''
+    phone: '',
+    fullName: '',
+    dateOfBirth: '',
+    gender: '',
+    address: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
+    // Basic validation
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Password mismatch",
+        description: "Passwords do not match. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.email || !formData.phone || !formData.fullName) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await register(formData);
+      const registrationData = {
+        username: formData.username,
+        password: formData.password,
+        email: formData.email,
+        phone: formData.phone,
+        role: 'customer'
+      };
+      
+      const response = await register(registrationData);
       authLogin(response.user, response.token);
       setLocation('/');
       toast({
-        title: "Account created!",
-        description: "Welcome to Pathak Bhandar!",
+        title: "Account created successfully!",
+        description: `Welcome to Pathak Bhandar, ${formData.fullName}!`,
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Registration failed",
-        description: "Please try again with different details.",
+        description: error.message || "Please try again with different details.",
         variant: "destructive",
       });
     } finally {
@@ -43,59 +87,145 @@ export default function CustomerRegister() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-orange-800">Join Pathak Bhandar</CardTitle>
-          <CardDescription>Create your account to start shopping</CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-almond via-champagne/10 to-navy/5 p-4">
+      <Card className="w-full max-w-lg shadow-xl border-champagne/20">
+        <CardHeader className="text-center pb-6">
+          <div className="w-16 h-16 bg-navy rounded-lg flex items-center justify-center mx-auto mb-4">
+            <span className="text-champagne font-bold text-xl">PB</span>
+          </div>
+          <CardTitle className="text-2xl font-bold text-navy">Join Pathak Bhandar</CardTitle>
+          <CardDescription className="text-navy/70">Create your account to start shopping for authentic sweets and snacks</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Full Name *"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                  className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  required
+                />
+              </div>
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Username *"
+                  value={formData.username}
+                  onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+                  className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Email Address *"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  required
+                />
+              </div>
+              <div>
+                <Input
+                  type="tel"
+                  placeholder="Phone Number *"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password *"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Confirm Password *"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Input
+                  type="date"
+                  placeholder="Date of Birth"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                />
+              </div>
+              <div>
+                <select
+                  value={formData.gender}
+                  onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                  className="w-full px-3 py-2 border border-champagne/30 rounded-md focus:border-champagne focus:ring-champagne bg-white text-navy"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                  <option value="prefer-not-to-say">Prefer not to say</option>
+                </select>
+              </div>
+            </div>
+
             <div>
-              <Input
-                type="text"
-                placeholder="Username"
-                value={formData.username}
-                onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                required
+              <textarea
+                placeholder="Address (Optional)"
+                value={formData.address}
+                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                className="w-full px-3 py-2 border border-champagne/30 rounded-md focus:border-champagne focus:ring-champagne resize-none h-20"
+                rows={3}
               />
             </div>
-            <div>
-              <Input
-                type="email"
-                placeholder="Email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              />
+
+            <div className="text-xs text-navy/60 bg-almond/30 p-3 rounded-md">
+              <p className="mb-1">By creating an account, you agree to our Terms of Service and Privacy Policy.</p>
+              <p>Fields marked with * are required.</p>
             </div>
-            <div>
-              <Input
-                type="tel"
-                placeholder="Phone Number"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Create Account'}
+
+            <Button 
+              type="submit" 
+              className="w-full bg-champagne text-navy hover:bg-champagne/90 font-semibold py-3 shadow-lg transition-all duration-300" 
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating your account...' : 'Create Account'}
             </Button>
           </form>
-          <div className="mt-4 text-center">
+          
+          <div className="mt-6 text-center">
+            <p className="text-sm text-navy/70 mb-2">Already have an account?</p>
             <Button
               variant="link"
-              onClick={() => setLocation('/customer/login')}
-              className="text-orange-600"
+              onClick={() => setLocation('/login')}
+              className="text-champagne hover:text-navy font-semibold"
             >
-              Already have an account? Sign in
+              Sign in to your account
             </Button>
           </div>
         </CardContent>

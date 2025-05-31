@@ -67,12 +67,19 @@ export default function Header() {
                 </Button>
               </div>
             ) : (
-              <Link href="/login">
-                <Button className="hidden md:flex bg-champagne text-navy hover:bg-champagne/90 rounded-lg px-4 py-2 font-semibold transition-all duration-300 shadow-sm">
-                  <User className="h-4 w-4 mr-2 text-navy" />
-                  Login
-                </Button>
-              </Link>
+              <div className="hidden md:flex items-center space-x-2">
+                <Link href="/customer/register">
+                  <Button variant="outline" className="border-champagne text-navy hover:bg-champagne/10 rounded-lg px-4 py-2 font-semibold transition-all duration-300">
+                    Sign Up
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button className="bg-champagne text-navy hover:bg-champagne/90 rounded-lg px-4 py-2 font-semibold transition-all duration-300 shadow-sm">
+                    <User className="h-4 w-4 mr-2 text-navy" />
+                    Login
+                  </Button>
+                </Link>
+              </div>
             )}
 
             <Button
@@ -117,15 +124,26 @@ export default function Header() {
                 </Button>
               </div>
             ) : (
-              <Link href="/login">
-                <Button 
-                  className="w-full bg-champagne text-navy hover:bg-champagne/90 mt-4"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  Login
-                </Button>
-              </Link>
+              <div className="pt-4 border-t space-y-2">
+                <Link href="/customer/register">
+                  <Button 
+                    variant="outline"
+                    className="w-full border-champagne text-navy hover:bg-champagne/10"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button 
+                    className="w-full bg-champagne text-navy hover:bg-champagne/90"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Login
+                  </Button>
+                </Link>
+              </div>
             )}
           </div>
         </div>

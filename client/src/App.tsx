@@ -21,6 +21,9 @@ import AdminProducts from "@/pages/admin/products";
 import AdminCustomers from "@/pages/admin/customers";
 import SuperAdminLogin from "@/pages/super-admin/login";
 import SuperAdminDashboard from "@/pages/super-admin/dashboard";
+import LogoManager from "@/pages/super-admin/logo-manager";
+import ShopkeeperManager from "@/pages/super-admin/shopkeepers";
+import ProductManager from "@/pages/super-admin/products";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -40,6 +43,9 @@ function Router() {
       <Route path="/admin/customers" component={AdminCustomers} />
       <Route path="/super-admin/login" component={SuperAdminLogin} />
       <Route path="/super-admin" component={SuperAdminDashboard} />
+      <Route path="/super-admin/logo-manager" component={LogoManager} />
+      <Route path="/super-admin/shopkeepers" component={ShopkeeperManager} />
+      <Route path="/super-admin/products" component={ProductManager} />
       <Route component={NotFound} />
     </Switch>
   );

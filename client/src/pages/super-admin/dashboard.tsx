@@ -94,22 +94,46 @@ export default function SuperAdminDashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
-            <Users className="h-6 w-6" />
-            <span>User Management</span>
-          </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
-            <Database className="h-6 w-6" />
-            <span>Database</span>
-          </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+            onClick={() => setLocation('/super-admin/logo-manager')}
+          >
             <Settings className="h-6 w-6" />
-            <span>System Settings</span>
+            <span>Logo Manager</span>
           </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => setLocation('/super-admin/shopkeepers')}
+          >
+            <Users className="h-6 w-6" />
+            <span>Manage Shopkeepers</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-green-300 text-green-700 hover:bg-green-50"
+            onClick={() => setLocation('/super-admin/revenue')}
+          >
+            <TrendingUp className="h-6 w-6" />
+            <span>Revenue Analytics</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-purple-300 text-purple-700 hover:bg-purple-50"
+            onClick={() => setLocation('/super-admin/products')}
+          >
+            <Package className="h-6 w-6" />
+            <span>Product Manager</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-red-300 text-red-700 hover:bg-red-50"
+            onClick={() => setLocation('/super-admin/discounts')}
+          >
             <Activity className="h-6 w-6" />
-            <span>Activity Logs</span>
+            <span>Discount Manager</span>
           </Button>
         </div>
 

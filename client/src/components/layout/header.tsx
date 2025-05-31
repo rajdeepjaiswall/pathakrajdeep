@@ -30,15 +30,9 @@ export default function Header() {
               <img 
                 src={`/api/logo?v=${Date.now()}`} 
                 alt="Pathak Bhandar Logo" 
-                className="w-full h-full object-cover rounded"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const fallback = target.nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = 'flex';
-                }}
+                className="w-full h-full object-contain"
+                style={{ display: 'block' }}
               />
-              <span className="text-white font-bold text-lg hidden items-center justify-center w-full h-full">PB</span>
             </div>
             <div>
               <h1 className="text-xl font-bold text-navy">{COMPANY_INFO.name}</h1>

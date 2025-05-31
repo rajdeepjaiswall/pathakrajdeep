@@ -30,7 +30,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
   const data = await response.json();
   
   // Store token in localStorage
-  localStorage.setItem('authToken', data.token);
+  localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;
@@ -41,7 +41,7 @@ export async function register(userData: RegisterData): Promise<AuthResponse> {
   const data = await response.json();
   
   // Store token in localStorage
-  localStorage.setItem('authToken', data.token);
+  localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;
@@ -56,19 +56,19 @@ export async function verifyOTP(phone: string, otp: string): Promise<AuthRespons
   const data = await response.json();
   
   // Store token in localStorage
-  localStorage.setItem('authToken', data.token);
+  localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;
 }
 
 export function logout(): void {
-  localStorage.removeItem('authToken');
+  localStorage.removeItem('token');
   localStorage.removeItem('user');
 }
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('token');
 }
 
 export function getStoredUser(): User | null {

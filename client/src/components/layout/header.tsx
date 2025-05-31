@@ -26,11 +26,11 @@ export default function Header() {
         <div className="flex justify-between items-center h-18">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-champagne rounded-xl flex items-center justify-center overflow-hidden shadow-md">
+            <div className="w-12 h-12 flex items-center justify-center">
               <img 
                 src={`/api/logo?v=${Date.now()}`} 
                 alt="Pathak Bhandar Logo" 
-                className="w-full h-full object-contain"
+                className="w-12 h-12 object-contain"
                 style={{ display: 'block' }}
               />
             </div>

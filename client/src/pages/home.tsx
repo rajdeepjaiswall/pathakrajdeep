@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { ShoppingBag, Play, ArrowRight, Truck, Smartphone, Award } from 'lucide-react';
+import { ArrowRight, Truck, Smartphone, Award } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/header';
@@ -7,6 +7,7 @@ import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
 import ProductCard from '@/components/product/product-card';
+import BannerSlideshow from '@/components/banner-slideshow';
 import { CATEGORIES } from '@/lib/constants';
 
 export default function Home() {
@@ -24,41 +25,10 @@ export default function Home() {
     <div className="min-h-screen bg-cream">
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative h-96 md:h-[500px] overflow-hidden bakery-pattern">
-        <div 
-          className="absolute inset-0 bg-cover bg-center" 
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080')"
-          }}
-        />
-        <div className="absolute inset-0 gradient-overlay" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
-          <div className="max-w-2xl">
-            <h1 className="text-4xl md:text-6xl font-bold text-navy mb-4">
-              Premium Bakery <br />
-              <span className="text-champagne">Since 1957</span>
-            </h1>
-            <p className="text-lg md:text-xl text-navy/80 mb-8">
-              Authentic local biscuits & cookies from Prayagraj's most trusted bakery. 
-              Experience the taste of tradition with every bite.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/products">
-                <Button className="bg-champagne text-navy px-8 py-3 hover:bg-champagne/90 transition-all">
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                  Shop Now
-                </Button>
-              </Link>
-              <Button 
-                variant="outline" 
-                className="border-2 border-navy text-navy px-8 py-3 hover:bg-navy hover:text-cream transition-all"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Our Story
-              </Button>
-            </div>
-          </div>
+      {/* Banner Slideshow */}
+      <section className="py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <BannerSlideshow />
         </div>
       </section>
 

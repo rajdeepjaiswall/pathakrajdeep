@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct, type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem, type CartItem, type InsertCartItem, type Review, type InsertReview } from "@shared/schema";
+import { type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct, type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem, type CartItem, type InsertCartItem, type Review, type InsertReview, type Banner, type InsertBanner } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -56,6 +56,13 @@ export interface IStorage {
     recentOrders: Order[];
     topProducts: (Product & { orderCount: number })[];
   }>;
+
+  // Banner methods
+  getBanners(activeOnly?: boolean): Promise<Banner[]>;
+  getBanner(id: number): Promise<Banner | undefined>;
+  createBanner(banner: InsertBanner): Promise<Banner>;
+  updateBanner(id: number, banner: Partial<InsertBanner>): Promise<Banner>;
+  deleteBanner(id: number): Promise<void>;
 }
 
 class MemStorage implements IStorage {
@@ -83,6 +90,21 @@ class MemStorage implements IStorage {
   private ordersData: Order[] = [];
   private orderItemsData: OrderItem[] = [];
   private reviewsData: Review[] = [];
+  private bannersData: Banner[] = [
+    {
+      id: 1,
+      title: "Premium Bakery Since 1957",
+      description: "Authentic local biscuits & cookies from Prayagraj's most trusted bakery. Experience the taste of tradition with every bite.",
+      imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1326&q=80",
+      linkUrl: "/products",
+      linkType: "category",
+      linkId: 1,
+      isActive: true,
+      displayOrder: 1,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
 
   async getUser(id: number): Promise<User | undefined> {
     const user = this.users.find(u => u.id === id);
@@ -313,6 +335,54 @@ class MemStorage implements IStorage {
       recentOrders: this.ordersData.slice(-10),
       topProducts: this.products.map(p => ({ ...p, orderCount: 0 }))
     };
+  }
+
+  // Banner methods
+  async getBanners(activeOnly = false): Promise<Banner[]> {
+    let banners = this.bannersData;
+    if (activeOnly) {
+      banners = banners.filter(banner => banner.isActive);
+    }
+    return banners.sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  async getBanner(id: number): Promise<Banner | undefined> {
+    return this.bannersData.find(banner => banner.id === id);
+  }
+
+  async createBanner(insertBanner: InsertBanner): Promise<Banner> {
+    const id = Math.max(0, ...this.bannersData.map(b => b.id)) + 1;
+    const banner: Banner = {
+      id,
+      ...insertBanner,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.bannersData.push(banner);
+    return banner;
+  }
+
+  async updateBanner(id: number, updateBanner: Partial<InsertBanner>): Promise<Banner> {
+    const index = this.bannersData.findIndex(banner => banner.id === id);
+    if (index === -1) {
+      throw new Error('Banner not found');
+    }
+    
+    this.bannersData[index] = {
+      ...this.bannersData[index],
+      ...updateBanner,
+      updatedAt: new Date(),
+    };
+    
+    return this.bannersData[index];
+  }
+
+  async deleteBanner(id: number): Promise<void> {
+    const index = this.bannersData.findIndex(banner => banner.id === id);
+    if (index === -1) {
+      throw new Error('Banner not found');
+    }
+    this.bannersData.splice(index, 1);
   }
 }
 

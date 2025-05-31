@@ -40,12 +40,14 @@ export default function MobileNav() {
               }`}
             >
               {isLogo ? (
-                <img 
-                  src={`/api/logo?v=${Date.now()}`} 
-                  alt="KB Logo" 
-                  className="h-5 w-5 object-contain"
-                  style={{ filter: 'brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(356deg) brightness(95%) contrast(112%)' }}
-                />
+                <div className="relative -top-2">
+                  <img 
+                    src={`/api/logo?v=${Date.now()}`} 
+                    alt="KB Logo" 
+                    className="h-8 w-8 object-contain"
+                    style={{ filter: 'brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(356deg) brightness(95%) contrast(112%)' }}
+                  />
+                </div>
               ) : (
                 <Icon className="h-5 w-5 text-navy" />
               )}

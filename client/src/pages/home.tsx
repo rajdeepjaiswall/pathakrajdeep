@@ -9,9 +9,12 @@ import CartSidebar from '@/components/cart/cart-sidebar';
 import ProductCard from '@/components/product/product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
+import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
 
 export default function Home() {
+  const { isAuthenticated, user } = useAuth();
+  
   // Fetch featured products
   const { data: featuredProducts = [] } = useQuery({
     queryKey: ['/api/products?featured=true'],
@@ -25,6 +28,20 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      
+      {/* Welcome Message for Logged In Users */}
+      {isAuthenticated && user && (
+        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-cream to-almond">
+          <div className="max-w-7xl mx-auto text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-navy mb-2">
+              नमस्ते {user.username} जी,
+            </h2>
+            <p className="text-lg md:text-xl font-semibold text-navy">
+              आपका पाठक भंडार में स्वागत है
+            </p>
+          </div>
+        </section>
+      )}
       
       {/* Banner Slideshow */}
       <section className="py-8 px-4 sm:px-6 lg:px-8">

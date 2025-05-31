@@ -42,7 +42,7 @@ export function MiniBannerSlideshow() {
   };
 
   return (
-    <section className="relative w-full h-48 md:h-56 bg-background overflow-hidden rounded-lg mx-4 sm:mx-6 lg:mx-8">
+    <section className="relative w-full h-32 md:h-36 bg-background overflow-hidden rounded-lg mx-4 sm:mx-6 lg:mx-8">
       <div 
         className="flex transition-transform duration-500 ease-in-out h-full"
         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
@@ -56,8 +56,8 @@ export function MiniBannerSlideshow() {
             />
             <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
               <div className="text-center text-white px-4">
-                <h3 className="text-xl md:text-2xl font-bold mb-2">{banner.title}</h3>
-                <p className="text-sm md:text-base opacity-90">{banner.description}</p>
+                <h3 className="text-lg md:text-xl font-bold mb-1">{banner.title}</h3>
+                <p className="text-xs md:text-sm opacity-90">{banner.description}</p>
               </div>
             </div>
           </div>

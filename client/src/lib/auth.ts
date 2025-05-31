@@ -18,7 +18,12 @@ export interface RegisterData {
   password: string;
   email?: string;
   phone?: string;
-  address?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  area?: string;
+  city?: string;
+  state?: string;
+  pinCode?: string;
   latitude?: string;
   longitude?: string;
   role?: string;

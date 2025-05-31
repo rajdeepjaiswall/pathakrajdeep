@@ -14,6 +14,7 @@ export default function CustomerRegister() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isFetchingPinData, setIsFetchingPinData] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -113,6 +114,57 @@ export default function CustomerRegister() {
         maximumAge: 60000
       }
     );
+  };
+
+  const fetchLocationByPinCode = async (pinCode: string) => {
+    if (!pinCode || pinCode.length !== 6) return;
+    
+    setIsFetchingPinData(true);
+    
+    try {
+      // Using India Post Pin Code API for accurate data
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pinCode}`);
+      const data = await response.json();
+      
+      if (data[0].Status === "Success" && data[0].PostOffice.length > 0) {
+        const locationData = data[0].PostOffice[0];
+        
+        setFormData(prev => ({
+          ...prev,
+          area: locationData.Name || '',
+          city: locationData.District || '',
+          state: locationData.State || ''
+        }));
+
+        toast({
+          title: "Location details found",
+          description: `Auto-filled details for ${locationData.District}, ${locationData.State}`,
+        });
+      } else {
+        toast({
+          title: "Pin code not found",
+          description: "Please check the pin code and try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error fetching location",
+        description: "Unable to fetch location details. Please fill manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetchingPinData(false);
+    }
+  };
+
+  const handlePinCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pinCode = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setFormData(prev => ({ ...prev, pinCode }));
+    
+    if (pinCode.length === 6) {
+      fetchLocationByPinCode(pinCode);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -293,22 +345,17 @@ export default function CustomerRegister() {
               </div>
             </div>
 
-            <div>
-              <div className="relative">
-                <textarea
-                  placeholder="Address (Optional)"
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  className="w-full px-3 py-2 pr-12 border border-champagne/30 rounded-md focus:border-champagne focus:ring-champagne resize-none h-20"
-                  rows={3}
-                />
+            {/* Address Fields Section */}
+            <div className="border border-champagne/20 rounded-lg p-4 space-y-4 bg-almond/10">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-navy">Address Information</h3>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={getCurrentLocation}
                   disabled={isGettingLocation}
-                  className="absolute top-2 right-2 h-8 w-8 p-0 text-champagne hover:text-navy hover:bg-champagne/10"
+                  className="h-8 w-8 p-0 text-champagne hover:text-navy hover:bg-champagne/10"
                   title="Get current location"
                 >
                   {isGettingLocation ? (
@@ -318,9 +365,76 @@ export default function CustomerRegister() {
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-navy/60 mt-1">
-                Click the location icon to automatically fill your current address
-              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    type="text"
+                    placeholder="Address Line 1"
+                    value={formData.addressLine1}
+                    onChange={(e) => setFormData(prev => ({ ...prev, addressLine1: e.target.value }))}
+                    className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="text"
+                    placeholder="Address Line 2 (Optional)"
+                    value={formData.addressLine2}
+                    onChange={(e) => setFormData(prev => ({ ...prev, addressLine2: e.target.value }))}
+                    className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      placeholder="Pin Code *"
+                      value={formData.pinCode}
+                      onChange={handlePinCodeChange}
+                      className="border-champagne/30 focus:border-champagne focus:ring-champagne pr-8"
+                      maxLength={6}
+                    />
+                    {isFetchingPinData && (
+                      <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-1/2 transform -translate-y-1/2 text-champagne" />
+                    )}
+                  </div>
+                  <p className="text-xs text-navy/60 mt-1">Enter pin code to auto-fill location</p>
+                </div>
+                <div>
+                  <Input
+                    type="text"
+                    placeholder="Area/Locality"
+                    value={formData.area}
+                    onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+                    className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    type="text"
+                    placeholder="City"
+                    value={formData.city}
+                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                    className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="text"
+                    placeholder="State"
+                    value={formData.state}
+                    onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                    className="border-champagne/30 focus:border-champagne focus:ring-champagne"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="text-xs text-navy/60 bg-almond/30 p-3 rounded-md">

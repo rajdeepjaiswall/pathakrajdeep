@@ -63,11 +63,11 @@ export default function Header() {
               variant="ghost"
               size="sm"
               onClick={openCart}
-              className="relative p-2 text-navy hover:text-champagne"
+              className="relative p-3 text-navy hover:bg-almond/30 hover:text-champagne transition-all duration-300 rounded-xl"
             >
               <ShoppingCart className="h-5 w-5" />
               {summary.itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-champagne text-navy text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
                   {summary.itemCount}
                 </span>
               )}
@@ -80,14 +80,14 @@ export default function Header() {
                   variant="outline"
                   size="sm"
                   onClick={logout}
-                  className="text-navy border-champagne hover:bg-champagne"
+                  className="text-navy border-champagne hover:bg-champagne rounded-lg px-4 py-2 font-semibold transition-all duration-300"
                 >
                   Logout
                 </Button>
               </div>
             ) : (
               <Link href="/login">
-                <Button className="hidden md:flex bg-champagne text-navy hover:bg-champagne/90">
+                <Button className="hidden md:flex bg-champagne text-navy hover:bg-champagne/90 rounded-lg px-4 py-2 font-semibold transition-all duration-300 shadow-sm">
                   <User className="h-4 w-4 mr-2" />
                   Login
                 </Button>

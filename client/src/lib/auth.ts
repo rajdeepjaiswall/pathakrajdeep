@@ -26,7 +26,19 @@ export interface AuthResponse {
 }
 
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  const response = await apiRequest('POST', '/api/auth/login', credentials);
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Login failed' }));
+    throw new Error(error.message || 'Invalid credentials');
+  }
+
   const data = await response.json();
   
   // Store token in localStorage
@@ -37,7 +49,19 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
 }
 
 export async function register(userData: RegisterData): Promise<AuthResponse> {
-  const response = await apiRequest('POST', '/api/auth/register', userData);
+  const response = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Registration failed' }));
+    throw new Error(error.message || 'Registration failed');
+  }
+
   const data = await response.json();
   
   // Store token in localStorage

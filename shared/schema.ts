@@ -12,7 +12,12 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").notNull().default("customer"), // customer, admin, super_admin
   isVerified: boolean("is_verified").default(false),
-  address: text("address"),
+  addressLine1: text("address_line_1"),
+  addressLine2: text("address_line_2"),
+  area: text("area"),
+  city: text("city"),
+  state: text("state"),
+  pinCode: text("pin_code"),
   latitude: text("latitude"),
   longitude: text("longitude"),
   createdAt: timestamp("created_at").defaultNow(),

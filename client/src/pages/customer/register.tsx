@@ -23,7 +23,12 @@ export default function CustomerRegister() {
     fullName: '',
     dateOfBirth: '',
     gender: '',
-    address: '',
+    addressLine1: '',
+    addressLine2: '',
+    area: '',
+    city: '',
+    state: '',
+    pinCode: '',
     latitude: '',
     longitude: ''
   });
@@ -51,11 +56,11 @@ export default function CustomerRegister() {
           );
           const data = await response.json();
           
-          const fullAddress = `${data.locality}, ${data.principalSubdivision}, ${data.countryName}`;
-          
           setFormData(prev => ({
             ...prev,
-            address: fullAddress,
+            area: data.locality || '',
+            city: data.city || data.locality || '',
+            state: data.principalSubdivision || '',
             latitude: latitude.toString(),
             longitude: longitude.toString()
           }));
@@ -68,7 +73,6 @@ export default function CustomerRegister() {
           // Fallback to just coordinates if geocoding fails
           setFormData(prev => ({
             ...prev,
-            address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
             latitude: latitude.toString(),
             longitude: longitude.toString()
           }));
@@ -152,7 +156,12 @@ export default function CustomerRegister() {
         password: formData.password,
         email: formData.email,
         phone: formData.phone,
-        address: formData.address,
+        addressLine1: formData.addressLine1,
+        addressLine2: formData.addressLine2,
+        area: formData.area,
+        city: formData.city,
+        state: formData.state,
+        pinCode: formData.pinCode,
         latitude: formData.latitude,
         longitude: formData.longitude,
         role: 'customer'

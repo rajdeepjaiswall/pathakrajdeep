@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
 import { COMPANY_INFO } from '@/lib/constants';
-import pathakLogo from '@assets/project_20250528_0859055-02.png';
+import pathakLogo from '@assets/Screenshot_2025-05-30-23-52-51-45_10a3d211b678d435d51c62b8010e86c1.jpg';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -30,7 +30,8 @@ export default function Header() {
             <img 
               src={pathakLogo}
               alt="Pathak Bhandar Logo" 
-              className="h-12 object-contain"
+              className="h-12 w-12 object-contain bg-transparent"
+              style={{ backgroundColor: 'transparent' }}
             />
           </Link>
 

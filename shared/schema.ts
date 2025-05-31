@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -132,6 +132,22 @@ export const reviews = pgTable("reviews", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Banners table
+export const banners = pgTable("banners", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
+  linkUrl: text("link_url"),
+  linkType: text("link_type").default("product"), // "product", "category", "external", "offer"
+  linkId: integer("link_id"), // Product or category ID if applicable
+  isActive: boolean("is_active").default(true),
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   addresses: many(addresses),
@@ -247,6 +263,12 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({
   createdAt: true,
 });
 
+export const insertBannerSchema = createInsertSchema(banners).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Select schemas
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -257,6 +279,7 @@ export type OrderItem = typeof orderItems.$inferSelect;
 export type CartItem = typeof cartItems.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
+export type Banner = typeof banners.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -268,3 +291,4 @@ export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
+export type InsertBanner = z.infer<typeof insertBannerSchema>;

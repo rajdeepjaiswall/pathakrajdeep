@@ -8,6 +8,7 @@ import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
 import ProductCard from '@/components/product/product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
+import CategoryShowcase from '@/components/category-showcase';
 import { CATEGORIES } from '@/lib/constants';
 
 export default function Home() {
@@ -31,6 +32,9 @@ export default function Home() {
           <BannerSlideshow />
         </div>
       </section>
+
+      {/* Category Showcase */}
+      <CategoryShowcase />
 
       {/* Featured Categories */}
       <section className="py-16 bg-white">

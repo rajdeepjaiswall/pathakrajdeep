@@ -67,7 +67,7 @@ export default function BannerSlideshow() {
 
   const BannerContent = ({ banner }: { banner: Banner }) => {
     const content = (
-      <div className="relative h-[300px] md:h-[400px] overflow-hidden rounded-lg">
+      <div className="relative h-[200px] md:h-[250px] overflow-hidden rounded-lg">
         {banner.imageUrl ? (
           <div 
             className="w-full h-full bg-cover bg-center cursor-pointer transition-transform duration-300 hover:scale-105"
@@ -97,7 +97,7 @@ export default function BannerSlideshow() {
 
   if (isLoading) {
     return (
-      <div className="h-[300px] md:h-[400px] bg-gray-200 animate-pulse flex items-center justify-center rounded-lg">
+      <div className="h-[200px] md:h-[250px] bg-gray-200 animate-pulse flex items-center justify-center rounded-lg">
         <div className="text-gray-500 text-lg">Loading banners...</div>
       </div>
     );
@@ -105,7 +105,7 @@ export default function BannerSlideshow() {
 
   if (activeBanners.length === 0) {
     return (
-      <div className="h-[300px] md:h-[400px] bg-gradient-to-br from-almond to-cream flex items-center justify-center rounded-lg">
+      <div className="h-[200px] md:h-[250px] bg-gradient-to-br from-almond to-cream flex items-center justify-center rounded-lg">
         <div className="text-center text-navy/60 p-8">
           <div className="text-lg font-medium mb-2">No Banners Available</div>
           <div className="text-sm">Contact admin to add promotional banners</div>

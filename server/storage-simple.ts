@@ -72,9 +72,12 @@ class MemStorage implements IStorage {
   ];
   
   private categories: Category[] = [
-    { id: 1, name: 'Traditional Sweets', description: 'Authentic Indian mithai and sweets', isActive: true, createdAt: new Date() },
-    { id: 2, name: 'Savory Snacks', description: 'Crispy namkeen and snacks', isActive: true, createdAt: new Date() },
-    { id: 3, name: 'Festive Specials', description: 'Special items for festivals', isActive: true, createdAt: new Date() },
+    { id: 1, name: 'Biscuits', description: 'Traditional and modern biscuits', image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', isActive: true, createdAt: new Date() },
+    { id: 2, name: 'Snacks', description: 'Crispy and delicious snack items', image: 'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', isActive: true, createdAt: new Date() },
+    { id: 3, name: 'Cookies', description: 'Fresh baked cookies and treats', image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', isActive: true, createdAt: new Date() },
+    { id: 4, name: 'Pastries', description: 'Soft and sweet pastry delights', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', isActive: true, createdAt: new Date() },
+    { id: 5, name: 'Cake', description: 'Special occasion cakes', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', isActive: true, createdAt: new Date() },
+    { id: 6, name: 'Rolls', description: 'Fresh bread rolls and buns', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', isActive: true, createdAt: new Date() },
   ];
   
   private products: Product[] = [

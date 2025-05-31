@@ -22,7 +22,7 @@ export default function MobileNav() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-cream border-t border-almond md:hidden z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-champagne border-t border-almond md:hidden z-40">
       <div className="grid grid-cols-5 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -36,7 +36,7 @@ export default function MobileNav() {
               href={item.href}
               onClick={isCart ? handleCartClick : undefined}
               className={`flex flex-col items-center justify-center py-2 relative ${
-                isActive ? 'text-champagne' : 'text-navy'
+                isActive ? 'text-cream' : 'text-navy'
               }`}
             >
               {isLogo ? (

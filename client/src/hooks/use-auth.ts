@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, getStoredUser, getStoredToken, logout as authLogout } from '../lib/auth';
 
 interface AuthContextType {
@@ -54,11 +54,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return React.createElement(AuthContext.Provider, { value }, children);
 }
 
 export function useAuth() {

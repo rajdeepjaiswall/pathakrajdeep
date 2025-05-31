@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CartItem, CartSummary, calculateCartSummary } from '../lib/cart';
 import { apiRequest } from '../lib/queryClient';
@@ -145,11 +145,7 @@ export function CartProvider({ children }: CartProviderProps) {
     closeCart,
   };
 
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
-  );
+  return React.createElement(CartContext.Provider, { value }, children);
 }
 
 export function useCart() {

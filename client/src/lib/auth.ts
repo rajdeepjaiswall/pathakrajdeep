@@ -18,6 +18,7 @@ export interface RegisterData {
   password: string;
   email?: string;
   phone?: string;
+  role?: string;
 }
 
 export interface AuthResponse {

@@ -36,6 +36,7 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/login" component={CustomerLogin} />
       <Route path="/register" component={CustomerRegister} />
+      <Route path="/customer/register" component={CustomerRegister} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/orders" component={AdminOrders} />

@@ -21,12 +21,12 @@ export default function Header() {
   ];
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
+    <header className="bg-cream shadow-lg sticky top-0 z-50 border-b border-almond">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-18">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center overflow-hidden">
+            <div className="w-12 h-12 bg-champagne rounded-xl flex items-center justify-center overflow-hidden shadow-md">
               <img 
                 src={`/api/logo?v=${Date.now()}`} 
                 alt="Pathak Bhandar Logo" 
@@ -35,8 +35,8 @@ export default function Header() {
               />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-navy">{COMPANY_INFO.name}</h1>
-              <p className="text-xs text-gray-600">{COMPANY_INFO.tagline}</p>
+              <h1 className="text-xl font-bold text-navy tracking-wide">{COMPANY_INFO.name}</h1>
+              <p className="text-xs text-navy/70 font-medium">{COMPANY_INFO.tagline}</p>
             </div>
           </Link>
 
@@ -46,10 +46,10 @@ export default function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`font-medium transition-colors ${
+                className={`font-semibold transition-all duration-300 py-2 px-3 rounded-lg ${
                   location === item.href
-                    ? 'text-champagne'
-                    : 'text-navy hover:text-champagne'
+                    ? 'text-navy bg-champagne shadow-sm'
+                    : 'text-navy hover:text-champagne hover:bg-almond/30'
                 }`}
               >
                 {item.name}

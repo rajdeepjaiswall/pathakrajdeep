@@ -29,6 +29,12 @@ export interface IStorage {
   removeFromCart(id: number, userId: number): Promise<void>;
   clearCart(userId: number): Promise<void>;
 
+  // Wishlist methods
+  getWishlistItems(userId: number): Promise<(WishlistItem & { product: Product })[]>;
+  addToWishlist(wishlistItem: InsertWishlistItem): Promise<WishlistItem>;
+  removeFromWishlist(id: number, userId: number): Promise<void>;
+  isInWishlist(userId: number, productId: number): Promise<boolean>;
+
   // Address methods
   getAddresses(userId: number): Promise<Address[]>;
   getAddress(id: number): Promise<Address | undefined>;

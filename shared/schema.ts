@@ -105,6 +105,14 @@ export const cartItems = pgTable("cart_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Wishlist items table
+export const wishlistItems = pgTable("wishlist_items", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").references(() => users.id),
+  product_id: integer("product_id").references(() => products.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Coupons table
 export const coupons = pgTable("coupons", {
   id: serial("id").primaryKey(),
@@ -153,6 +161,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   addresses: many(addresses),
   orders: many(orders),
   cartItems: many(cartItems),
+  wishlistItems: many(wishlistItems),
   reviews: many(reviews),
 }));
 
@@ -167,6 +176,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   }),
   orderItems: many(orderItems),
   cartItems: many(cartItems),
+  wishlistItems: many(wishlistItems),
   reviews: many(reviews),
 }));
 
@@ -203,6 +213,17 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
   }),
   product: one(products, {
     fields: [cartItems.product_id],
+    references: [products.id],
+  }),
+}));
+
+export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
+  user: one(users, {
+    fields: [wishlistItems.user_id],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [wishlistItems.product_id],
     references: [products.id],
   }),
 }));
@@ -253,6 +274,11 @@ export const insertCartItemSchema = createInsertSchema(cartItems).omit({
   createdAt: true,
 });
 
+export const insertWishlistItemSchema = createInsertSchema(wishlistItems).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertCouponSchema = createInsertSchema(coupons).omit({
   id: true,
   createdAt: true,
@@ -277,6 +303,7 @@ export type Address = typeof addresses.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type CartItem = typeof cartItems.$inferSelect;
+export type WishlistItem = typeof wishlistItems.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type Banner = typeof banners.$inferSelect;
@@ -289,6 +316,7 @@ export type InsertAddress = z.infer<typeof insertAddressSchema>;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
+export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type InsertBanner = z.infer<typeof insertBannerSchema>;

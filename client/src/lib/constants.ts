@@ -47,10 +47,12 @@ export const DELIVERY_ZONES = [
 ] as const;
 
 export const CATEGORIES = [
-  { id: 1, name: 'Traditional Biscuits', description: 'Handcrafted with authentic recipes' },
-  { id: 2, name: 'Premium Cookies', description: 'Made with finest ingredients' },
-  { id: 3, name: 'Confectionery', description: 'Sweet treats for every occasion' },
-  { id: 4, name: 'Fresh Bakes', description: 'Daily fresh baked goods' },
+  { id: 1, name: 'Biscuits', description: 'Traditional and modern biscuits' },
+  { id: 2, name: 'Snacks', description: 'Savory snacks and namkeen' },
+  { id: 3, name: 'Cookies', description: 'Premium cookies and wafers' },
+  { id: 4, name: 'Pastries', description: 'Fresh pastries and desserts' },
+  { id: 5, name: 'Cake', description: 'Custom cakes and celebration treats' },
+  { id: 6, name: 'Rolls', description: 'Fresh rolls and bread varieties' },
 ] as const;
 
 export const COMPANY_INFO = {

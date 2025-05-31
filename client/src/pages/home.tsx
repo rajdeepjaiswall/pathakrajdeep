@@ -33,8 +33,9 @@ export default function Home() {
       {isAuthenticated && user && (
         <section className="py-3 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-cream to-almond">
           <div className="max-w-7xl mx-auto text-left">
-            <p className="text-sm text-navy">
-              Namaste <span className="text-xl font-bold">{user.username}</span> ji, aapka Pathak Bhandar mein swagat hai
+            <p className="text-sm text-navy font-serif">
+              Namaste <span className="text-xl font-bold">{user.username}</span> ji,<br />
+              aapka Pathak Bhandar mein swagat hai
             </p>
           </div>
         </section>

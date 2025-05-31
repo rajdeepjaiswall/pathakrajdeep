@@ -31,13 +31,10 @@ export default function Home() {
       
       {/* Welcome Message for Logged In Users */}
       {isAuthenticated && user && (
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-cream to-almond">
-          <div className="max-w-7xl mx-auto text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-navy mb-2">
-              नमस्ते {user.username} जी,
-            </h2>
-            <p className="text-lg md:text-xl font-semibold text-navy">
-              आपका पाठक भंडार में स्वागत है
+        <section className="py-3 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-cream to-almond">
+          <div className="max-w-7xl mx-auto text-left">
+            <p className="text-sm text-navy">
+              Namaste <span className="text-xl font-bold">{user.username}</span> ji, aapka Pathak Bhandar mein swagat hai
             </p>
           </div>
         </section>

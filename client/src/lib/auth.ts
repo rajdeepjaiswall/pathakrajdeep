@@ -18,6 +18,9 @@ export interface RegisterData {
   password: string;
   email?: string;
   phone?: string;
+  address?: string;
+  latitude?: string;
+  longitude?: string;
   role?: string;
 }
 

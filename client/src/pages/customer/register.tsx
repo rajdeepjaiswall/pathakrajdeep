@@ -152,6 +152,9 @@ export default function CustomerRegister() {
         password: formData.password,
         email: formData.email,
         phone: formData.phone,
+        address: formData.address,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         role: 'customer'
       };
       

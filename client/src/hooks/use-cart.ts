@@ -31,11 +31,12 @@ export function CartProvider({ children }: CartProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Fetch cart items
-  const { data: items = [], isLoading } = useQuery({
+  const { data: cartData, isLoading } = useQuery({
     queryKey: ['/api/cart'],
     enabled: isAuthenticated,
   });
 
+  const items = (cartData as CartItem[]) || [];
   // Calculate cart summary
   const summary = calculateCartSummary(items);
 

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import fs from "fs";
 import path from "path";
-import { storage } from "./storage-simple";
+import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
@@ -223,6 +223,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(cartItems);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Wishlist routes
+  app.get("/api/wishlist", async (req, res) => {
+    try {
+      // For now, return empty array if not authenticated
+      if (!req.user) {
+        return res.json([]);
+      }
+      const wishlistItems = await storage.getWishlistItems(req.user.id);
+      res.json(wishlistItems);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/wishlist", authenticateToken, async (req, res) => {
+    try {
+      const { product_id } = req.body;
+      const wishlistItem = await storage.addToWishlist({
+        user_id: req.user.id,
+        product_id: parseInt(product_id),
+      });
+      res.json(wishlistItem);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/wishlist/:productId", authenticateToken, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      await storage.removeFromWishlist(productId, req.user.id);
+      res.json({ message: "Product removed from wishlist" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   });
 

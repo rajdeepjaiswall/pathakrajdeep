@@ -451,6 +451,53 @@ class MemStorage implements IStorage {
     }
     this.bannersData.splice(index, 1);
   }
+
+  // Wishlist methods
+  async getWishlistItems(userId: number): Promise<(WishlistItem & { product: Product })[]> {
+    const wishlistItems = this.wishlistItemsData.filter(item => item.user_id === userId);
+    return wishlistItems.map(item => {
+      const product = this.products.find(p => p.id === item.product_id);
+      if (!product) {
+        throw new Error(`Product not found for wishlist item ${item.id}`);
+      }
+      return { ...item, product };
+    });
+  }
+
+  async addToWishlist(wishlistItem: InsertWishlistItem): Promise<WishlistItem> {
+    // Check if item already exists in wishlist
+    const existing = this.wishlistItemsData.find(
+      item => item.user_id === wishlistItem.user_id && item.product_id === wishlistItem.product_id
+    );
+    if (existing) {
+      throw new Error('Product already in wishlist');
+    }
+
+    const id = Math.max(0, ...this.wishlistItemsData.map(item => item.id)) + 1;
+    const newItem: WishlistItem = {
+      id,
+      ...wishlistItem,
+      createdAt: new Date(),
+    };
+    this.wishlistItemsData.push(newItem);
+    return newItem;
+  }
+
+  async removeFromWishlist(productId: number, userId: number): Promise<void> {
+    const index = this.wishlistItemsData.findIndex(
+      item => item.product_id === productId && item.user_id === userId
+    );
+    if (index === -1) {
+      throw new Error('Product not found in wishlist');
+    }
+    this.wishlistItemsData.splice(index, 1);
+  }
+
+  async isInWishlist(userId: number, productId: number): Promise<boolean> {
+    return this.wishlistItemsData.some(
+      item => item.user_id === userId && item.product_id === productId
+    );
+  }
 }
 
 export const storage = new MemStorage();

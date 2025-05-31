@@ -1,8 +1,8 @@
 import { 
-  users, categories, products, addresses, orders, orderItems, cartItems, coupons, reviews, banners,
+  users, categories, products, addresses, orders, orderItems, cartItems, wishlistItems, coupons, reviews, banners,
   type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct,
   type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
-  type CartItem, type InsertCartItem, type Coupon, type InsertCoupon, type Review, type InsertReview,
+  type CartItem, type InsertCartItem, type WishlistItem, type InsertWishlistItem, type Coupon, type InsertCoupon, type Review, type InsertReview,
   type Banner, type InsertBanner
 } from "@shared/schema";
 import { db } from "./db";
@@ -36,6 +36,12 @@ export interface IStorage {
   updateCartItem(id: number, quantity: number, userId: number): Promise<CartItem>;
   removeFromCart(id: number, userId: number): Promise<void>;
   clearCart(userId: number): Promise<void>;
+
+  // Wishlist methods
+  getWishlistItems(userId: number): Promise<(WishlistItem & { product: Product })[]>;
+  addToWishlist(wishlistItem: InsertWishlistItem): Promise<WishlistItem>;
+  removeFromWishlist(productId: number, userId: number): Promise<void>;
+  isInWishlist(userId: number, productId: number): Promise<boolean>;
 
   // Address methods
   getAddresses(userId: number): Promise<Address[]>;
@@ -250,6 +256,62 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(cartItems)
       .where(eq(cartItems.user_id, userId));
+  }
+
+  // Wishlist methods
+  async getWishlistItems(userId: number): Promise<(WishlistItem & { product: Product })[]> {
+    return await db
+      .select({
+        id: wishlistItems.id,
+        user_id: wishlistItems.user_id,
+        product_id: wishlistItems.product_id,
+        createdAt: wishlistItems.createdAt,
+        product: products
+      })
+      .from(wishlistItems)
+      .innerJoin(products, eq(wishlistItems.product_id, products.id))
+      .where(eq(wishlistItems.user_id, userId));
+  }
+
+  async addToWishlist(insertWishlistItem: InsertWishlistItem): Promise<WishlistItem> {
+    // Check if item already exists in wishlist
+    const [existingItem] = await db
+      .select()
+      .from(wishlistItems)
+      .where(and(
+        eq(wishlistItems.user_id, insertWishlistItem.user_id),
+        eq(wishlistItems.product_id, insertWishlistItem.product_id)
+      ));
+
+    if (existingItem) {
+      throw new Error('Product already in wishlist');
+    }
+
+    const [wishlistItem] = await db
+      .insert(wishlistItems)
+      .values(insertWishlistItem)
+      .returning();
+    return wishlistItem;
+  }
+
+  async removeFromWishlist(productId: number, userId: number): Promise<void> {
+    await db
+      .delete(wishlistItems)
+      .where(and(
+        eq(wishlistItems.product_id, productId), 
+        eq(wishlistItems.user_id, userId)
+      ));
+  }
+
+  async isInWishlist(userId: number, productId: number): Promise<boolean> {
+    const [item] = await db
+      .select()
+      .from(wishlistItems)
+      .where(and(
+        eq(wishlistItems.user_id, userId),
+        eq(wishlistItems.product_id, productId)
+      ));
+    return !!item;
   }
 
   // Address methods

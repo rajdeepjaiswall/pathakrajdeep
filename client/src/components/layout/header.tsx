@@ -24,20 +24,13 @@ export default function Header() {
     <header className="bg-cream shadow-lg sticky top-0 z-50 border-b border-almond">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-18">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="w-12 h-12 flex items-center justify-center">
-              <img 
-                src={`/api/logo?v=${Date.now()}`} 
-                alt="Pathak Bhandar Logo" 
-                className="w-12 h-12 object-contain"
-                style={{ display: 'block' }}
-              />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-navy tracking-wide">{COMPANY_INFO.name}</h1>
-              <p className="text-xs text-navy/70 font-medium">{COMPANY_INFO.tagline}</p>
-            </div>
+          {/* Combined Logo */}
+          <Link href="/" className="flex items-center">
+            <img 
+              src="/attached_assets/project_20250530_0051420-02.png"
+              alt="Pathak Bhandar Logo" 
+              className="h-12 object-contain"
+            />
           </Link>
 
           {/* Desktop Navigation */}

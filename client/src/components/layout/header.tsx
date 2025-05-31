@@ -25,7 +25,15 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-18">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center space-x-3">
+            <div className="w-12 h-12 flex items-center justify-center">
+              <img 
+                src={`/api/logo?v=${Date.now()}`} 
+                alt="Pathak Bhandar Logo" 
+                className="w-12 h-12 object-contain"
+                style={{ display: 'block' }}
+              />
+            </div>
             <div>
               <h1 className="text-xl font-bold text-navy tracking-wide">{COMPANY_INFO.name}</h1>
               <p className="text-xs text-navy/70 font-medium">{COMPANY_INFO.tagline}</p>
@@ -49,19 +57,8 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Cart & Profile */}
+          {/* Profile */}
           <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={openCart}
-              className="relative p-3 text-navy hover:bg-almond/30 hover:text-champagne transition-all duration-300 rounded-xl"
-            >
-              <ShoppingCart className="h-5 w-5 text-navy" />
-              {summary.itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full"></span>
-              )}
-            </Button>
 
             {isAuthenticated ? (
               <div className="hidden md:flex items-center space-x-2">

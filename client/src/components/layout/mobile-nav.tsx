@@ -1,4 +1,4 @@
-import { Home, Search, Grid3X3, ShoppingCart, User } from 'lucide-react';
+import { Home, Search, ShoppingCart, User } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
@@ -11,7 +11,7 @@ export default function MobileNav() {
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
     { icon: Search, label: 'Search', href: '/products?search=true' },
-    { icon: Grid3X3, label: 'Categories', href: '/products' },
+    { icon: 'logo', label: 'Categories', href: '/products' },
     { icon: ShoppingCart, label: 'Cart', href: '/cart' },
     { icon: User, label: 'Account', href: isAuthenticated ? '/account' : '/login' },
   ];
@@ -28,6 +28,7 @@ export default function MobileNav() {
           const Icon = item.icon;
           const isActive = location === item.href;
           const isCart = item.label === 'Cart';
+          const isLogo = item.icon === 'logo';
 
           return (
             <Link
@@ -38,7 +39,16 @@ export default function MobileNav() {
                 isActive ? 'text-champagne' : 'text-navy'
               }`}
             >
-              <Icon className="h-5 w-5 text-navy" />
+              {isLogo ? (
+                <img 
+                  src={`/api/logo?v=${Date.now()}`} 
+                  alt="KB Logo" 
+                  className="h-5 w-5 object-contain"
+                  style={{ filter: 'brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(356deg) brightness(95%) contrast(112%)' }}
+                />
+              ) : (
+                <Icon className="h-5 w-5 text-navy" />
+              )}
               <span className="text-xs mt-1 text-navy">{item.label}</span>
               {isCart && summary.itemCount > 0 && (
                 <div className="absolute -top-1 right-3 w-3 h-3 bg-red-500 rounded-full"></div>

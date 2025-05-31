@@ -6,12 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/hooks/use-auth';
 import { register } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { MapPin, Loader2 } from 'lucide-react';
 
 export default function CustomerRegister() {
   const [, setLocation] = useLocation();
   const { login: authLogin } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -21,8 +23,93 @@ export default function CustomerRegister() {
     fullName: '',
     dateOfBirth: '',
     gender: '',
-    address: ''
+    address: '',
+    latitude: '',
+    longitude: ''
   });
+
+  const getCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Location not supported",
+        description: "Your browser doesn't support location services.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGettingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          // Use reverse geocoding to get address from coordinates
+          const response = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          const data = await response.json();
+          
+          const fullAddress = `${data.locality}, ${data.principalSubdivision}, ${data.countryName}`;
+          
+          setFormData(prev => ({
+            ...prev,
+            address: fullAddress,
+            latitude: latitude.toString(),
+            longitude: longitude.toString()
+          }));
+
+          toast({
+            title: "Location found!",
+            description: "Your current location has been added to the address field.",
+          });
+        } catch (error) {
+          // Fallback to just coordinates if geocoding fails
+          setFormData(prev => ({
+            ...prev,
+            address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
+            latitude: latitude.toString(),
+            longitude: longitude.toString()
+          }));
+
+          toast({
+            title: "Location captured",
+            description: "Your coordinates have been saved.",
+          });
+        }
+        
+        setIsGettingLocation(false);
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        let message = "Unable to get your location.";
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            message = "Location access denied. Please enable location permissions.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            message = "Location information is unavailable.";
+            break;
+          case error.TIMEOUT:
+            message = "Location request timed out.";
+            break;
+        }
+
+        toast({
+          title: "Location error",
+          description: message,
+          variant: "destructive",
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      }
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,13 +282,33 @@ export default function CustomerRegister() {
             </div>
 
             <div>
-              <textarea
-                placeholder="Address (Optional)"
-                value={formData.address}
-                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                className="w-full px-3 py-2 border border-champagne/30 rounded-md focus:border-champagne focus:ring-champagne resize-none h-20"
-                rows={3}
-              />
+              <div className="relative">
+                <textarea
+                  placeholder="Address (Optional)"
+                  value={formData.address}
+                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  className="w-full px-3 py-2 pr-12 border border-champagne/30 rounded-md focus:border-champagne focus:ring-champagne resize-none h-20"
+                  rows={3}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={getCurrentLocation}
+                  disabled={isGettingLocation}
+                  className="absolute top-2 right-2 h-8 w-8 p-0 text-champagne hover:text-navy hover:bg-champagne/10"
+                  title="Get current location"
+                >
+                  {isGettingLocation ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MapPin className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-navy/60 mt-1">
+                Click the location icon to automatically fill your current address
+              </p>
             </div>
 
             <div className="text-xs text-navy/60 bg-almond/30 p-3 rounded-md">

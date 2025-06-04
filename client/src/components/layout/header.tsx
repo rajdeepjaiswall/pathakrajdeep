@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
@@ -51,12 +51,29 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Profile */}
+          {/* Profile & Actions */}
           <div className="flex items-center space-x-4">
-
+            {/* Desktop view */}
             {isAuthenticated ? (
-              <div className="hidden md:flex items-center space-x-2">
-                <span className="text-sm text-navy">Hello, {user?.username}</span>
+              <div className="hidden md:flex items-center space-x-4">
+                <Link href="/customer/profile">
+                  <span className="text-sm text-navy hover:text-champagne cursor-pointer font-medium transition-colors">
+                    Namaste, {user?.username}
+                  </span>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={openCart}
+                  className="relative text-navy hover:bg-almond/30 rounded-xl p-3 transition-all duration-300"
+                >
+                  <ShoppingCart className="h-5 w-5 text-navy" />
+                  {summary.itemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {summary.itemCount}
+                    </span>
+                  )}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -82,6 +99,7 @@ export default function Header() {
               </div>
             )}
 
+            {/* Mobile hamburger menu */}
             <Button
               variant="ghost"
               size="sm"
@@ -96,21 +114,69 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t bg-white">
+        <div className="md:hidden border-t bg-white shadow-lg">
           <div className="px-4 py-4 space-y-3">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="block text-navy font-medium"
+                className="block text-navy font-medium py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {item.name}
               </Link>
             ))}
+            
             {isAuthenticated ? (
-              <div className="pt-4 border-t">
-                <p className="text-sm text-gray-600 mb-2">Hello, {user?.username}</p>
+              <div className="pt-4 border-t border-almond space-y-3">
+                <Link href="/customer/profile">
+                  <div 
+                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User className="h-5 w-5 text-navy" />
+                    <span className="text-navy font-medium">Namaste, {user?.username}</span>
+                  </div>
+                </Link>
+                
+                <div 
+                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
+                  onClick={() => {
+                    openCart();
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
+                  <div className="relative">
+                    <ShoppingCart className="h-5 w-5 text-navy" />
+                    {summary.itemCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                        {summary.itemCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-navy font-medium">Cart ({summary.itemCount})</span>
+                </div>
+
+                <Link href="/customer/wishlist">
+                  <div 
+                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Heart className="h-5 w-5 text-navy" />
+                    <span className="text-navy font-medium">Wishlist</span>
+                  </div>
+                </Link>
+
+                <Link href="/customer/profile">
+                  <div 
+                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Settings className="h-5 w-5 text-navy" />
+                    <span className="text-navy font-medium">Account Settings</span>
+                  </div>
+                </Link>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -118,13 +184,13 @@ export default function Header() {
                     logout();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full text-navy border-champagne hover:bg-champagne"
+                  className="w-full text-navy border-champagne hover:bg-champagne mt-3"
                 >
                   Logout
                 </Button>
               </div>
             ) : (
-              <div className="pt-4 border-t space-y-2">
+              <div className="pt-4 border-t border-almond space-y-2">
                 <Link href="/customer/register">
                   <Button 
                     variant="outline"

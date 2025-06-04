@@ -6,6 +6,14 @@ export interface User {
   role: 'customer' | 'admin' | 'super_admin';
   email?: string;
   phone?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  area?: string;
+  city?: string;
+  state?: string;
+  pin_code?: string;
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface LoginCredentials {

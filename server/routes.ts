@@ -150,6 +150,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile management routes
+  app.put("/api/auth/profile", authenticateToken, async (req, res) => {
+    try {
+      const { username, email, phone } = req.body;
+      const userId = req.user.id;
+      
+      const updatedUser = await storage.updateUser(userId, {
+        username,
+        email,
+        phone,
+      });
+      
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        role: updatedUser.role,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        address_line_1: updatedUser.address_line_1,
+        address_line_2: updatedUser.address_line_2,
+        area: updatedUser.area,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        pin_code: updatedUser.pin_code,
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/auth/address", authenticateToken, async (req, res) => {
+    try {
+      const { address_line_1, address_line_2, area, city, state, pin_code } = req.body;
+      const userId = req.user.id;
+      
+      const updatedUser = await storage.updateUser(userId, {
+        address_line_1,
+        address_line_2,
+        area,
+        city,
+        state,
+        pin_code,
+      });
+      
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        role: updatedUser.role,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        address_line_1: updatedUser.address_line_1,
+        address_line_2: updatedUser.address_line_2,
+        area: updatedUser.area,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        pin_code: updatedUser.pin_code,
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Category routes
   app.get("/api/categories", async (req, res) => {
     try {

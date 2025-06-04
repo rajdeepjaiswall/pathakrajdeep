@@ -7,6 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (user: User, token: string) => void;
   logout: () => void;
+  updateUser: (updatedUser: User) => void;
   isLoading: boolean;
 }
 
@@ -45,12 +46,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setToken(null);
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    // Update stored user data
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   const value = {
     user,
     token,
     isAuthenticated: !!user && !!token,
     login,
     logout,
+    updateUser,
     isLoading,
   };
 

@@ -106,8 +106,8 @@ export default function Products() {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              {[...Array(12)].map((_, i) => (
                 <div key={i} className="bg-white rounded-2xl shadow-sm animate-pulse">
                   <div className="h-48 bg-gray-200 rounded-t-2xl" />
                   <div className="p-4 space-y-3">
@@ -126,7 +126,7 @@ export default function Products() {
           ) : (
             <div className={`grid gap-6 ${
               viewMode === 'grid' 
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
+                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
                 : 'grid-cols-1'
             }`}>
               {products.map((product: any) => (

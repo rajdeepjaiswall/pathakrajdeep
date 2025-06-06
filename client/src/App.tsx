@@ -15,6 +15,7 @@ import Checkout from "@/pages/checkout";
 import CustomerLogin from "@/pages/customer/login";
 import CustomerRegister from "@/pages/customer/register";
 import CustomerProfile from "@/pages/customer/profile";
+import CustomerWishlist from "@/pages/customer/wishlist";
 import AdminLogin from "@/pages/admin/login";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminOrders from "@/pages/admin/orders";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/register" component={CustomerRegister} />
       <Route path="/customer/register" component={CustomerRegister} />
       <Route path="/customer/profile" component={CustomerProfile} />
+      <Route path="/customer/wishlist" component={CustomerWishlist} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/orders" component={AdminOrders} />

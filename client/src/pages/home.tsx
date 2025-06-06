@@ -49,47 +49,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Category Showcase */}
+      {/* Category Showcase - Automatic Moving Carousel */}
       <CategoryShowcase />
 
-      {/* Featured Categories */}
-      <section className="pt-2 pb-8 bg-almond">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">Our Specialties</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Discover our premium collection of traditional and modern biscuits, cookies, and confectionery items
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 max-w-xl mx-auto">
-            {CATEGORIES.map((category) => (
-              <Link key={category.id} href={`/products?category=${category.id}`}>
-                <div className="group cursor-pointer">
-                  <div className="bg-almond rounded-2xl p-4 text-center hover:shadow-lg transition-all duration-300 group-hover:scale-105 border border-champagne">
-                    <img 
-                      src={`https://images.unsplash.com/photo-1486427944299-d1955d23e34d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300`} 
-                      alt={category.name}
-                      className="w-full h-28 object-cover rounded-lg mb-3" 
-                    />
-                    <h3 className="text-lg font-semibold text-navy mb-1">{category.name}</h3>
-                    <p className="text-navy/70 text-sm">{category.description}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Mini Banner Slideshow */}
-      <div className="pt-2 pb-3 bg-background">
-        <div className="max-w-7xl mx-auto">
-          <MiniBannerSlideshow />
-        </div>
-      </div>
-
-      {/* Featured Products */}
+      {/* Featured Products - Product Catalogue */}
       <section className="pt-2 pb-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-8">
@@ -104,8 +67,8 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.slice(0, 8).map((product: any) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            {featuredProducts.slice(0, 12).map((product: any) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
@@ -119,6 +82,13 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Mini Banner Slideshow */}
+      <div className="pt-2 pb-3 bg-background">
+        <div className="max-w-7xl mx-auto">
+          <MiniBannerSlideshow />
+        </div>
+      </div>
 
       {/* Trust Indicators */}
 <section className="py-12 bg-background">

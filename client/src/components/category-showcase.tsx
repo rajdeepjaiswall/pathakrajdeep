@@ -1,12 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
 import type { Category } from "@shared/schema";
 
 export default function CategoryShowcase() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  
   const { data: categories, isLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
@@ -50,26 +46,26 @@ export default function CategoryShowcase() {
     }
   ];
 
-  const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % Math.max(1, foodCategories.length - 4));
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + Math.max(1, foodCategories.length - 4)) % Math.max(1, foodCategories.length - 4));
-  };
+  // Create multiple copies for seamless infinite scroll
+  const infiniteCategories = [
+    ...foodCategories,
+    ...foodCategories,
+    ...foodCategories,
+    ...foodCategories
+  ];
 
   if (isLoading) {
     return (
-      <div className="py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-navy text-center mb-8">
-            What's on your mind?
+      <div className="py-8 px-4">
+        <div className="max-w-full mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-navy text-center mb-6">
+            Our Specialties
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-6">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="text-center">
-                <div className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-3 bg-gray-200 rounded-full animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+          <div className="flex space-x-6 animate-pulse overflow-hidden">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="flex-shrink-0">
+                <div className="w-28 h-28 bg-gray-200 rounded-full mx-auto mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-20 mx-auto"></div>
               </div>
             ))}
           </div>
@@ -79,78 +75,36 @@ export default function CategoryShowcase() {
   }
 
   return (
-    <div className="py-12 px-4 bg-gradient-to-b from-white to-almond/20">
-      <div className="max-w-7xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-bold text-navy text-center mb-8">
-          What's on your mind?
+    <div className="py-8 px-4 bg-gradient-to-b from-white to-almond/20 overflow-hidden">
+      <div className="max-w-full mx-auto">
+        <h2 className="text-2xl md:text-3xl font-bold text-navy text-center mb-6">
+          Our Specialties
         </h2>
         
-        {/* Desktop View - Show all categories */}
-        <div className="hidden md:grid md:grid-cols-6 gap-6">
-          {foodCategories.map((category) => (
-            <Link key={category.id} href={category.link}>
-              <div className="text-center group cursor-pointer">
-                <div className="relative w-32 h-32 mx-auto mb-3 overflow-hidden rounded-full bg-white shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-                <h3 className="text-sm md:text-base font-medium text-navy group-hover:text-champagne transition-colors duration-300">
-                  {category.name}
-                </h3>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Mobile View - Slidable */}
-        <div className="md:hidden relative">
+        {/* Infinite Scrolling Carousel */}
+        <div className="relative">
           <div className="overflow-hidden">
-            <div 
-              className="flex transition-transform duration-300 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * 50}%)` }}
-            >
-              {foodCategories.map((category) => (
-                <Link key={category.id} href={category.link}>
-                  <div className="w-1/2 flex-shrink-0 px-2">
-                    <div className="text-center group cursor-pointer">
-                      <div className="relative w-24 h-24 mx-auto mb-3 overflow-hidden rounded-full bg-white shadow-lg group-hover:shadow-xl transition-all duration-300">
-                        <img
-                          src={category.image}
-                          alt={category.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-                      <h3 className="text-sm font-medium text-navy">
-                        {category.name}
-                      </h3>
+            <div className="flex space-x-8 animate-scroll">
+              {infiniteCategories.map((category, index) => (
+                <Link key={`${category.id}-${index}`} href={category.link}>
+                  <div className="flex-shrink-0 text-center group cursor-pointer">
+                    <div className="relative w-28 h-28 mx-auto mb-3 overflow-hidden rounded-full bg-white shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </div>
+                    <h3 className="text-sm font-medium text-navy group-hover:text-champagne transition-colors duration-300 whitespace-nowrap">
+                      {category.name}
+                    </h3>
                   </div>
                 </Link>
               ))}
             </div>
           </div>
-
-          {/* Navigation Arrows for Mobile */}
-          <button
-            onClick={prevSlide}
-            className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg hover:bg-white transition-all duration-200"
-            aria-label="Previous categories"
-          >
-            <ChevronLeft className="w-4 h-4 text-navy" />
-          </button>
-          <button
-            onClick={nextSlide}
-            className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg hover:bg-white transition-all duration-200"
-            aria-label="Next categories"
-          >
-            <ChevronRight className="w-4 h-4 text-navy" />
-          </button>
         </div>
       </div>
     </div>

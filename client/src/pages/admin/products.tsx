@@ -352,12 +352,16 @@ export default function AdminProducts() {
                                           onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                              // In a real app, you'd upload to a cloud service
-                                              // For now, we'll use a placeholder URL
-                                              const imageUrl = `https://via.placeholder.com/300x300?text=Product+${index + 1}`;
+                                              // Create a local URL for the uploaded image
+                                              const imageUrl = URL.createObjectURL(file);
                                               const newImages = [...field.value];
                                               newImages[index] = imageUrl;
                                               field.onChange(newImages);
+                                              
+                                              toast({
+                                                title: "Photo uploaded",
+                                                description: `Photo ${index + 1} has been added successfully`,
+                                              });
                                             }
                                           }}
                                         />
@@ -427,12 +431,16 @@ export default function AdminProducts() {
                                           onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                              // In a real app, you'd upload to a cloud service
-                                              // For now, we'll use a placeholder URL
-                                              const videoUrl = `https://sample-videos.com/zip/10/mp4/SampleVideo_${index + 1}.mp4`;
+                                              // Create a local URL for the uploaded video
+                                              const videoUrl = URL.createObjectURL(file);
                                               const newVideos = [...field.value];
                                               newVideos[index] = videoUrl;
                                               field.onChange(newVideos);
+                                              
+                                              toast({
+                                                title: "Video uploaded",
+                                                description: `Video ${index + 1} has been added successfully`,
+                                              });
                                             }
                                           }}
                                         />

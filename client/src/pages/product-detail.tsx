@@ -89,34 +89,73 @@ export default function ProductDetail() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Product Images */}
+          {/* Product Media Gallery */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-lg overflow-hidden bg-white">
-              <img
-                src={product.images[selectedImage] || '/placeholder-product.jpg'}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            {product.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
-                {product.images.map((image: string, index: number) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                      selectedImage === index ? 'border-champagne' : 'border-transparent'
-                    }`}
-                  >
-                    <img
-                      src={image}
-                      alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+            {(() => {
+              // Create combined media array
+              const mediaItems = [];
+              if (product.images && product.images.length > 0) {
+                product.images.forEach((url, index) => {
+                  if (url) mediaItems.push({ type: 'image', url, index });
+                });
+              }
+              if (product.videos && product.videos.length > 0) {
+                product.videos.forEach((url, index) => {
+                  if (url) mediaItems.push({ type: 'video', url, index: product.images?.length + index || index });
+                });
+              }
+              
+              if (mediaItems.length === 0) {
+                mediaItems.push({ type: 'image', url: '/placeholder-product.jpg', index: 0 });
+              }
+              
+              const currentMedia = mediaItems[selectedImage] || mediaItems[0];
+              
+              return (
+                <>
+                  <div className="aspect-square rounded-lg overflow-hidden bg-white">
+                    {currentMedia.type === 'video' ? (
+                      <video
+                        src={currentMedia.url}
+                        controls
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={currentMedia.url}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
+                  {mediaItems.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto">
+                      {mediaItems.map((media, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedImage(index)}
+                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                            selectedImage === index ? 'border-champagne' : 'border-transparent'
+                          }`}
+                        >
+                          {media.type === 'video' ? (
+                            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                              <span className="text-xs text-gray-600">Video</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={media.url}
+                              alt={`${product.name} ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Product Info */}

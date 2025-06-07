@@ -18,14 +18,33 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { isInWishlist, toggleWishlist, isAdding, isRemoving } = useWishlist();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Create a media array with 4 images and 1 video
-  const mediaItems = [
-    { type: 'image', url: (product.images && product.images[0]) || 'https://images.unsplash.com/photo-1568747097-e7ebf3fac9e9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300' },
-    { type: 'image', url: 'https://images.unsplash.com/photo-1517686469429-8bdb88b9f907?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300' },
-    { type: 'image', url: 'https://images.unsplash.com/photo-1550628204-e2041ba2d3ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300' },
-    { type: 'image', url: 'https://images.unsplash.com/photo-1486427944299-d1955d23e34d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300' },
-    { type: 'video', url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4' }
-  ];
+  // Create media array from actual product images and videos
+  const createMediaItems = () => {
+    const items = [];
+    
+    // Add product images
+    if (product.images && product.images.length > 0) {
+      product.images.forEach(url => {
+        if (url) items.push({ type: 'image' as const, url });
+      });
+    }
+    
+    // Add product videos
+    if (product.videos && product.videos.length > 0) {
+      product.videos.forEach(url => {
+        if (url) items.push({ type: 'video' as const, url });
+      });
+    }
+    
+    // If no media, show a placeholder
+    if (items.length === 0) {
+      items.push({ type: 'image' as const, url: '/placeholder-product.jpg' });
+    }
+    
+    return items;
+  };
+
+  const mediaItems = createMediaItems();
 
   // Auto-advance slideshow
   useEffect(() => {

@@ -34,6 +34,21 @@ function authenticateToken(req: any, res: any, next: any) {
   });
 }
 
+// Optional authentication middleware for cart/wishlist
+function optionalAuth(req: any, res: any, next: any) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token) {
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+      if (!err) {
+        req.user = user;
+      }
+    });
+  }
+  next();
+}
+
 // Middleware to verify admin role
 function requireAdmin(req: any, res: any, next: any) {
   if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
@@ -312,8 +327,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cart routes
-  app.get("/api/cart", authenticateToken, async (req, res) => {
+  app.get("/api/cart", optionalAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.json([]); // Return empty cart for guest users
+      }
       const cartItems = await storage.getCartItems(req.user.id);
       res.json(cartItems);
     } catch (error: any) {
@@ -396,8 +414,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/cart", authenticateToken, async (req, res) => {
+  app.post("/api/cart", optionalAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Please login to add items to cart' });
+      }
       const cartItemData = insertCartItemSchema.parse({
         ...req.body,
         user_id: req.user.id,

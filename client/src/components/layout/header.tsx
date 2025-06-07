@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
 import { COMPANY_INFO } from '@/lib/constants';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
+import bakeryPattern from '@assets/project_20250607_1604012-01_1749292781428.png';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -213,8 +214,18 @@ export default function Header() {
           />
           
           {/* Sliding Menu */}
-          <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out hidden md:block">
-            <div className="p-6">
+          <div className="fixed top-0 right-0 h-full w-80 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out hidden md:block">
+            {/* Background Pattern */}
+            <div 
+              className="absolute inset-0 opacity-10"
+              style={{
+                backgroundImage: `url(${bakeryPattern})`,
+                backgroundSize: '150px 150px',
+                backgroundRepeat: 'repeat'
+              }}
+            />
+            {/* Content Overlay */}
+            <div className="relative p-6 bg-cream/95 backdrop-blur-sm h-full">
               {/* Header */}
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-almond">
                 <h3 className="text-lg font-semibold text-navy">Menu</h3>

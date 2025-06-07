@@ -19,22 +19,35 @@ import { ORDER_STATUSES } from '@/lib/constants';
 import { Link, useLocation } from 'wouter';
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect if not admin
-  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+  // Show loading while auth is being checked
+  if (!user && !authLoading) {
+    setLocation('/admin/login');
+    return null;
+  }
+
+  // Redirect if not admin after auth is confirmed
+  if (user && user.role !== 'admin' && user.role !== 'super_admin') {
     setLocation('/admin/login');
     return null;
   }
 
   // Fetch analytics data
-  const { data: analytics, isLoading } = useQuery({
+  const { data: analytics, isLoading: analyticsLoading } = useQuery<{
+    totalOrders: number;
+    totalRevenue: number;
+    totalCustomers: number;
+    totalProducts: number;
+    recentOrders: any[];
+    topProducts: any[];
+  }>({
     queryKey: ['/api/admin/analytics'],
   });
 
   // Fetch recent orders
-  const { data: recentOrders = [] } = useQuery({
+  const { data: recentOrders = [] } = useQuery<any[]>({
     queryKey: ['/api/admin/orders'],
   });
 
@@ -61,7 +74,7 @@ export default function AdminDashboard() {
     }
   };
 
-  if (isLoading) {
+  if (authLoading || analyticsLoading) {
     return (
       <div className="min-h-screen bg-cream">
         <Header />

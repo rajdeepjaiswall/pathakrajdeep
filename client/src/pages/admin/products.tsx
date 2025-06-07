@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit, Trash2, Package, Star, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Star, Eye, Upload, X, Image, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import { useLocation } from 'wouter';
 
 const productFormSchema = insertProductSchema.extend({
   images: z.array(z.string()).default([]),
+  videos: z.array(z.string()).default([]),
 });
 
 export default function AdminProducts() {
@@ -60,6 +61,7 @@ export default function AdminProducts() {
       weight: '',
       category_id: undefined,
       images: [],
+      videos: [],
       stock: 0,
       isActive: true,
       hsnCode: '',
@@ -132,6 +134,7 @@ export default function AdminProducts() {
       weight: product.weight || '',
       category_id: product.category_id,
       images: product.images || [],
+      videos: product.videos || [],
       stock: product.stock,
       isActive: product.isActive,
       hsnCode: product.hsnCode || '',
@@ -294,6 +297,157 @@ export default function AdminProducts() {
                           <FormLabel>GST Rate (%)</FormLabel>
                           <FormControl>
                             <Input {...field} type="number" step="0.01" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Photo Upload Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Image className="h-5 w-5 text-navy" />
+                      <h3 className="text-lg font-semibold text-navy">Product Photos (Up to 4)</h3>
+                    </div>
+                    <FormField
+                      control={productForm.control}
+                      name="images"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {[...Array(4)].map((_, index) => (
+                                <div key={index} className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                                  {field.value[index] ? (
+                                    <div className="relative">
+                                      <img 
+                                        src={field.value[index]} 
+                                        alt={`Product ${index + 1}`}
+                                        className="w-full h-24 object-cover rounded"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="sm"
+                                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                                        onClick={() => {
+                                          const newImages = [...field.value];
+                                          newImages.splice(index, 1);
+                                          field.onChange(newImages);
+                                        }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                                      <div>
+                                        <Input
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          id={`image-${index}`}
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                              // In a real app, you'd upload to a cloud service
+                                              // For now, we'll use a placeholder URL
+                                              const imageUrl = `https://via.placeholder.com/300x300?text=Product+${index + 1}`;
+                                              const newImages = [...field.value];
+                                              newImages[index] = imageUrl;
+                                              field.onChange(newImages);
+                                            }
+                                          }}
+                                        />
+                                        <label 
+                                          htmlFor={`image-${index}`}
+                                          className="cursor-pointer text-sm text-champagne hover:text-champagne/80"
+                                        >
+                                          Click to upload
+                                        </label>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Video Upload Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Video className="h-5 w-5 text-navy" />
+                      <h3 className="text-lg font-semibold text-navy">Product Videos (Up to 3)</h3>
+                    </div>
+                    <FormField
+                      control={productForm.control}
+                      name="videos"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {[...Array(3)].map((_, index) => (
+                                <div key={index} className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                                  {field.value[index] ? (
+                                    <div className="relative">
+                                      <div className="w-full h-24 bg-gray-100 rounded flex items-center justify-center">
+                                        <Video className="h-8 w-8 text-gray-400" />
+                                        <span className="ml-2 text-sm text-gray-600">Video {index + 1}</span>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="sm"
+                                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                                        onClick={() => {
+                                          const newVideos = [...field.value];
+                                          newVideos.splice(index, 1);
+                                          field.onChange(newVideos);
+                                        }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                                      <div>
+                                        <Input
+                                          type="file"
+                                          accept="video/*"
+                                          className="hidden"
+                                          id={`video-${index}`}
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                              // In a real app, you'd upload to a cloud service
+                                              // For now, we'll use a placeholder URL
+                                              const videoUrl = `https://sample-videos.com/zip/10/mp4/SampleVideo_${index + 1}.mp4`;
+                                              const newVideos = [...field.value];
+                                              newVideos[index] = videoUrl;
+                                              field.onChange(newVideos);
+                                            }
+                                          }}
+                                        />
+                                        <label 
+                                          htmlFor={`video-${index}`}
+                                          className="cursor-pointer text-sm text-champagne hover:text-champagne/80"
+                                        >
+                                          Click to upload
+                                        </label>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

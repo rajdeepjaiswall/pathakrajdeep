@@ -42,6 +42,7 @@ export const products = pgTable("products", {
   weight: text("weight"),
   category_id: integer("category_id").references(() => categories.id),
   images: jsonb("images").$type<string[]>().default([]),
+  videos: jsonb("videos").$type<string[]>().default([]),
   stock: integer("stock").default(0),
   isActive: boolean("is_active").default(true),
   hsnCode: text("hsn_code"),

@@ -214,18 +214,18 @@ export default function Header() {
           />
           
           {/* Sliding Menu */}
-          <div className="fixed top-0 right-0 h-full w-80 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out hidden md:block">
+          <div className="fixed top-0 right-0 h-full w-80 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out hidden md:block bg-cream">
             {/* Background Pattern */}
             <div 
-              className="absolute inset-0 opacity-10"
+              className="absolute inset-0 opacity-20"
               style={{
                 backgroundImage: `url(${bakeryPattern})`,
-                backgroundSize: '150px 150px',
+                backgroundSize: '120px 120px',
                 backgroundRepeat: 'repeat'
               }}
             />
             {/* Content Overlay */}
-            <div className="relative p-6 bg-cream/95 backdrop-blur-sm h-full">
+            <div className="relative p-6 h-full">
               {/* Header */}
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-almond">
                 <h3 className="text-lg font-semibold text-navy">Menu</h3>

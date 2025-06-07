@@ -217,10 +217,10 @@ export default function Header() {
           <div className="fixed top-0 right-0 h-full w-80 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out hidden md:block bg-cream">
             {/* Background Pattern */}
             <div 
-              className="absolute inset-0 opacity-20"
+              className="absolute inset-0 opacity-25"
               style={{
                 backgroundImage: `url(${bakeryPattern})`,
-                backgroundSize: '120px 120px',
+                backgroundSize: '250px 250px',
                 backgroundRepeat: 'repeat'
               }}
             />

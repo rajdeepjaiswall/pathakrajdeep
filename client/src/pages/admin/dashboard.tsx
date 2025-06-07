@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import Header from '@/components/layout/header';
+import AdminSidebar from '@/components/admin/admin-sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { formatPrice } from '@/lib/cart';
 import { ORDER_STATUSES } from '@/lib/constants';
@@ -77,14 +77,16 @@ export default function AdminDashboard() {
   if (authLoading || analyticsLoading) {
     return (
       <div className="min-h-screen bg-cream">
-        <Header />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-200 rounded w-1/4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded-lg" />
-              ))}
+        <AdminSidebar />
+        <div className="lg:pl-64">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="animate-pulse space-y-6">
+              <div className="h-8 bg-gray-200 rounded w-1/4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-32 bg-gray-200 rounded-lg" />
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -94,55 +96,56 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <Header />
+      <AdminSidebar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user?.username}! Here's what's happening with your bakery.</p>
-        </div>
+      <div className="lg:pl-64">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-navy mb-2">Admin Dashboard</h1>
+            <p className="text-gray-600">Welcome back, {user?.username}! Here's what's happening with your bakery.</p>
+          </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-          <Link href="/admin/orders">
-            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
-              <ShoppingCart className="h-6 w-6" />
-              <span>Orders</span>
-            </Button>
-          </Link>
-          <Link href="/admin/products">
-            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
-              <Package className="h-6 w-6" />
-              <span>Products</span>
-            </Button>
-          </Link>
-          <Link href="/admin/customers">
-            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
-              <Users className="h-6 w-6" />
-              <span>Customers</span>
-            </Button>
-          </Link>
-          <Link href="/admin/banners">
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+            <Link href="/admin/orders">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+                <ShoppingCart className="h-6 w-6" />
+                <span>Orders</span>
+              </Button>
+            </Link>
+            <Link href="/admin/products">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+                <Package className="h-6 w-6" />
+                <span>Products</span>
+              </Button>
+            </Link>
+            <Link href="/admin/customers">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+                <Users className="h-6 w-6" />
+                <span>Customers</span>
+              </Button>
+            </Link>
+            <Link href="/admin/banners">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+                <TrendingUp className="h-6 w-6" />
+                <span>Banners</span>
+              </Button>
+            </Link>
+            <Link href="/admin/categories">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+                <Package className="h-6 w-6" />
+                <span>Categories</span>
+              </Button>
+            </Link>
             <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
               <TrendingUp className="h-6 w-6" />
-              <span>Banners</span>
+              <span>Reports</span>
             </Button>
-          </Link>
-          <Link href="/admin/categories">
-            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
-              <Package className="h-6 w-6" />
-              <span>Categories</span>
-            </Button>
-          </Link>
-          <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
-            <TrendingUp className="h-6 w-6" />
-            <span>Reports</span>
-          </Button>
-        </div>
+          </div>
 
-        {/* Analytics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Analytics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -259,6 +262,7 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
+        </div>
         </div>
       </div>
     </div>

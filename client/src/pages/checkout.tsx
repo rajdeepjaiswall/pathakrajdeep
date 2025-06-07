@@ -19,7 +19,7 @@ import { formatPrice, getGSTBreakdown } from '@/lib/cart';
 import { apiRequest } from '@/lib/queryClient';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { insertAddressSchema, insertOrderSchema } from '@shared/schema';
+import { insertAddressSchema, insertOrderSchema, type Address } from '@shared/schema';
 import { z } from 'zod';
 
 const addressFormSchema = insertAddressSchema.omit({ user_id: true });
@@ -50,7 +50,7 @@ export default function Checkout() {
   }
 
   // Fetch addresses
-  const { data: addresses = [] } = useQuery({
+  const { data: addresses = [] } = useQuery<Address[]>({
     queryKey: ['/api/addresses'],
   });
 
@@ -82,7 +82,7 @@ export default function Checkout() {
   // Add address mutation
   const addAddressMutation = useMutation({
     mutationFn: async (data: z.infer<typeof addressFormSchema>) => {
-      const response = await apiRequest('POST', '/api/addresses', data);
+      const response = await apiRequest('/api/addresses', 'POST', data);
       return response.json();
     },
     onSuccess: (newAddress) => {
@@ -107,7 +107,7 @@ export default function Checkout() {
   // Place order mutation
   const placeOrderMutation = useMutation({
     mutationFn: async (data: z.infer<typeof orderFormSchema>) => {
-      const selectedAddr = addresses.find((addr: any) => addr.id === selectedAddress);
+      const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
       if (!selectedAddr) throw new Error('Please select a delivery address');
 
       const orderData = {
@@ -133,12 +133,12 @@ export default function Checkout() {
         notes: data.notes,
       };
 
-      const response = await apiRequest('POST', '/api/orders', orderData);
+      const response = await apiRequest('/api/orders', 'POST', orderData);
       const order = await response.json();
 
       // Create order items
       for (const item of items) {
-        await apiRequest('POST', '/api/order-items', {
+        await apiRequest('/api/order-items', 'POST', {
           order_id: order.id,
           product_id: item.product_id,
           quantity: item.quantity,

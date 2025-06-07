@@ -309,10 +309,10 @@ export default function Checkout() {
                           />
                           <FormField
                             control={addressForm.control}
-                            name="pincode"
+                            name="state"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Pincode</FormLabel>
+                                <FormLabel>State</FormLabel>
                                 <FormControl>
                                   <Input {...field} />
                                 </FormControl>
@@ -321,6 +321,19 @@ export default function Checkout() {
                             )}
                           />
                         </div>
+                        <FormField
+                          control={addressForm.control}
+                          name="pincode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Pincode</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         <FormField
                           control={addressForm.control}
                           name="landmark"

@@ -20,12 +20,12 @@ const profileSchema = z.object({
 });
 
 const addressSchema = z.object({
-  address_line_1: z.string().min(5, 'Address line 1 is required'),
-  address_line_2: z.string().optional(),
+  addressLine1: z.string().min(5, 'Address line 1 is required'),
+  addressLine2: z.string().optional(),
   area: z.string().min(2, 'Area is required'),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
-  pin_code: z.string().regex(/^\d{6}$/, 'Pin code must be 6 digits'),
+  pinCode: z.string().regex(/^\d{6}$/, 'Pin code must be 6 digits'),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;

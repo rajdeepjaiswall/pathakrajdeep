@@ -185,12 +185,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: updatedUser.role,
         email: updatedUser.email,
         phone: updatedUser.phone,
-        address_line_1: updatedUser.address_line_1,
-        address_line_2: updatedUser.address_line_2,
+        address_line_1: updatedUser.addressLine1,
+        address_line_2: updatedUser.addressLine2,
         area: updatedUser.area,
         city: updatedUser.city,
         state: updatedUser.state,
-        pin_code: updatedUser.pin_code,
+        pin_code: updatedUser.pinCode,
       });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -199,16 +199,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/auth/address", authenticateToken, async (req, res) => {
     try {
-      const { address_line_1, address_line_2, area, city, state, pin_code } = req.body;
+      const { addressLine1, addressLine2, area, city, state, pinCode } = req.body;
       const userId = req.user.id;
       
       const updatedUser = await storage.updateUser(userId, {
-        address_line_1,
-        address_line_2,
+        addressLine1,
+        addressLine2,
         area,
         city,
         state,
-        pin_code,
+        pinCode,
       });
       
       res.json({
@@ -217,12 +217,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: updatedUser.role,
         email: updatedUser.email,
         phone: updatedUser.phone,
-        address_line_1: updatedUser.address_line_1,
-        address_line_2: updatedUser.address_line_2,
+        address_line_1: updatedUser.addressLine1,
+        address_line_2: updatedUser.addressLine2,
         area: updatedUser.area,
         city: updatedUser.city,
         state: updatedUser.state,
-        pin_code: updatedUser.pin_code,
+        pin_code: updatedUser.pinCode,
       });
     } catch (error: any) {
       res.status(400).json({ message: error.message });

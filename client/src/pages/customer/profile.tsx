@@ -50,12 +50,12 @@ export default function CustomerProfile() {
   const addressForm = useForm<AddressForm>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
-      address_line_1: user?.address_line_1 || '',
-      address_line_2: user?.address_line_2 || '',
+      addressLine1: user?.address_line_1 || '',
+      addressLine2: user?.address_line_2 || '',
       area: user?.area || '',
       city: user?.city || '',
       state: user?.state || '',
-      pin_code: user?.pin_code || '',
+      pinCode: user?.pin_code || '',
     },
   });
 
@@ -293,41 +293,41 @@ export default function CustomerProfile() {
                   <form onSubmit={addressForm.handleSubmit(onAddressSubmit)} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
-                        <Label htmlFor="address_line_1">Address Line 1</Label>
+                        <Label htmlFor="addressLine1">Address Line 1</Label>
                         <Input
-                          id="address_line_1"
-                          {...addressForm.register('address_line_1')}
+                          id="addressLine1"
+                          {...addressForm.register('addressLine1')}
                           placeholder="House/Flat number, Building name"
                           className="mt-1"
                         />
-                        {addressForm.formState.errors.address_line_1 && (
+                        {addressForm.formState.errors.addressLine1 && (
                           <p className="text-red-500 text-sm mt-1">
-                            {addressForm.formState.errors.address_line_1.message}
+                            {addressForm.formState.errors.addressLine1.message}
                           </p>
                         )}
                       </div>
                       <div className="md:col-span-2">
-                        <Label htmlFor="address_line_2">Address Line 2 (Optional)</Label>
+                        <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
                         <Input
-                          id="address_line_2"
-                          {...addressForm.register('address_line_2')}
+                          id="addressLine2"
+                          {...addressForm.register('addressLine2')}
                           placeholder="Street name, Locality"
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="pin_code">Pin Code</Label>
+                        <Label htmlFor="pinCode">Pin Code</Label>
                         <Input
-                          id="pin_code"
-                          {...addressForm.register('pin_code', {
+                          id="pinCode"
+                          {...addressForm.register('pinCode', {
                             onChange: (e) => handlePinCodeChange(e.target.value)
                           })}
                           placeholder="6-digit pin code"
                           className="mt-1"
                         />
-                        {addressForm.formState.errors.pin_code && (
+                        {addressForm.formState.errors.pinCode && (
                           <p className="text-red-500 text-sm mt-1">
-                            {addressForm.formState.errors.pin_code.message}
+                            {addressForm.formState.errors.pinCode.message}
                           </p>
                         )}
                       </div>

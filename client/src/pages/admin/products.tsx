@@ -359,16 +359,20 @@ export default function AdminProducts() {
                                         onChange={(e) => {
                                           const file = e.target.files?.[0];
                                           if (file) {
-                                            // Create a local URL for the uploaded image
-                                            const imageUrl = URL.createObjectURL(file);
-                                            const newImages = [...field.value];
-                                            newImages[index] = imageUrl;
-                                            field.onChange(newImages);
-                                            
-                                            toast({
-                                              title: "Photo uploaded",
-                                              description: `Photo ${index + 1} has been added successfully`,
-                                            });
+                                            // Convert file to base64 data URL for persistence
+                                            const reader = new FileReader();
+                                            reader.onload = (event) => {
+                                              const imageUrl = event.target?.result as string;
+                                              const newImages = [...field.value];
+                                              newImages[index] = imageUrl;
+                                              field.onChange(newImages);
+                                              
+                                              toast({
+                                                title: "Photo uploaded",
+                                                description: `Photo ${index + 1} has been added successfully`,
+                                              });
+                                            };
+                                            reader.readAsDataURL(file);
                                           }
                                         }}
                                       />
@@ -438,16 +442,20 @@ export default function AdminProducts() {
                                         onChange={(e) => {
                                           const file = e.target.files?.[0];
                                           if (file) {
-                                            // Create a local URL for the uploaded video
-                                            const videoUrl = URL.createObjectURL(file);
-                                            const newVideos = [...field.value];
-                                            newVideos[index] = videoUrl;
-                                            field.onChange(newVideos);
-                                            
-                                            toast({
-                                              title: "Video uploaded",
-                                              description: `Video ${index + 1} has been added successfully`,
-                                            });
+                                            // Convert video file to data URL for persistence
+                                            const reader = new FileReader();
+                                            reader.onload = (event) => {
+                                              const videoUrl = event.target?.result as string;
+                                              const newVideos = [...field.value];
+                                              newVideos[index] = videoUrl;
+                                              field.onChange(newVideos);
+                                              
+                                              toast({
+                                                title: "Video uploaded",
+                                                description: `Video ${index + 1} has been added successfully`,
+                                              });
+                                            };
+                                            reader.readAsDataURL(file);
                                           }
                                         }}
                                       />

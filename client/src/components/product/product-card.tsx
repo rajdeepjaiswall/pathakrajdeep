@@ -38,7 +38,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     
     // If no media, show a placeholder
     if (items.length === 0) {
-      items.push({ type: 'image' as const, url: '/placeholder-product.jpg' });
+      items.push({ type: 'image' as const, url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300&q=80' });
     }
     
     return items;
@@ -94,6 +94,12 @@ export default function ProductCard({ product }: ProductCardProps) {
                 src={mediaItems[currentImageIndex].url} 
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== '/placeholder-product.jpg') {
+                    target.src = '/placeholder-product.jpg';
+                  }
+                }}
               />
             )}
             

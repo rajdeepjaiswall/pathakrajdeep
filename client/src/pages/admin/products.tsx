@@ -341,38 +341,38 @@ export default function AdminProducts() {
                                       </Button>
                                     </div>
                                   ) : (
-                                    <div className="space-y-2">
-                                      <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                                      <div>
-                                        <Input
-                                          type="file"
-                                          accept="image/*"
-                                          className="hidden"
-                                          id={`image-${index}`}
-                                          onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                              // Create a local URL for the uploaded image
-                                              const imageUrl = URL.createObjectURL(file);
-                                              const newImages = [...field.value];
-                                              newImages[index] = imageUrl;
-                                              field.onChange(newImages);
-                                              
-                                              toast({
-                                                title: "Photo uploaded",
-                                                description: `Photo ${index + 1} has been added successfully`,
-                                              });
-                                            }
-                                          }}
-                                        />
-                                        <label 
-                                          htmlFor={`image-${index}`}
-                                          className="cursor-pointer text-sm text-champagne hover:text-champagne/80"
-                                        >
-                                          Click to upload
-                                        </label>
+                                    <label 
+                                      htmlFor={`image-${index}`}
+                                      className="cursor-pointer block w-full h-full"
+                                    >
+                                      <div className="space-y-2 flex flex-col items-center justify-center h-full">
+                                        <Upload className="h-8 w-8 text-gray-400" />
+                                        <span className="text-sm text-champagne hover:text-champagne/80">
+                                          Click to upload photo
+                                        </span>
                                       </div>
-                                    </div>
+                                      <Input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        id={`image-${index}`}
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            // Create a local URL for the uploaded image
+                                            const imageUrl = URL.createObjectURL(file);
+                                            const newImages = [...field.value];
+                                            newImages[index] = imageUrl;
+                                            field.onChange(newImages);
+                                            
+                                            toast({
+                                              title: "Photo uploaded",
+                                              description: `Photo ${index + 1} has been added successfully`,
+                                            });
+                                          }
+                                        }}
+                                      />
+                                    </label>
                                   )}
                                 </div>
                               ))}
@@ -420,38 +420,38 @@ export default function AdminProducts() {
                                       </Button>
                                     </div>
                                   ) : (
-                                    <div className="space-y-2">
-                                      <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                                      <div>
-                                        <Input
-                                          type="file"
-                                          accept="video/*"
-                                          className="hidden"
-                                          id={`video-${index}`}
-                                          onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                              // Create a local URL for the uploaded video
-                                              const videoUrl = URL.createObjectURL(file);
-                                              const newVideos = [...field.value];
-                                              newVideos[index] = videoUrl;
-                                              field.onChange(newVideos);
-                                              
-                                              toast({
-                                                title: "Video uploaded",
-                                                description: `Video ${index + 1} has been added successfully`,
-                                              });
-                                            }
-                                          }}
-                                        />
-                                        <label 
-                                          htmlFor={`video-${index}`}
-                                          className="cursor-pointer text-sm text-champagne hover:text-champagne/80"
-                                        >
-                                          Click to upload
-                                        </label>
+                                    <label 
+                                      htmlFor={`video-${index}`}
+                                      className="cursor-pointer block w-full h-full"
+                                    >
+                                      <div className="space-y-2 flex flex-col items-center justify-center h-full">
+                                        <Upload className="h-8 w-8 text-gray-400" />
+                                        <span className="text-sm text-champagne hover:text-champagne/80">
+                                          Click to upload video
+                                        </span>
                                       </div>
-                                    </div>
+                                      <Input
+                                        type="file"
+                                        accept="video/*"
+                                        className="hidden"
+                                        id={`video-${index}`}
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            // Create a local URL for the uploaded video
+                                            const videoUrl = URL.createObjectURL(file);
+                                            const newVideos = [...field.value];
+                                            newVideos[index] = videoUrl;
+                                            field.onChange(newVideos);
+                                            
+                                            toast({
+                                              title: "Video uploaded",
+                                              description: `Video ${index + 1} has been added successfully`,
+                                            });
+                                          }
+                                        }}
+                                      />
+                                    </label>
                                   )}
                                 </div>
                               ))}

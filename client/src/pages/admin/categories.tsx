@@ -47,10 +47,7 @@ export default function AdminCategories() {
   // Create category mutation
   const createCategoryMutation = useMutation({
     mutationFn: async (categoryData: any) => {
-      return await apiRequest('/api/admin/categories', {
-        method: 'POST',
-        body: JSON.stringify(categoryData),
-      });
+      return await apiRequest('/api/admin/categories', 'POST', categoryData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
@@ -77,10 +74,7 @@ export default function AdminCategories() {
   // Update category mutation
   const updateCategoryMutation = useMutation({
     mutationFn: async ({ id, ...categoryData }: any) => {
-      return await apiRequest(`/api/admin/categories/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(categoryData),
-      });
+      return await apiRequest(`/api/admin/categories/${id}`, 'PATCH', categoryData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
@@ -102,9 +96,7 @@ export default function AdminCategories() {
   // Delete category mutation
   const deleteCategoryMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/admin/categories/${id}`, {
-        method: 'DELETE',
-      });
+      return await apiRequest(`/api/admin/categories/${id}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });

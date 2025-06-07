@@ -67,7 +67,7 @@ export default function AdminLogin() {
             </div>
             <CardTitle className="text-2xl font-bold text-navy">Admin Dashboard</CardTitle>
             <CardDescription>
-              Sign in to access the shopkeeper dashboard
+              Use: pathakji / bhandar123 or rajdeep / web123
             </CardDescription>
           </CardHeader>
           <CardContent>

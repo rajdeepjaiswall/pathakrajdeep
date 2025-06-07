@@ -239,30 +239,30 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                {analytics?.topProducts?.slice(0, 5).map((product: any) => (
-                  <div key={product.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <img
-                      src={product.images[0] || '/placeholder-product.jpg'}
-                      alt={product.name}
-                      className="w-12 h-12 object-cover rounded-lg"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-navy">{product.name}</h4>
-                      <p className="text-sm text-gray-600">{formatPrice(parseFloat(product.price))}</p>
+                  {analytics?.topProducts?.slice(0, 5).map((product: any) => (
+                    <div key={product.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <img
+                        src={product.images[0] || '/placeholder-product.jpg'}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-navy">{product.name}</h4>
+                        <p className="text-sm text-gray-600">{formatPrice(parseFloat(product.price))}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-champagne">{product.orderCount}</p>
+                        <p className="text-xs text-gray-500">orders</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-champagne">{product.orderCount}</p>
-                      <p className="text-xs text-gray-500">orders</p>
-                    </div>
-                  </div>
-                )) || []}
-                {(!analytics?.topProducts || analytics.topProducts.length === 0) && (
-                  <p className="text-gray-500 text-center py-8">No sales data yet</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  )) || []}
+                  {(!analytics?.topProducts || analytics.topProducts.length === 0) && (
+                    <p className="text-gray-500 text-center py-8">No sales data yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

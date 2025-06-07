@@ -43,6 +43,7 @@ function Router() {
       <Route path="/customer/wishlist" component={CustomerWishlist} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/orders" component={AdminOrders} />
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/customers" component={AdminCustomers} />

@@ -43,11 +43,10 @@ export function CartProvider({ children }: CartProviderProps) {
   // Add to cart mutation
   const addToCartMutation = useMutation({
     mutationFn: async ({ productId, quantity }: { productId: number; quantity: number }) => {
-      const response = await apiRequest('POST', '/api/cart', {
+      return await apiRequest('/api/cart', 'POST', {
         product_id: productId,
         quantity,
       });
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -68,10 +67,9 @@ export function CartProvider({ children }: CartProviderProps) {
   // Update quantity mutation
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ cartItemId, quantity }: { cartItemId: number; quantity: number }) => {
-      const response = await apiRequest('PUT', `/api/cart/${cartItemId}`, {
+      return await apiRequest(`/api/cart/${cartItemId}`, 'PUT', {
         quantity,
       });
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -88,7 +86,7 @@ export function CartProvider({ children }: CartProviderProps) {
   // Remove from cart mutation
   const removeFromCartMutation = useMutation({
     mutationFn: async (cartItemId: number) => {
-      await apiRequest('DELETE', `/api/cart/${cartItemId}`);
+      return await apiRequest(`/api/cart/${cartItemId}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });

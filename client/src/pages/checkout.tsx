@@ -204,7 +204,7 @@ export default function Checkout() {
                     value={selectedAddress?.toString()}
                     onValueChange={(value) => setSelectedAddress(parseInt(value))}
                   >
-                    {addresses.map((address: any) => (
+                    {addresses.map((address) => (
                       <div key={address.id} className="flex items-start space-x-3 p-4 border rounded-lg">
                         <RadioGroupItem value={address.id.toString()} className="mt-1" />
                         <div className="flex-1">

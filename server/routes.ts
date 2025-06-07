@@ -44,9 +44,11 @@ function optionalAuth(req: any, res: any, next: any) {
       if (!err) {
         req.user = user;
       }
+      next();
     });
+  } else {
+    next();
   }
-  next();
 }
 
 // Middleware to verify admin role

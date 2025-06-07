@@ -21,6 +21,8 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AdminOrders from "@/pages/admin/orders";
 import AdminProducts from "@/pages/admin/products";
 import AdminCustomers from "@/pages/admin/customers";
+import AdminBanners from "@/pages/admin/banners";
+import AdminCategories from "@/pages/admin/categories";
 import SuperAdminLogin from "@/pages/super-admin/login";
 import SuperAdminDashboard from "@/pages/super-admin/dashboard";
 import LogoManager from "@/pages/super-admin/logo-manager";
@@ -47,6 +49,8 @@ function Router() {
       <Route path="/admin/orders" component={AdminOrders} />
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/customers" component={AdminCustomers} />
+      <Route path="/admin/banners" component={AdminBanners} />
+      <Route path="/admin/categories" component={AdminCategories} />
       <Route path="/super-admin/login" component={SuperAdminLogin} />
       <Route path="/super-admin" component={SuperAdminDashboard} />
       <Route path="/super-admin/logo-manager" component={LogoManager} />

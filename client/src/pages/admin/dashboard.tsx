@@ -91,7 +91,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
           <Link href="/admin/orders">
             <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
               <ShoppingCart className="h-6 w-6" />
@@ -108,6 +108,18 @@ export default function AdminDashboard() {
             <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
               <Users className="h-6 w-6" />
               <span>Customers</span>
+            </Button>
+          </Link>
+          <Link href="/admin/banners">
+            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+              <TrendingUp className="h-6 w-6" />
+              <span>Banners</span>
+            </Button>
+          </Link>
+          <Link href="/admin/categories">
+            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
+              <Package className="h-6 w-6" />
+              <span>Categories</span>
             </Button>
           </Link>
           <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">

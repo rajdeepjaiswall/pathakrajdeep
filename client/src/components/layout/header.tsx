@@ -103,8 +103,17 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t bg-white shadow-lg">
-          <div className="px-4 py-4 space-y-3">
+        <div className="md:hidden border-t shadow-lg relative bg-cream">
+          {/* Background Pattern for Mobile */}
+          <div 
+            className="absolute inset-0 opacity-15"
+            style={{
+              backgroundImage: `url(${bakeryPattern})`,
+              backgroundSize: '180px 180px',
+              backgroundRepeat: 'repeat'
+            }}
+          />
+          <div className="relative px-4 py-4 space-y-3">
             {navigation.map((item) => (
               <Link
                 key={item.name}

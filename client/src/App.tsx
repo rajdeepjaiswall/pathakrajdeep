@@ -40,6 +40,7 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/login" component={CustomerLogin} />
       <Route path="/register" component={CustomerRegister} />
+      <Route path="/account" component={CustomerProfile} />
       <Route path="/customer/register" component={CustomerRegister} />
       <Route path="/customer/profile" component={CustomerProfile} />
       <Route path="/customer/wishlist" component={CustomerWishlist} />

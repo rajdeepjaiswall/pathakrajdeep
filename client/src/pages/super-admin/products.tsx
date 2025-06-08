@@ -137,8 +137,8 @@ export default function ProductManager() {
     return (originalPrice * (1 - discount / 100)).toFixed(0);
   };
 
-  const displayProducts = products?.data || [];
-  const displayCategories = categories?.data || [];
+  const displayProducts = products || [];
+  const displayCategories = categories || [];
 
   return (
     <div className="min-h-screen bg-cream">

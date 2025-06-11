@@ -351,6 +351,156 @@ export default function AdminOrders() {
                                       </SelectContent>
                                     </Select>
                                   </div>
+
+                                  {/* Rider Assignment */}
+                                  <div>
+                                    <h4 className="font-medium mb-2">Delivery Partner</h4>
+                                    {selectedOrder.riderName ? (
+                                      <div className="space-y-3">
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                          <div className="flex items-center justify-between">
+                                            <div>
+                                              <p className="font-medium flex items-center gap-2">
+                                                <User className="h-4 w-4" />
+                                                {selectedOrder.riderName}
+                                              </p>
+                                              {selectedOrder.riderPhone && (
+                                                <p className="text-sm text-gray-600 flex items-center gap-2">
+                                                  <Phone className="h-3 w-3" />
+                                                  {selectedOrder.riderPhone}
+                                                </p>
+                                              )}
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setIsEditingRider(selectedOrder.id);
+                                                setRiderName(selectedOrder.riderName || '');
+                                                setRiderPhone(selectedOrder.riderPhone || '');
+                                              }}
+                                            >
+                                              <Edit className="h-3 w-3 mr-1" />
+                                              Edit
+                                            </Button>
+                                          </div>
+                                        </div>
+
+                                        {isEditingRider === selectedOrder.id && (
+                                          <div className="space-y-3 p-3 border rounded-lg">
+                                            <div>
+                                              <Label htmlFor="riderName">Rider Name</Label>
+                                              <Input
+                                                id="riderName"
+                                                value={riderName}
+                                                onChange={(e) => setRiderName(e.target.value)}
+                                                placeholder="Enter rider name"
+                                              />
+                                            </div>
+                                            <div>
+                                              <Label htmlFor="riderPhone">Rider Phone</Label>
+                                              <Input
+                                                id="riderPhone"
+                                                value={riderPhone}
+                                                onChange={(e) => setRiderPhone(e.target.value)}
+                                                placeholder="Enter phone number"
+                                              />
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <Button
+                                                size="sm"
+                                                onClick={() => updateRiderMutation.mutate({
+                                                  orderId: selectedOrder.id,
+                                                  riderName,
+                                                  riderPhone
+                                                })}
+                                                disabled={updateRiderMutation.isPending}
+                                              >
+                                                <Save className="h-3 w-3 mr-1" />
+                                                Save
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setIsEditingRider(null);
+                                                  setRiderName('');
+                                                  setRiderPhone('');
+                                                }}
+                                              >
+                                                <X className="h-3 w-3 mr-1" />
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-3">
+                                        <p className="text-sm text-gray-600">No rider assigned yet</p>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => {
+                                            setIsEditingRider(selectedOrder.id);
+                                            setRiderName('');
+                                            setRiderPhone('');
+                                          }}
+                                        >
+                                          <User className="h-3 w-3 mr-1" />
+                                          Assign Rider
+                                        </Button>
+
+                                        {isEditingRider === selectedOrder.id && (
+                                          <div className="space-y-3 p-3 border rounded-lg">
+                                            <div>
+                                              <Label htmlFor="riderName">Rider Name</Label>
+                                              <Input
+                                                id="riderName"
+                                                value={riderName}
+                                                onChange={(e) => setRiderName(e.target.value)}
+                                                placeholder="Enter rider name"
+                                              />
+                                            </div>
+                                            <div>
+                                              <Label htmlFor="riderPhone">Rider Phone</Label>
+                                              <Input
+                                                id="riderPhone"
+                                                value={riderPhone}
+                                                onChange={(e) => setRiderPhone(e.target.value)}
+                                                placeholder="Enter phone number"
+                                              />
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <Button
+                                                size="sm"
+                                                onClick={() => updateRiderMutation.mutate({
+                                                  orderId: selectedOrder.id,
+                                                  riderName,
+                                                  riderPhone
+                                                })}
+                                                disabled={updateRiderMutation.isPending}
+                                              >
+                                                <Save className="h-3 w-3 mr-1" />
+                                                Assign
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setIsEditingRider(null);
+                                                  setRiderName('');
+                                                  setRiderPhone('');
+                                                }}
+                                              >
+                                                <X className="h-3 w-3 mr-1" />
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               )}
                             </DialogContent>

@@ -56,6 +56,7 @@ export interface IStorage {
   createOrder(order: InsertOrder): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
+  updateOrderRider(id: number, riderName: string, riderPhone: string): Promise<Order>;
   getAllOrders(status?: string): Promise<Order[]>;
 
   // Review methods
@@ -412,6 +413,15 @@ export class DatabaseStorage implements IStorage {
     const [order] = await db
       .update(orders)
       .set({ status })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async updateOrderRider(id: number, riderName: string, riderPhone: string): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({ riderName, riderPhone })
       .where(eq(orders.id, id))
       .returning();
     return order;

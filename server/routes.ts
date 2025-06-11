@@ -510,6 +510,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer orders route
+  app.get("/api/orders", authenticateToken, async (req, res) => {
+    try {
+      const orders = await storage.getOrders(req.user.id);
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Cancel order route
+  app.put("/api/orders/:id/cancel", authenticateToken, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await storage.updateOrderStatus(orderId, 'cancelled');
+      res.json(order);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Admin routes
   app.get("/api/admin/orders", authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -525,6 +546,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status } = req.body;
       const order = await storage.updateOrderStatus(parseInt(req.params.id), status);
+      res.json(order);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/orders/:id/rider", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const { riderName, riderPhone } = req.body;
+      const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone);
       res.json(order);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

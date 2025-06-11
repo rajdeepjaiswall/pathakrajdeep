@@ -93,6 +93,8 @@ export const orders = pgTable("orders", {
   orderDate: timestamp("order_date").defaultNow(),
   deliveryDate: timestamp("delivery_date"),
   notes: text("notes"),
+  riderName: text("rider_name"),
+  riderPhone: text("rider_phone"),
 });
 
 // Order items table

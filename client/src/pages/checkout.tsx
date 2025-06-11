@@ -118,8 +118,8 @@ export default function Checkout() {
         gstAmount: summary.gstAmount.toString(),
         deliveryCharge: summary.deliveryCharge.toString(),
         total: summary.total.toString(),
-        paymentMethod: data.paymentMethod,
-        paymentStatus: data.paymentMethod === 'cod' ? 'pending' : 'paid',
+        paymentMethod: 'cod',
+        paymentStatus: 'confirmed',
         deliveryAddress: {
           name: selectedAddr.name,
           phone: selectedAddr.phone,
@@ -382,21 +382,32 @@ export default function Checkout() {
                             defaultValue={field.value}
                             className="space-y-3"
                           >
-                            <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                              <RadioGroupItem value="upi" />
+                            <div className="flex items-center space-x-3 p-4 border-2 border-green-500 bg-green-50 rounded-lg">
+                              <RadioGroupItem value="cod" checked />
                               <div className="flex items-center gap-2">
-                                <Smartphone className="h-5 w-5 text-purple-600" />
-                                <span>UPI Payment</span>
+                                <Truck className="h-5 w-5 text-green-600" />
+                                <span className="font-semibold text-green-800">Cash on Delivery (Recommended)</span>
                               </div>
                             </div>
-                            <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                              <RadioGroupItem value="card" />
-                              <div className="flex items-center gap-2">
-                                <CreditCard className="h-5 w-5 text-blue-600" />
-                                <span>Credit/Debit Card</span>
+                            <div className="opacity-50 pointer-events-none">
+                              <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                                <RadioGroupItem value="upi" disabled />
+                                <div className="flex items-center gap-2">
+                                  <Smartphone className="h-5 w-5 text-gray-400" />
+                                  <span className="text-gray-500">UPI Payment (Coming Soon)</span>
+                                </div>
                               </div>
                             </div>
-                            <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                            <div className="opacity-50 pointer-events-none">
+                              <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                                <RadioGroupItem value="card" disabled />
+                                <div className="flex items-center gap-2">
+                                  <CreditCard className="h-5 w-5 text-gray-400" />
+                                  <span className="text-gray-500">Credit/Debit Card (Coming Soon)</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="hidden">
                               <RadioGroupItem value="cod" />
                               <div className="flex items-center gap-2">
                                 <Truck className="h-5 w-5 text-green-600" />

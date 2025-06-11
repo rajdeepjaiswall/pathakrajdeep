@@ -150,13 +150,28 @@ export default function Checkout() {
       return order;
     },
     onSuccess: (order) => {
+      const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
+      
+      // Store order details for confirmation page
+      const orderDetails = {
+        ...order,
+        deliveryAddress: selectedAddr,
+        paymentMethod: 'cod',
+        total: summary.total.toString(),
+        subtotal: summary.subtotal.toString(),
+        gstAmount: summary.gstAmount.toString(),
+        deliveryCharge: summary.deliveryCharge.toString(),
+      };
+      
+      localStorage.setItem('lastOrderDetails', JSON.stringify(orderDetails));
+      
       clearCart();
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
         title: 'Order placed successfully!',
         description: `Order #${order.orderNumber} has been placed`,
       });
-      setLocation('/orders');
+      setLocation('/order-confirmation');
     },
     onError: (error: any) => {
       toast({

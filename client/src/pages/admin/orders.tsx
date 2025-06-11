@@ -41,9 +41,18 @@ export default function AdminOrders() {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       
+      const token = localStorage.getItem('token');
       const response = await fetch(`/api/admin/orders?${params.toString()}`, {
-        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
+      }
+      
       return response.json();
     },
   });
@@ -333,9 +342,10 @@ export default function AdminOrders() {
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                                        <SelectItem value="processing">Processing</SelectItem>
-                                        <SelectItem value="shipped">Shipped</SelectItem>
+                                        <SelectItem value="order_received">Order Received</SelectItem>
+                                        <SelectItem value="preparing">Preparing</SelectItem>
+                                        <SelectItem value="dispatched">Dispatched</SelectItem>
+                                        <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
                                         <SelectItem value="delivered">Delivered</SelectItem>
                                         <SelectItem value="cancelled">Cancelled</SelectItem>
                                       </SelectContent>
@@ -355,9 +365,10 @@ export default function AdminOrders() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="confirmed">Confirmed</SelectItem>
-                              <SelectItem value="processing">Processing</SelectItem>
-                              <SelectItem value="shipped">Shipped</SelectItem>
+                              <SelectItem value="order_received">Order Received</SelectItem>
+                              <SelectItem value="preparing">Preparing</SelectItem>
+                              <SelectItem value="dispatched">Dispatched</SelectItem>
+                              <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
                               <SelectItem value="delivered">Delivered</SelectItem>
                               <SelectItem value="cancelled">Cancelled</SelectItem>
                             </SelectContent>

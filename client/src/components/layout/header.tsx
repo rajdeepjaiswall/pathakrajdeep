@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3 } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
@@ -175,6 +175,16 @@ export default function Header() {
                   >
                     <Heart className="h-5 w-5 text-navy" />
                     <span className="text-navy font-medium">Wishlist</span>
+                  </div>
+                </Link>
+
+                <Link href="/customer/orders">
+                  <div 
+                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Package className="h-5 w-5 text-navy" />
+                    <span className="text-navy font-medium">My Orders</span>
                   </div>
                 </Link>
 

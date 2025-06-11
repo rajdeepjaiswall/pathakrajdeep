@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, Search, Filter, Download, CheckCircle, Clock, Package, Truck } from 'lucide-react';
+import { Eye, Search, Filter, Download, CheckCircle, Clock, Package, Truck, User, Phone, Edit, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +24,9 @@ export default function AdminOrders() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isEditingRider, setIsEditingRider] = useState<number | null>(null);
+  const [riderName, setRiderName] = useState('');
+  const [riderPhone, setRiderPhone] = useState('');
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -47,7 +51,7 @@ export default function AdminOrders() {
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
-      const response = await apiRequest('PUT', `/api/admin/orders/${orderId}/status`, { status });
+      const response = await apiRequest(`/api/admin/orders/${orderId}/status`, 'PUT', { status });
       return response.json();
     },
     onSuccess: () => {
@@ -66,12 +70,41 @@ export default function AdminOrders() {
     },
   });
 
+  // Update rider assignment mutation
+  const updateRiderMutation = useMutation({
+    mutationFn: async ({ orderId, riderName, riderPhone }: { orderId: number; riderName: string; riderPhone: string }) => {
+      const response = await apiRequest(`/api/admin/orders/${orderId}/rider`, 'PUT', { 
+        riderName, 
+        riderPhone 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      setIsEditingRider(null);
+      setRiderName('');
+      setRiderPhone('');
+      toast({
+        title: 'Rider Assigned',
+        description: 'Delivery rider has been assigned successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to assign rider',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed': return 'bg-blue-100 text-blue-800';
-      case 'processing': return 'bg-purple-100 text-purple-800';
-      case 'shipped': return 'bg-indigo-100 text-indigo-800';
+      case 'pending': return 'bg-orange-100 text-orange-800';
+      case 'order_received': return 'bg-blue-100 text-blue-800';
+      case 'preparing': return 'bg-purple-100 text-purple-800';
+      case 'dispatched': return 'bg-indigo-100 text-indigo-800';
+      case 'out_for_delivery': return 'bg-cyan-100 text-cyan-800';
       case 'delivered': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -81,11 +114,25 @@ export default function AdminOrders() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="h-3 w-3" />;
-      case 'confirmed': return <CheckCircle className="h-3 w-3" />;
-      case 'processing': return <Package className="h-3 w-3" />;
-      case 'shipped': return <Truck className="h-3 w-3" />;
+      case 'order_received': return <CheckCircle className="h-3 w-3" />;
+      case 'preparing': return <Package className="h-3 w-3" />;
+      case 'dispatched': return <Truck className="h-3 w-3" />;
+      case 'out_for_delivery': return <Truck className="h-3 w-3" />;
       case 'delivered': return <CheckCircle className="h-3 w-3" />;
       default: return <Clock className="h-3 w-3" />;
+    }
+  };
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'order_received': return 'Order Received';
+      case 'preparing': return 'Preparing';
+      case 'dispatched': return 'Dispatched';
+      case 'out_for_delivery': return 'Out for Delivery';
+      case 'delivered': return 'Delivered';
+      case 'cancelled': return 'Cancelled';
+      default: return status;
     }
   };
 
@@ -138,9 +185,10 @@ export default function AdminOrders() {
                 <SelectContent>
                   <SelectItem value="all">All Orders</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="shipped">Shipped</SelectItem>
+                  <SelectItem value="order_received">Order Received</SelectItem>
+                  <SelectItem value="preparing">Preparing</SelectItem>
+                  <SelectItem value="dispatched">Dispatched</SelectItem>
+                  <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
                   <SelectItem value="delivered">Delivered</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
@@ -181,10 +229,10 @@ export default function AdminOrders() {
                           <h3 className="font-semibold text-navy">#{order.orderNumber}</h3>
                           <Badge className={`${getStatusColor(order.status)}`}>
                             {getStatusIcon(order.status)}
-                            <span className="ml-1">{ORDER_STATUSES[order.status as keyof typeof ORDER_STATUSES] || order.status}</span>
+                            <span className="ml-1">{getStatusDisplay(order.status)}</span>
                           </Badge>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm text-gray-600">
                           <div>
                             <span className="font-medium">Customer:</span> {order.deliveryAddress?.name}
                           </div>
@@ -194,6 +242,11 @@ export default function AdminOrders() {
                           <div>
                             <span className="font-medium">Payment:</span> {order.paymentMethod.toUpperCase()}
                           </div>
+                          {order.riderName && (
+                            <div>
+                              <span className="font-medium">Rider:</span> {order.riderName}
+                            </div>
+                          )}
                         </div>
                       </div>
                       

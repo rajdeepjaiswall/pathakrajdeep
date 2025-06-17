@@ -16,10 +16,15 @@ import { CATEGORIES } from '@/lib/constants';
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
   
-  // Fetch featured products
-  const { data: featuredProducts = [] } = useQuery({
-    queryKey: ['/api/products?featured=true'],
+  // Fetch all products
+  const { data: allProducts = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['/api/products'],
   });
+
+  // Filter featured products or show all if none are featured
+  const featuredProducts = (allProducts as any[]).filter((product: any) => product.featured).length > 0
+    ? (allProducts as any[]).filter((product: any) => product.featured)
+    : (allProducts as any[]);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({

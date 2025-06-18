@@ -1,38 +1,22 @@
-const { spawn } = require('child_process');
+/**
+ * Pathak Bhandar E-Commerce Platform - cPanel Entry Point
+ * This file serves as the main entry point for cPanel hosting
+ */
+
+// Import the compiled TypeScript server
 const path = require('path');
+const fs = require('fs');
 
-// cPanel Node.js entry point
-// This file starts the Express server for production deployment
+// Check if the compiled dist folder exists
+const distPath = path.join(__dirname, 'dist');
+const serverPath = path.join(distPath, 'server', 'index-cpanel.js');
 
-const serverPath = path.join(__dirname, 'server', 'index.ts');
-
-// Use tsx to run TypeScript files directly
-const server = spawn('npx', ['tsx', serverPath], {
-  stdio: 'inherit',
-  env: {
-    ...process.env,
-    NODE_ENV: 'production',
-    PORT: process.env.PORT || 3000
-  }
-});
-
-server.on('error', (err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
-
-server.on('close', (code) => {
-  console.log(`Server process exited with code ${code}`);
-  process.exit(code);
-});
-
-// Handle graceful shutdown
-process.on('SIGINT', () => {
-  console.log('Received SIGINT, shutting down gracefully...');
-  server.kill('SIGINT');
-});
-
-process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, shutting down gracefully...');
-  server.kill('SIGTERM');
-});
+if (fs.existsSync(serverPath)) {
+  // Use compiled JavaScript version
+  require(serverPath);
+} else {
+  // Fallback to TypeScript version with tsx
+  console.log('Compiled version not found, using TypeScript with tsx...');
+  require('tsx/cjs').register();
+  require('./server/index-cpanel.ts');
+}

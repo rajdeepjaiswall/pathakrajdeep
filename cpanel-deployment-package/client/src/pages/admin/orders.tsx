@@ -1,0 +1,538 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Eye, Search, Filter, Download, CheckCircle, Clock, Package, Truck, User, Phone, Edit, Save, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import Header from '@/components/layout/header';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { formatPrice } from '@/lib/cart';
+import { ORDER_STATUSES } from '@/lib/constants';
+import { apiRequest } from '@/lib/queryClient';
+import { useLocation } from 'wouter';
+
+export default function AdminOrders() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isEditingRider, setIsEditingRider] = useState<number | null>(null);
+  const [riderName, setRiderName] = useState('');
+  const [riderPhone, setRiderPhone] = useState('');
+
+  // Redirect if not admin
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    setLocation('/admin/login');
+    return null;
+  }
+
+  // Fetch orders
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['/api/admin/orders', { status: statusFilter !== 'all' ? statusFilter : undefined }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/orders?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
+      }
+      
+      return response.json();
+    },
+  });
+
+  // Update order status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
+      const response = await apiRequest(`/api/admin/orders/${orderId}/status`, 'PUT', { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      toast({
+        title: 'Status Updated',
+        description: 'Order status has been updated successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update order status',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Update rider assignment mutation
+  const updateRiderMutation = useMutation({
+    mutationFn: async ({ orderId, riderName, riderPhone }: { orderId: number; riderName: string; riderPhone: string }) => {
+      const response = await apiRequest(`/api/admin/orders/${orderId}/rider`, 'PUT', { 
+        riderName, 
+        riderPhone 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      setIsEditingRider(null);
+      setRiderName('');
+      setRiderPhone('');
+      toast({
+        title: 'Rider Assigned',
+        description: 'Delivery rider has been assigned successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to assign rider',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-orange-100 text-orange-800';
+      case 'order_received': return 'bg-blue-100 text-blue-800';
+      case 'preparing': return 'bg-purple-100 text-purple-800';
+      case 'dispatched': return 'bg-indigo-100 text-indigo-800';
+      case 'out_for_delivery': return 'bg-cyan-100 text-cyan-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending': return <Clock className="h-3 w-3" />;
+      case 'order_received': return <CheckCircle className="h-3 w-3" />;
+      case 'preparing': return <Package className="h-3 w-3" />;
+      case 'dispatched': return <Truck className="h-3 w-3" />;
+      case 'out_for_delivery': return <Truck className="h-3 w-3" />;
+      case 'delivered': return <CheckCircle className="h-3 w-3" />;
+      default: return <Clock className="h-3 w-3" />;
+    }
+  };
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'order_received': return 'Order Received';
+      case 'preparing': return 'Preparing';
+      case 'dispatched': return 'Dispatched';
+      case 'out_for_delivery': return 'Out for Delivery';
+      case 'delivered': return 'Delivered';
+      case 'cancelled': return 'Cancelled';
+      default: return status;
+    }
+  };
+
+  const filteredOrders = orders.filter((order: any) => {
+    const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.deliveryAddress?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  const handleStatusUpdate = (orderId: number, status: string) => {
+    updateStatusMutation.mutate({ orderId, status });
+  };
+
+  return (
+    <div className="min-h-screen bg-cream">
+      <Header />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-navy mb-2">Orders Management</h1>
+            <p className="text-gray-600">Manage and track all customer orders</p>
+          </div>
+          <Button className="bg-champagne text-navy hover:bg-champagne/90">
+            <Download className="h-4 w-4 mr-2" />
+            Export Orders
+          </Button>
+        </div>
+
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search orders..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Orders</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="order_received">Order Received</SelectItem>
+                  <SelectItem value="preparing">Preparing</SelectItem>
+                  <SelectItem value="dispatched">Dispatched</SelectItem>
+                  <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Orders Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Orders ({filteredOrders.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-16 bg-gray-200 rounded-lg" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">No orders found</p>
+                <p className="text-gray-400">Orders will appear here when customers place them</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredOrders.map((order: any) => (
+                  <div key={order.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-navy">#{order.orderNumber}</h3>
+                          <Badge className={`${getStatusColor(order.status)}`}>
+                            {getStatusIcon(order.status)}
+                            <span className="ml-1">{getStatusDisplay(order.status)}</span>
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm text-gray-600">
+                          <div>
+                            <span className="font-medium">Customer:</span> {order.deliveryAddress?.name}
+                          </div>
+                          <div>
+                            <span className="font-medium">Date:</span> {new Date(order.orderDate).toLocaleDateString()}
+                          </div>
+                          <div>
+                            <span className="font-medium">Payment:</span> {order.paymentMethod.toUpperCase()}
+                          </div>
+                          {order.riderName && (
+                            <div>
+                              <span className="font-medium">Rider:</span> {order.riderName}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="font-bold text-navy text-lg">{formatPrice(parseFloat(order.total))}</p>
+                          <p className="text-sm text-gray-500">{order.paymentStatus}</p>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setSelectedOrder(order)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Order Details - #{order.orderNumber}</DialogTitle>
+                              </DialogHeader>
+                              {selectedOrder && (
+                                <div className="space-y-6">
+                                  {/* Order Info */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <h4 className="font-medium mb-2">Order Information</h4>
+                                      <div className="text-sm space-y-1">
+                                        <p><span className="font-medium">Status:</span> {selectedOrder.status}</p>
+                                        <p><span className="font-medium">Date:</span> {new Date(selectedOrder.orderDate).toLocaleString()}</p>
+                                        <p><span className="font-medium">Payment:</span> {selectedOrder.paymentMethod}</p>
+                                        <p><span className="font-medium">Payment Status:</span> {selectedOrder.paymentStatus}</p>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium mb-2">Delivery Address</h4>
+                                      <div className="text-sm space-y-1">
+                                        <p>{selectedOrder.deliveryAddress?.name}</p>
+                                        <p>{selectedOrder.deliveryAddress?.phone}</p>
+                                        <p>{selectedOrder.deliveryAddress?.addressLine1}</p>
+                                        {selectedOrder.deliveryAddress?.addressLine2 && (
+                                          <p>{selectedOrder.deliveryAddress.addressLine2}</p>
+                                        )}
+                                        <p>{selectedOrder.deliveryAddress?.city}, {selectedOrder.deliveryAddress?.state} - {selectedOrder.deliveryAddress?.pincode}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Order Summary */}
+                                  <div>
+                                    <h4 className="font-medium mb-4">Order Summary</h4>
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between text-sm">
+                                        <span>Subtotal:</span>
+                                        <span>{formatPrice(parseFloat(selectedOrder.subtotal))}</span>
+                                      </div>
+                                      <div className="flex justify-between text-sm">
+                                        <span>GST:</span>
+                                        <span>{formatPrice(parseFloat(selectedOrder.gstAmount))}</span>
+                                      </div>
+                                      <div className="flex justify-between text-sm">
+                                        <span>Delivery:</span>
+                                        <span>{parseFloat(selectedOrder.deliveryCharge) === 0 ? 'FREE' : formatPrice(parseFloat(selectedOrder.deliveryCharge))}</span>
+                                      </div>
+                                      <div className="flex justify-between font-bold text-lg border-t pt-2">
+                                        <span>Total:</span>
+                                        <span>{formatPrice(parseFloat(selectedOrder.total))}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Status Update */}
+                                  <div>
+                                    <h4 className="font-medium mb-2">Update Status</h4>
+                                    <Select 
+                                      value={selectedOrder.status} 
+                                      onValueChange={(status) => handleStatusUpdate(selectedOrder.id, status)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="order_received">Order Received</SelectItem>
+                                        <SelectItem value="preparing">Preparing</SelectItem>
+                                        <SelectItem value="dispatched">Dispatched</SelectItem>
+                                        <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                                        <SelectItem value="delivered">Delivered</SelectItem>
+                                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  {/* Rider Assignment */}
+                                  <div>
+                                    <h4 className="font-medium mb-2">Delivery Partner</h4>
+                                    {selectedOrder.riderName ? (
+                                      <div className="space-y-3">
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                          <div className="flex items-center justify-between">
+                                            <div>
+                                              <p className="font-medium flex items-center gap-2">
+                                                <User className="h-4 w-4" />
+                                                {selectedOrder.riderName}
+                                              </p>
+                                              {selectedOrder.riderPhone && (
+                                                <p className="text-sm text-gray-600 flex items-center gap-2">
+                                                  <Phone className="h-3 w-3" />
+                                                  {selectedOrder.riderPhone}
+                                                </p>
+                                              )}
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setIsEditingRider(selectedOrder.id);
+                                                setRiderName(selectedOrder.riderName || '');
+                                                setRiderPhone(selectedOrder.riderPhone || '');
+                                              }}
+                                            >
+                                              <Edit className="h-3 w-3 mr-1" />
+                                              Edit
+                                            </Button>
+                                          </div>
+                                        </div>
+
+                                        {isEditingRider === selectedOrder.id && (
+                                          <div className="space-y-3 p-3 border rounded-lg">
+                                            <div>
+                                              <Label htmlFor="riderName">Rider Name</Label>
+                                              <Input
+                                                id="riderName"
+                                                value={riderName}
+                                                onChange={(e) => setRiderName(e.target.value)}
+                                                placeholder="Enter rider name"
+                                              />
+                                            </div>
+                                            <div>
+                                              <Label htmlFor="riderPhone">Rider Phone</Label>
+                                              <Input
+                                                id="riderPhone"
+                                                value={riderPhone}
+                                                onChange={(e) => setRiderPhone(e.target.value)}
+                                                placeholder="Enter phone number"
+                                              />
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <Button
+                                                size="sm"
+                                                onClick={() => updateRiderMutation.mutate({
+                                                  orderId: selectedOrder.id,
+                                                  riderName,
+                                                  riderPhone
+                                                })}
+                                                disabled={updateRiderMutation.isPending}
+                                              >
+                                                <Save className="h-3 w-3 mr-1" />
+                                                Save
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setIsEditingRider(null);
+                                                  setRiderName('');
+                                                  setRiderPhone('');
+                                                }}
+                                              >
+                                                <X className="h-3 w-3 mr-1" />
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-3">
+                                        <p className="text-sm text-gray-600">No rider assigned yet</p>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => {
+                                            setIsEditingRider(selectedOrder.id);
+                                            setRiderName('');
+                                            setRiderPhone('');
+                                          }}
+                                        >
+                                          <User className="h-3 w-3 mr-1" />
+                                          Assign Rider
+                                        </Button>
+
+                                        {isEditingRider === selectedOrder.id && (
+                                          <div className="space-y-3 p-3 border rounded-lg">
+                                            <div>
+                                              <Label htmlFor="riderName">Rider Name</Label>
+                                              <Input
+                                                id="riderName"
+                                                value={riderName}
+                                                onChange={(e) => setRiderName(e.target.value)}
+                                                placeholder="Enter rider name"
+                                              />
+                                            </div>
+                                            <div>
+                                              <Label htmlFor="riderPhone">Rider Phone</Label>
+                                              <Input
+                                                id="riderPhone"
+                                                value={riderPhone}
+                                                onChange={(e) => setRiderPhone(e.target.value)}
+                                                placeholder="Enter phone number"
+                                              />
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <Button
+                                                size="sm"
+                                                onClick={() => updateRiderMutation.mutate({
+                                                  orderId: selectedOrder.id,
+                                                  riderName,
+                                                  riderPhone
+                                                })}
+                                                disabled={updateRiderMutation.isPending}
+                                              >
+                                                <Save className="h-3 w-3 mr-1" />
+                                                Assign
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setIsEditingRider(null);
+                                                  setRiderName('');
+                                                  setRiderPhone('');
+                                                }}
+                                              >
+                                                <X className="h-3 w-3 mr-1" />
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </DialogContent>
+                          </Dialog>
+
+                          <Select 
+                            value={order.status} 
+                            onValueChange={(status) => handleStatusUpdate(order.id, status)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="order_received">Order Received</SelectItem>
+                              <SelectItem value="preparing">Preparing</SelectItem>
+                              <SelectItem value="dispatched">Dispatched</SelectItem>
+                              <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

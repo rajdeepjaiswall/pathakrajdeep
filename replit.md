@@ -1,0 +1,125 @@
+# Pathak Bhandar E-Commerce Platform
+
+## Overview
+
+Pathak Bhandar is a comprehensive e-commerce platform built for a premium bakery and confectionery store in Prayagraj, Uttar Pradesh. The platform serves as both a customer-facing storefront and a complete administrative dashboard for managing products, orders, and business operations.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Technology**: React 18 with TypeScript
+- **Routing**: Wouter for lightweight client-side routing
+- **State Management**: React Query (TanStack Query) for server state management
+- **Styling**: Tailwind CSS with custom design system
+- **UI Components**: Radix UI components with custom theming
+- **Build Tool**: Vite for fast development and optimized builds
+
+### Backend Architecture
+- **Technology**: Node.js with Express.js
+- **Language**: TypeScript for type safety
+- **Database ORM**: Drizzle ORM for type-safe database operations
+- **Authentication**: JWT tokens with bcrypt for password hashing
+- **API Design**: RESTful API with structured error handling
+
+### Database Strategy
+The application supports dual database configurations:
+- **Development/Cloud**: PostgreSQL with Neon serverless
+- **Production/cPanel**: MySQL for shared hosting compatibility
+- **Schema Management**: Separate schema files for each database type
+- **Migrations**: Drizzle Kit for database schema management
+
+## Key Components
+
+### Authentication System
+- **Multi-role authentication**: Customer, Admin, Super Admin roles
+- **JWT-based sessions**: Secure token management
+- **Password security**: bcrypt hashing with salt rounds
+- **Role-based access control**: Route protection based on user roles
+
+### Product Management
+- **Category system**: Hierarchical product categorization
+- **Product catalog**: Rich product information with images, pricing, and inventory
+- **Stock management**: Real-time inventory tracking
+- **GST integration**: Indian tax calculation with HSN codes
+- **Image handling**: Multiple product images with gallery support
+
+### E-commerce Features
+- **Shopping cart**: Persistent cart with user authentication
+- **Wishlist**: Product wishlist functionality
+- **Order management**: Complete order lifecycle tracking
+- **Address management**: Multiple shipping addresses per user
+- **Payment integration**: UPI QR code generation support
+
+### Admin Dashboard
+- **Order management**: Order status tracking and updates
+- **Product management**: CRUD operations for products and categories
+- **Customer management**: User account administration
+- **Banner management**: Dynamic banner/slideshow content
+- **Analytics**: Basic sales and inventory reporting
+
+## Data Flow
+
+1. **User Authentication**: JWT tokens stored in localStorage, validated on each API request
+2. **Product Display**: Category-based product filtering with real-time inventory
+3. **Shopping Cart**: User-specific cart items with product relationship joins
+4. **Order Processing**: Cart to order conversion with inventory updates
+5. **Admin Operations**: Role-based access to management endpoints
+
+## External Dependencies
+
+### Core Libraries
+- **React Ecosystem**: React, React DOM, React Query
+- **UI Framework**: Radix UI primitives with Tailwind CSS
+- **Backend**: Express.js with various middleware
+- **Database**: Drizzle ORM with PostgreSQL/MySQL drivers
+- **Authentication**: jsonwebtoken, bcrypt
+- **Validation**: Zod for schema validation
+
+### Development Tools
+- **TypeScript**: Full type safety across frontend and backend
+- **Vite**: Fast build tool and development server
+- **ESBuild**: Production bundling
+- **Drizzle Kit**: Database migration management
+
+### Database Drivers
+- **PostgreSQL**: Neon serverless driver for cloud deployment
+- **MySQL**: mysql2 driver for cPanel hosting compatibility
+
+## Deployment Strategy
+
+### Development Environment
+- **Local Development**: Vite dev server with hot reload
+- **Database**: PostgreSQL with Neon serverless
+- **Environment**: Development-specific configurations
+
+### Production Deployment Options
+
+#### Option 1: Unified Deployment (Recommended)
+- **Target**: cPanel hosting with Node.js support
+- **Database**: MySQL for shared hosting compatibility
+- **Entry Point**: `app.js` with automatic TypeScript compilation
+- **Configuration**: Environment-specific database connections
+
+#### Option 2: Cloud Deployment
+- **Target**: Render, Heroku, or similar cloud platforms
+- **Database**: PostgreSQL with Neon serverless
+- **Build Process**: Vite build with esbuild bundling
+- **Configuration**: Environment variables for database and JWT secrets
+
+#### Option 3: Separated Architecture
+- **Frontend**: Static hosting (Netlify, Vercel)
+- **Backend**: Node.js hosting (Heroku, Railway)
+- **Database**: Separate PHP/MySQL layer on cPanel
+- **Complexity**: Higher complexity but greater scalability
+
+### Configuration Management
+- **Environment Variables**: Separate configs for development and production
+- **Database URLs**: Dynamic connection strings based on environment
+- **Security**: JWT and session secrets for authentication
+- **Assets**: Static file serving for product images and banners
+
+The architecture prioritizes flexibility, allowing deployment to various hosting environments while maintaining type safety and development experience quality.

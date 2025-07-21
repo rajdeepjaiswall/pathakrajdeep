@@ -127,6 +127,14 @@ The architecture prioritizes flexibility, allowing deployment to various hosting
 
 ## Recent Changes
 
+### July 21, 2025 - Custom Domain Setup with Hostinger
+Successfully configured custom domain connection:
+- **DNS Configuration**: Set up A record pointing to Replit IP (34.111.179.208) in Hostinger DNS
+- **Domain Verification**: Resolved "multiple A records" error by cleaning up conflicting DNS entries
+- **SSL Certificate Issue**: Domain verified but SSL certificate shows name mismatch (NET::ERR_CERT_COMMON_NAME_INVALID)
+- **Current Status**: Site accessible via HTTP, HTTPS showing certificate error
+- **Next Steps**: Regenerating SSL certificate for pathakbhandar.in domain
+
 ### July 21, 2025 - Cloud Run Deployment Fixes
 Applied comprehensive Cloud Run compatibility improvements:
 - **Port Configuration**: Updated server to properly use PORT environment variable with fallback to 5000

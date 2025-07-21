@@ -98,23 +98,24 @@ The application supports dual database configurations:
 
 ### Production Deployment Options
 
-#### Option 1: Unified Deployment (Recommended)
+#### Option 1: Replit Deployment (Current Choice)
+- **Target**: Replit Deployments with custom domain support
+- **Database**: PostgreSQL with Neon serverless (existing)
+- **Configuration**: 1 vCPU, 2GB RAM, 22 compute units/sec
+- **Custom Domain**: DNS configuration through domain registrar
+- **SSL**: Automatic HTTPS with free certificates
+
+#### Option 2: Unified Deployment (Alternative)
 - **Target**: cPanel hosting with Node.js support
 - **Database**: MySQL for shared hosting compatibility
 - **Entry Point**: `app.js` with automatic TypeScript compilation
 - **Configuration**: Environment-specific database connections
 
-#### Option 2: Cloud Deployment
+#### Option 3: Cloud Deployment
 - **Target**: Render, Heroku, or similar cloud platforms
 - **Database**: PostgreSQL with Neon serverless
 - **Build Process**: Vite build with esbuild bundling
 - **Configuration**: Environment variables for database and JWT secrets
-
-#### Option 3: Separated Architecture
-- **Frontend**: Static hosting (Netlify, Vercel)
-- **Backend**: Node.js hosting (Heroku, Railway)
-- **Database**: Separate PHP/MySQL layer on cPanel
-- **Complexity**: Higher complexity but greater scalability
 
 ### Configuration Management
 - **Environment Variables**: Separate configs for development and production

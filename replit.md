@@ -124,3 +124,16 @@ The application supports dual database configurations:
 - **Assets**: Static file serving for product images and banners
 
 The architecture prioritizes flexibility, allowing deployment to various hosting environments while maintaining type safety and development experience quality.
+
+## Recent Changes
+
+### July 21, 2025 - Cloud Run Deployment Fixes
+Applied comprehensive Cloud Run compatibility improvements:
+- **Port Configuration**: Updated server to properly use PORT environment variable with fallback to 5000
+- **Host Binding**: Changed to always use `0.0.0.0` instead of conditional localhost for cloud compatibility  
+- **Health Check Endpoint**: Added `/health` endpoint that returns JSON status and timestamp for container health monitoring
+- **CORS Configuration**: Simplified CORS headers for production deployment with support for Replit domains
+- **Environment Detection**: Improved NODE_ENV-based conditional logic for development vs production modes
+- **Build Verification**: Confirmed production build works correctly with all fixes applied
+
+These changes resolve the "Application may not be listening on the correct port" deployment failure and ensure proper Cloud Run compatibility.

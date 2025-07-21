@@ -6,20 +6,33 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
-// Add CORS headers for desktop development
-if (!process.env.REPL_ID) {
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(200);
-    } else {
-      next();
-    }
-  });
-}
+// Add CORS headers - simplified for cloud deployment
+app.use((req, res, next) => {
+  // Allow CORS for development and production
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'https://*.replit.app',
+    'https://*.replit.co'
+  ];
+  
+  const origin = req.headers.origin;
+  if (origin && (allowedOrigins.some(allowed => 
+    allowed.includes('*') ? origin.includes(allowed.replace('*', '')) : origin === allowed
+  ) || process.env.NODE_ENV === 'development')) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -51,6 +64,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add health check endpoint for Cloud Run (before routes)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
 (async () => {
   const server = await registerRoutes(app);
 
@@ -62,24 +80,18 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  // Setup Vite in development, serve static files in production
+  if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // Use environment port or fallback to 5000
+  // Use environment port for Cloud Run compatibility, fallback to 5000
   const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
-  const host = process.env.REPL_ID ? "0.0.0.0" : "localhost";
+  const host = "0.0.0.0"; // Always use 0.0.0.0 for Cloud Run compatibility
   
-  server.listen({
-    port,
-    host,
-    reusePort: process.env.REPL_ID ? true : false,
-  }, () => {
+  server.listen(port, host, () => {
     log(`serving on http://${host}:${port}`);
   });
 })();

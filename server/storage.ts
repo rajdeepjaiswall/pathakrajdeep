@@ -1,9 +1,9 @@
 import { 
-  users, categories, products, addresses, orders, orderItems, cartItems, wishlistItems, coupons, reviews, banners,
+  users, categories, products, addresses, orders, orderItems, cartItems, wishlistItems, coupons, reviews, banners, otps,
   type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct,
   type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
   type CartItem, type InsertCartItem, type WishlistItem, type InsertWishlistItem, type Coupon, type InsertCoupon, type Review, type InsertReview,
-  type Banner, type InsertBanner
+  type Banner, type InsertBanner, type Otp, type InsertOtp
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, desc, asc, sql } from "drizzle-orm";
@@ -79,6 +79,14 @@ export interface IStorage {
   createBanner(banner: InsertBanner): Promise<Banner>;
   updateBanner(id: number, banner: Partial<InsertBanner>): Promise<Banner>;
   deleteBanner(id: number): Promise<void>;
+
+  // OTP methods
+  createOtp(otp: InsertOtp): Promise<Otp>;
+  getOtp(identifier: string, type: string): Promise<Otp | undefined>;
+  verifyOtp(identifier: string, otpCode: string, type: string): Promise<boolean>;
+  deleteOtp(identifier: string, type: string): Promise<void>;
+  incrementOtpAttempts(identifier: string, type: string): Promise<void>;
+  cleanupExpiredOtps(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

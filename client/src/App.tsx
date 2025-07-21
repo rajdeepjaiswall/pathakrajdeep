@@ -30,6 +30,7 @@ import SuperAdminDashboard from "@/pages/super-admin/dashboard";
 import LogoManager from "@/pages/super-admin/logo-manager";
 import ShopkeeperManager from "@/pages/super-admin/shopkeepers";
 import ProductManager from "@/pages/super-admin/products";
+import OTPTest from "@/pages/otp-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/super-admin/logo-manager" component={LogoManager} />
       <Route path="/super-admin/shopkeepers" component={ShopkeeperManager} />
       <Route path="/super-admin/products" component={ProductManager} />
+      <Route path="/otp-test" component={OTPTest} />
       <Route component={NotFound} />
     </Switch>
   );

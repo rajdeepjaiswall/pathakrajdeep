@@ -167,6 +167,19 @@ export const banners = pgTable("banners", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// OTP table for email and WhatsApp verification
+export const otps = pgTable("otps", {
+  id: serial("id").primaryKey(),
+  identifier: text("identifier").notNull(), // email or phone number
+  otp: text("otp").notNull(),
+  type: text("type").notNull(), // "email" or "whatsapp"
+  purpose: text("purpose").notNull().default("verification"), // "verification", "password_reset", "login"
+  attempts: integer("attempts").default(0),
+  isVerified: boolean("is_verified").default(false),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   addresses: many(addresses),
@@ -306,6 +319,11 @@ export const insertBannerSchema = createInsertSchema(banners).omit({
   updatedAt: true,
 });
 
+export const insertOtpSchema = createInsertSchema(otps).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Select schemas
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -318,6 +336,7 @@ export type WishlistItem = typeof wishlistItems.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type Banner = typeof banners.$inferSelect;
+export type Otp = typeof otps.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -331,3 +350,4 @@ export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type InsertBanner = z.infer<typeof insertBannerSchema>;
+export type InsertOtp = z.infer<typeof insertOtpSchema>;

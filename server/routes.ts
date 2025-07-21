@@ -6,6 +6,7 @@ import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
+import otpRoutes from "./otp-routes";
 
 const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
 
@@ -744,6 +745,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // OTP routes for email and WhatsApp verification
+  app.use("/api/otp", otpRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

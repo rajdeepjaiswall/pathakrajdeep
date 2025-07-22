@@ -302,7 +302,6 @@ export const upsertUserSchema = insertUserSchema.extend({
 });
 
 // User types
-export type User = typeof users.$inferSelect;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 
 export const insertCategorySchema = createInsertSchema(categories).omit({

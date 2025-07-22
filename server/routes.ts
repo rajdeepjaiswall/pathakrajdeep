@@ -336,6 +336,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Skip profile completion (mark as incomplete but allow access)
+  app.post("/api/auth/skip-profile", authenticateUser, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      
+      const updatedUser = await storage.updateUser(userId, {
+        profileCompleted: false,
+      });
+      
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Link Google account to existing user
   app.post("/api/auth/link-google", authenticateUser, async (req, res) => {
     try {

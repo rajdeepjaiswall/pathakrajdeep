@@ -129,11 +129,16 @@ export default function Header() {
               <div className="pt-4 border-t border-almond space-y-3">
                 <Link href="/customer/profile">
                   <div 
-                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
+                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors relative"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <User className="h-5 w-5 text-navy" />
-                    <span className="text-navy font-medium">Namaste, {user?.username}</span>
+                    <div className="relative">
+                      <User className="h-5 w-5 text-navy" />
+                      {user?.authProvider === 'google' && !user?.profileCompleted && (
+                        <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
+                      )}
+                    </div>
+                    <span className="text-navy font-medium">Namaste, {user?.firstName || user?.username}</span>
                   </div>
                 </Link>
 

@@ -26,13 +26,21 @@ export default function CompleteProfile() {
 
   const completeProfileMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest('/api/auth/complete-profile', {
+      const response = await fetch('/api/auth/complete-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies
         body: JSON.stringify(data),
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to complete profile');
+      }
+      
+      return response.json();
     },
     onSuccess: (updatedUser) => {
       updateUser(updatedUser);
@@ -219,7 +227,11 @@ export default function CompleteProfile() {
             <div className="mt-4 text-center">
               <Button
                 variant="ghost"
-                onClick={() => navigate('/')}
+                onClick={() => {
+                  // Mark profile as incomplete but allow user to continue
+                  updateUser({ ...user, profileCompleted: false });
+                  navigate('/account');
+                }}
                 className="text-gray-600 hover:text-gray-800"
               >
                 Skip for now

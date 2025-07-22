@@ -104,11 +104,6 @@ function AppContent() {
     );
   }
 
-  // If user is authenticated but hasn't completed profile, show complete profile page
-  if (isAuthenticated && user?.authProvider === 'google' && !user?.profileCompleted) {
-    return <CompleteProfile />;
-  }
-
   return <Router />;
 }
 

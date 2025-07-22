@@ -175,65 +175,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Profile management routes
-  app.put("/api/auth/profile", authenticateToken, async (req, res) => {
+  // Enhanced authentication middleware that works with both JWT and sessions
+  function authenticateUser(req: any, res: any, next: any) {
+    // Check for session-based auth first (Google OAuth)
+    if (req.isAuthenticated && req.isAuthenticated()) {
+      req.user = req.user; // Session user
+      return next();
+    }
+    
+    // Fallback to JWT auth
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+      if (err) return res.status(403).json({ message: 'Invalid token' });
+      req.user = user;
+      next();
+    });
+  }
+
+  // Phone verification routes
+  app.post("/api/auth/send-phone-otp", authenticateUser, async (req, res) => {
     try {
-      const { username, email, phone } = req.body;
+      const { phone } = req.body;
       const userId = req.user.id;
       
-      const updatedUser = await storage.updateUser(userId, {
-        username,
-        email,
-        phone,
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Store OTP in database
+      await storage.createOtp({
+        identifier: phone,
+        otp: otp,
+        type: 'whatsapp',
+        purpose: 'verification',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
       });
       
-      res.json({
-        id: updatedUser.id,
-        username: updatedUser.username,
-        role: updatedUser.role,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        address_line_1: updatedUser.addressLine1,
-        address_line_2: updatedUser.addressLine2,
-        area: updatedUser.area,
-        city: updatedUser.city,
-        state: updatedUser.state,
-        pin_code: updatedUser.pinCode,
-      });
+      // In production, send OTP via WhatsApp/SMS
+      console.log(`OTP for ${phone}: ${otp}`); // For development
+      
+      res.json({ message: 'OTP sent successfully' });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.put("/api/auth/address", authenticateToken, async (req, res) => {
+  app.post("/api/auth/verify-phone", authenticateUser, async (req, res) => {
     try {
-      const { addressLine1, addressLine2, area, city, state, pinCode } = req.body;
+      const { phone, otp } = req.body;
+      const userId = req.user.id;
+      
+      // Verify OTP
+      const isValid = await storage.verifyOtp(phone, otp, 'whatsapp');
+      
+      if (!isValid) {
+        return res.status(400).json({ message: 'Invalid or expired OTP' });
+      }
+      
+      // Update user phone and verification status
+      const updatedUser = await storage.updateUser(userId, {
+        phone,
+        isVerified: true,
+      });
+      
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Profile management routes
+  app.put("/api/auth/profile", authenticateUser, async (req, res) => {
+    try {
+      const { firstName, lastName, email } = req.body;
       const userId = req.user.id;
       
       const updatedUser = await storage.updateUser(userId, {
-        addressLine1,
-        addressLine2,
-        area,
-        city,
-        state,
-        pinCode,
+        firstName,
+        lastName,
+        email,
       });
       
-      res.json({
-        id: updatedUser.id,
-        username: updatedUser.username,
-        role: updatedUser.role,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        address_line_1: updatedUser.addressLine1,
-        address_line_2: updatedUser.addressLine2,
-        area: updatedUser.area,
-        city: updatedUser.city,
-        state: updatedUser.state,
-        pin_code: updatedUser.pinCode,
-      });
+      res.json(updatedUser);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Address management routes
+  app.get("/api/addresses", authenticateUser, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const addresses = await storage.getAddresses(userId);
+      res.json(addresses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/addresses", authenticateUser, async (req, res) => {
+    try {
+      const addressData = insertAddressSchema.parse({
+        ...req.body,
+        userId: req.user.id,
+      });
+      const address = await storage.createAddress(addressData);
+      res.json(address);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/addresses/:id", authenticateUser, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const addressData = insertAddressSchema.partial().parse(req.body);
+      const address = await storage.updateAddress(id, addressData);
+      res.json(address);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/addresses/:id", authenticateUser, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      // Add security check to ensure user owns this address
+      const address = await storage.getAddress(id);
+      if (!address || address.userId !== req.user.id) {
+        return res.status(404).json({ message: 'Address not found' });
+      }
+      
+      await storage.deleteAddress(id);
+      res.json({ message: 'Address deleted successfully' });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // User order history
+  app.get("/api/orders/user", authenticateUser, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const orders = await storage.getOrders(userId);
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
@@ -339,10 +431,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cart routes
   app.get("/api/cart", optionalAuth, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.json([]); // Return empty cart for guest users
+      // Check session auth first
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
       }
-      const cartItems = await storage.getCartItems(req.user.id);
+      
+      if (!userId) {
+        return res.json([]);
+      }
+      
+      const cartItems = await storage.getCartItems(userId);
       res.json(cartItems);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

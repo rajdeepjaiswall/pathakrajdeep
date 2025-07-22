@@ -90,9 +90,9 @@ export function initializeGoogleAuth() {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
-      done(null, user);
+      done(null, user || false);
     } catch (error) {
-      done(error, null);
+      done(error, false);
     }
   });
 }
@@ -172,16 +172,7 @@ export function setupGoogleAuthRoutes(app: Express) {
     if (req.isAuthenticated()) {
       res.json({ 
         isAuthenticated: true, 
-        user: {
-          id: req.user.id,
-          username: req.user.username,
-          email: req.user.email,
-          firstName: req.user.firstName,
-          lastName: req.user.lastName,
-          profileImageUrl: req.user.profileImageUrl,
-          role: req.user.role,
-          authProvider: req.user.authProvider
-        }
+        user: req.user
       });
     } else {
       res.json({ isAuthenticated: false });

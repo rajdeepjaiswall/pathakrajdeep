@@ -15,6 +15,7 @@ import Checkout from "@/pages/checkout";
 import CustomerLogin from "@/pages/customer/login";
 import CustomerRegister from "@/pages/customer/register";
 import CustomerProfile from "@/pages/customer/profile";
+import CustomerAccount from "@/pages/customer/account";
 import CustomerWishlist from "@/pages/customer/wishlist";
 import CustomerOrders from "@/pages/customer/orders";
 import OrderConfirmation from "@/pages/order-confirmation";
@@ -43,10 +44,11 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/login" component={CustomerLogin} />
       <Route path="/register" component={CustomerRegister} />
-      <Route path="/account" component={CustomerProfile} />
+      <Route path="/account" component={CustomerAccount} />
       <Route path="/customer/login" component={CustomerLogin} />
       <Route path="/customer/register" component={CustomerRegister} />
       <Route path="/customer/profile" component={CustomerProfile} />
+      <Route path="/customer/account" component={CustomerAccount} />
       <Route path="/customer/wishlist" component={CustomerWishlist} />
       <Route path="/customer/orders" component={CustomerOrders} />
       <Route path="/order-confirmation" component={OrderConfirmation} />

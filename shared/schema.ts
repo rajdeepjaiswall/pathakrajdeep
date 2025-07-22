@@ -61,7 +61,7 @@ export const products = pgTable("products", {
 // Addresses table
 export const addresses = pgTable("addresses", {
   id: serial("id").primaryKey(),
-  user_id: integer("user_id").references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   addressLine1: text("address_line_1").notNull(),
@@ -219,7 +219,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
 
 export const addressesRelations = relations(addresses, ({ one }) => ({
   user: one(users, {
-    fields: [addresses.user_id],
+    fields: [addresses.userId],
     references: [users.id],
   }),
 }));
@@ -343,6 +343,13 @@ export const insertCouponSchema = createInsertSchema(coupons).omit({
   createdAt: true,
 });
 
+export const insertOtpSchema = createInsertSchema(otps).omit({
+  id: true,
+  createdAt: true,
+});
+
+
+
 export const insertReviewSchema = createInsertSchema(reviews).omit({
   id: true,
   createdAt: true,
@@ -352,11 +359,6 @@ export const insertBannerSchema = createInsertSchema(banners).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
-
-export const insertOtpSchema = createInsertSchema(otps).omit({
-  id: true,
-  createdAt: true,
 });
 
 // Select schemas

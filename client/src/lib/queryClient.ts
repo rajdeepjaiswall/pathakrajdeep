@@ -8,8 +8,8 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
+  method: string,
   url: string,
-  method: string = 'GET',
   data?: unknown | undefined,
 ): Promise<Response> {
   const token = localStorage.getItem('token');
@@ -27,7 +27,7 @@ export async function apiRequest(
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: "include", // Important for session-based auth
   });
 
   await throwIfResNotOk(res);

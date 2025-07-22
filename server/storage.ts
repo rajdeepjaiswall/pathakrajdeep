@@ -53,6 +53,7 @@ export interface IStorage {
   getAddress(id: number): Promise<Address | undefined>;
   createAddress(address: InsertAddress): Promise<Address>;
   updateAddress(id: number, address: Partial<InsertAddress>): Promise<Address>;
+  deleteAddress(id: number): Promise<void>;
 
   // Order methods
   getOrders(userId: number): Promise<Order[]>;
@@ -364,7 +365,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(addresses)
-      .where(eq(addresses.user_id, userId))
+      .where(eq(addresses.userId, userId))
       .orderBy(desc(addresses.isDefault), desc(addresses.createdAt));
   }
 
@@ -379,7 +380,7 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(addresses)
         .set({ isDefault: false })
-        .where(eq(addresses.user_id, insertAddress.user_id));
+        .where(eq(addresses.userId, insertAddress.userId));
     }
 
     const [address] = await db
@@ -390,12 +391,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAddress(id: number, updateAddress: Partial<InsertAddress>): Promise<Address> {
+    // If this is default address, unset other defaults
+    if (updateAddress.isDefault) {
+      await db
+        .update(addresses)
+        .set({ isDefault: false })
+        .where(eq(addresses.userId, updateAddress.userId!));
+    }
+
     const [address] = await db
       .update(addresses)
       .set(updateAddress)
       .where(eq(addresses.id, id))
       .returning();
     return address;
+  }
+
+  async deleteAddress(id: number): Promise<void> {
+    await db.delete(addresses).where(eq(addresses.id, id));
   }
 
   // Order methods
@@ -610,6 +623,91 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBanner(id: number): Promise<void> {
     await db.delete(banners).where(eq(banners.id, id));
+  }
+
+  // OTP methods
+  async createOtp(insertOtp: InsertOtp): Promise<Otp> {
+    // Clean up any existing OTP for this identifier and type
+    await this.deleteOtp(insertOtp.identifier, insertOtp.type);
+    
+    const [otp] = await db
+      .insert(otps)
+      .values(insertOtp)
+      .returning();
+    return otp;
+  }
+
+  async getOtp(identifier: string, type: string): Promise<Otp | undefined> {
+    const [otp] = await db
+      .select()
+      .from(otps)
+      .where(and(
+        eq(otps.identifier, identifier),
+        eq(otps.type, type),
+        eq(otps.isVerified, false)
+      ))
+      .orderBy(desc(otps.createdAt))
+      .limit(1);
+    return otp || undefined;
+  }
+
+  async verifyOtp(identifier: string, otpCode: string, type: string): Promise<boolean> {
+    const otp = await this.getOtp(identifier, type);
+    
+    if (!otp) {
+      return false;
+    }
+
+    // Check if OTP is expired
+    if (new Date() > new Date(otp.expiresAt)) {
+      await this.deleteOtp(identifier, type);
+      return false;
+    }
+
+    // Check if too many attempts
+    if (otp.attempts >= 3) {
+      await this.deleteOtp(identifier, type);
+      return false;
+    }
+
+    // Check OTP code
+    if (otp.otp === otpCode) {
+      await db
+        .update(otps)
+        .set({ isVerified: true })
+        .where(eq(otps.id, otp.id));
+      return true;
+    } else {
+      await this.incrementOtpAttempts(identifier, type);
+      return false;
+    }
+  }
+
+  async deleteOtp(identifier: string, type: string): Promise<void> {
+    await db
+      .delete(otps)
+      .where(and(
+        eq(otps.identifier, identifier),
+        eq(otps.type, type)
+      ));
+  }
+
+  async incrementOtpAttempts(identifier: string, type: string): Promise<void> {
+    await db
+      .update(otps)
+      .set({ 
+        attempts: sql`${otps.attempts} + 1`
+      })
+      .where(and(
+        eq(otps.identifier, identifier),
+        eq(otps.type, type)
+      ));
+  }
+
+  async cleanupExpiredOtps(): Promise<void> {
+    await db
+      .delete(otps)
+      .where(sql`${otps.expiresAt} < NOW()`);
   }
 }
 

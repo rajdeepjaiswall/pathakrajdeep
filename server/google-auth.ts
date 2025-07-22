@@ -13,12 +13,33 @@ export function initializeGoogleAuth() {
     return;
   }
 
+  // Determine the callback URL based on environment
+  const getCallbackURL = () => {
+    if (process.env.NODE_ENV === 'production') {
+      // For production, try custom domain first, then Replit domain
+      if (process.env.CUSTOM_DOMAIN) {
+        return `https://${process.env.CUSTOM_DOMAIN}/api/auth/google/callback`;
+      } else if (process.env.REPLIT_DOMAINS) {
+        return `https://${process.env.REPLIT_DOMAINS}/api/auth/google/callback`;
+      }
+    }
+    // For development, use the Replit domain
+    if (process.env.REPLIT_DOMAINS) {
+      return `https://${process.env.REPLIT_DOMAINS}/api/auth/google/callback`;
+    }
+    // Fallback
+    return "/api/auth/google/callback";
+  };
+
+  const callbackURL = getCallbackURL();
+  console.log(`Google OAuth callback URL: ${callbackURL}`);
+
   passport.use(
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: "/api/auth/google/callback",
+        callbackURL: callbackURL,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {

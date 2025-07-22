@@ -333,7 +333,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/complete-profile", authenticateUser, async (req, res) => {
     try {
       const { phone, password, addressLine1, addressLine2, city, state, pinCode } = req.body;
-      const userId = req.user.id;
+      
+      // Get user ID from session (Google OAuth) or JWT
+      let userId;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        // Session-based authentication (Google OAuth)
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub;
+      } else {
+        // JWT-based authentication
+        userId = (req.user as any)?.id || (req.user as any)?.userId;
+      }
       
       // Hash password if provided
       let hashedPassword = null;
@@ -361,7 +371,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Skip profile completion (mark as incomplete but allow access)
   app.post("/api/auth/skip-profile", authenticateUser, async (req, res) => {
     try {
-      const userId = req.user.id;
+      // Get user ID from session (Google OAuth) or JWT
+      let userId;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        // Session-based authentication (Google OAuth)
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub;
+      } else {
+        // JWT-based authentication
+        userId = (req.user as any)?.id || (req.user as any)?.userId;
+      }
       
       const updatedUser = await storage.updateUser(userId, {
         profileCompleted: false,

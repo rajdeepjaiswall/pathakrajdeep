@@ -17,7 +17,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { 
   User, MapPin, Phone, Mail, Edit3, Save, X, Plus, Trash2, 
-  AlertCircle, CheckCircle, Clock, Package, LogOut, Verified 
+  AlertCircle, CheckCircle, Clock, Package, LogOut, Verified,
+  ArrowLeft, Home, Store
 } from 'lucide-react';
 
 // Phone verification schema
@@ -305,27 +306,52 @@ export default function CustomerAccount() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            {user.profileImageUrl ? (
-              <img src={user.profileImageUrl} alt="Profile" className="w-10 h-10 rounded-full" />
-            ) : (
-              <User className="w-6 h-6 text-primary" />
-            )}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">My Account</h1>
-            <p className="text-muted-foreground">
-              Welcome back, {user.firstName || user.username}!
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-cream to-almond">
+      {/* Navigation Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation('/')}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <Store className="h-4 w-4" />
+              <span>Back to Store</span>
+            </Button>
+            
+            <h1 className="text-2xl font-bold text-navy">My Account</h1>
+            
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="flex items-center space-x-2"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </Button>
           </div>
         </div>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Logout
-        </Button>
+      </div>
+      
+      <div className="container mx-auto p-4 max-w-4xl">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              {user.profileImageUrl ? (
+                <img src={user.profileImageUrl} alt="Profile" className="w-10 h-10 rounded-full" />
+              ) : (
+                <User className="w-6 h-6 text-primary" />
+              )}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Account Dashboard</h2>
+              <p className="text-muted-foreground">
+                Welcome back, {user.firstName || user.username}!
+              </p>
+            </div>
+        </div>
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
@@ -752,6 +778,7 @@ export default function CustomerAccount() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

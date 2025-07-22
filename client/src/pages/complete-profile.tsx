@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
+import { ArrowLeft, Home } from 'lucide-react';
 
 export default function CompleteProfile() {
   const [, navigate] = useLocation();
@@ -99,8 +100,55 @@ export default function CompleteProfile() {
     }));
   };
 
+  const skipProfileMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/auth/skip-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include session cookies
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to skip profile');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (updatedUser) => {
+      updateUser({ ...user, profileCompleted: false });
+      toast({
+        title: "Profile Skipped",
+        description: "You can complete your profile later from the account page.",
+      });
+      navigate('/customer/account');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to skip profile",
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center p-4">
+      {/* Navigation Header */}
+      <div className="fixed top-4 left-4 z-10">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <Home className="h-4 w-4" />
+          <span>Back to Store</span>
+        </Button>
+      </div>
+      
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center">
@@ -227,14 +275,11 @@ export default function CompleteProfile() {
             <div className="mt-4 text-center">
               <Button
                 variant="ghost"
-                onClick={() => {
-                  // Mark profile as incomplete but allow user to continue
-                  updateUser({ ...user, profileCompleted: false });
-                  navigate('/account');
-                }}
+                onClick={() => skipProfileMutation.mutate()}
+                disabled={skipProfileMutation.isPending}
                 className="text-gray-600 hover:text-gray-800"
               >
-                Skip for now
+                {skipProfileMutation.isPending ? 'Skipping...' : 'Skip for now'}
               </Button>
             </div>
           </CardContent>

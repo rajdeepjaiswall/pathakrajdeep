@@ -15,20 +15,8 @@ export function initializeGoogleAuth() {
 
   // Determine the callback URL based on environment
   const getCallbackURL = () => {
-    if (process.env.NODE_ENV === 'production') {
-      // For production, try custom domain first, then Replit domain
-      if (process.env.CUSTOM_DOMAIN) {
-        return `https://${process.env.CUSTOM_DOMAIN}/api/auth/google/callback`;
-      } else if (process.env.REPLIT_DOMAINS) {
-        return `https://${process.env.REPLIT_DOMAINS}/api/auth/google/callback`;
-      }
-    }
-    // For development, use the Replit domain
-    if (process.env.REPLIT_DOMAINS) {
-      return `https://${process.env.REPLIT_DOMAINS}/api/auth/google/callback`;
-    }
-    // Fallback
-    return "/api/auth/google/callback";
+    // Always use custom domain for production stability (doesn't change on redeployment)
+    return `https://pathakbhandar.in/api/auth/google/callback`;
   };
 
   const callbackURL = getCallbackURL();

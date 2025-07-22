@@ -135,6 +135,14 @@ Successfully configured custom domain connection:
 - **Current Status**: Site accessible via HTTP, HTTPS showing certificate error
 - **Next Steps**: Regenerating SSL certificate for pathakbhandar.in domain
 
+### July 22, 2025 - Google OAuth Domain Stability Fix
+Fixed post-deployment Google OAuth issues:
+- **Domain Stability**: Updated OAuth configuration to always use custom domain (pathakbhandar.in) instead of changing Replit domains
+- **Redeployment Resilience**: Google Console redirect URIs no longer need updates after each Replit redeployment
+- **Error Resolution**: Fixed "Error 400: invalid_request" that occurs when Replit domains change
+- **Authentication System**: Completed comprehensive account management with phone verification, address management, and order history
+- **Session Handling**: Implemented hybrid authentication supporting both JWT and session-based Google OAuth
+
 ### July 21, 2025 - Cloud Run Deployment Fixes
 Applied comprehensive Cloud Run compatibility improvements:
 - **Port Configuration**: Updated server to properly use PORT environment variable with fallback to 5000

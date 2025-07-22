@@ -35,6 +35,28 @@ function authenticateToken(req: any, res: any, next: any) {
   });
 }
 
+// Hybrid authentication middleware (JWT or Session)
+function authenticateUser(req: any, res: any, next: any) {
+  // Check for session-based authentication first (Google OAuth)
+  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+    return next();
+  }
+  
+  // Fall back to JWT authentication
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.status(401).json({ message: 'Authentication required' });
+    req.user = user;
+    next();
+  });
+}
+
 // Optional authentication middleware for cart/wishlist
 function optionalAuth(req: any, res: any, next: any) {
   const authHeader = req.headers['authorization'];

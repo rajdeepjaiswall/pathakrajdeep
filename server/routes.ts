@@ -175,6 +175,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auth status route (supports both JWT and session)
+  app.get('/api/auth/status', optionalAuth, async (req, res) => {
+    try {
+      // Check session-based auth first (Google OAuth)
+      if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+        // Fetch complete user data from database
+        const fullUser = await storage.getUser(req.user.id);
+        res.json({ 
+          isAuthenticated: true, 
+          user: fullUser,
+          authType: 'session'
+        });
+        return;
+      }
+      
+      // Check JWT-based auth
+      if (req.user) {
+        // Fetch complete user data from database
+        const fullUser = await storage.getUser(req.user.id);
+        res.json({ 
+          isAuthenticated: true, 
+          user: fullUser,
+          authType: 'jwt'
+        });
+        return;
+      }
+      
+      res.json({ 
+        isAuthenticated: false,
+        authType: null
+      });
+    } catch (error: any) {
+      console.error('Auth status error:', error);
+      res.json({ 
+        isAuthenticated: false,
+        authType: null
+      });
+    }
+  });
+
   // Enhanced authentication middleware that works with both JWT and sessions
   function authenticateUser(req: any, res: any, next: any) {
     // Check for session-based auth first (Google OAuth)
@@ -259,6 +299,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         lastName,
         email,
+      });
+      
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Complete profile after Google OAuth
+  app.post("/api/auth/complete-profile", authenticateUser, async (req, res) => {
+    try {
+      const { phone, password, addressLine1, addressLine2, city, state, pinCode } = req.body;
+      const userId = req.user.id;
+      
+      // Hash password if provided
+      let hashedPassword = null;
+      if (password) {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
+      
+      const updatedUser = await storage.updateUser(userId, {
+        phone,
+        password: hashedPassword,
+        addressLine1,
+        addressLine2,
+        city,
+        state,
+        pinCode,
+        profileCompleted: true,
+      });
+      
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Link Google account to existing user
+  app.post("/api/auth/link-google", authenticateUser, async (req, res) => {
+    try {
+      const { googleId } = req.body;
+      const userId = req.user.id;
+      
+      // Check if Google ID is already linked to another account
+      const existingUser = await storage.getUserByGoogleId(googleId);
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(400).json({ message: 'Google account is already linked to another user' });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, {
+        googleId,
+        authProvider: 'google',
+        isVerified: true,
       });
       
       res.json(updatedUser);

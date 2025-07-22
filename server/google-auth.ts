@@ -59,6 +59,7 @@ export function initializeGoogleAuth() {
             authProvider: "google",
             role: "customer",
             isVerified: true, // Google accounts are considered verified
+            profileCompleted: false, // New Google users need to complete profile
           });
           
           return done(null, newUser);
@@ -149,9 +150,19 @@ export function setupGoogleAuthRoutes(app: Express) {
   // Google OAuth callback route
   app.get("/api/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/customer/login" }),
-    (req, res) => {
-      // Successful authentication, redirect home
-      res.redirect("/?google_auth=success");
+    async (req, res) => {
+      try {
+        // Check if user needs to complete profile
+        const user = req.user as any;
+        if (user && !user.profileCompleted) {
+          res.redirect("/complete-profile");
+        } else {
+          res.redirect("/account");
+        }
+      } catch (error) {
+        console.error("Google OAuth callback error:", error);
+        res.redirect("/customer/login?error=callback_failed");
+      }
     }
   );
 

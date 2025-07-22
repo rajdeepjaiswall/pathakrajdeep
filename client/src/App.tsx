@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "./hooks/use-auth";
+import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { CartProvider } from "./hooks/use-cart";
 
 // Pages
@@ -34,6 +34,7 @@ import ProductManager from "@/pages/super-admin/products";
 import OTPTest from "@/pages/otp-test";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
+import CompleteProfile from "@/pages/complete-profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/otp-test" component={OTPTest} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-service" component={TermsOfService} />
+      <Route path="/complete-profile" component={CompleteProfile} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -82,12 +84,32 @@ function App() {
         <AuthProvider>
           <CartProvider>
             <Toaster />
-            <Router />
+            <AppContent />
           </CartProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
+}
+
+function AppContent() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+      </div>
+    );
+  }
+
+  // If user is authenticated but hasn't completed profile, show complete profile page
+  if (isAuthenticated && user?.authProvider === 'google' && !user?.profileCompleted) {
+    return <CompleteProfile />;
+  }
+
+  return <Router />;
 }
 
 export default App;

@@ -50,6 +50,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (data.isAuthenticated && data.user) {
           setUser(data.user);
           setAuthType('session');
+          
+          // Check if Google OAuth user needs to complete profile
+          if (data.user.authProvider === 'google' && !data.user.profileCompleted) {
+            // Don't redirect here, let the routing handle it
+            console.log('User needs to complete profile');
+          }
         }
       }
     } catch (error) {

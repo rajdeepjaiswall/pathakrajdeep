@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   authProvider: text("auth_provider").default("local"), // local, google
   role: text("role").notNull().default("customer"), // customer, admin, super_admin
   isVerified: boolean("is_verified").default(false),
+  profileCompleted: boolean("profile_completed").default(false),
   addressLine1: text("address_line_1"),
   addressLine2: text("address_line_2"),
   area: text("area"),

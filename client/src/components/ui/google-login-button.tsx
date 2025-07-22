@@ -9,6 +9,15 @@ interface GoogleLoginButtonProps {
 
 export function GoogleLoginButton({ disabled = false, className = "" }: GoogleLoginButtonProps) {
   const handleGoogleLogin = () => {
+    // Detect if this might be a mobile webview
+    const userAgent = navigator.userAgent || '';
+    const isMobileWebview = /wv|WebView/.test(userAgent);
+    
+    if (isMobileWebview) {
+      alert('Google login works best in your mobile browser (Chrome, Safari, Firefox). Please open this site directly in your browser instead of an app to use Google login.');
+      return;
+    }
+    
     window.location.href = '/api/auth/google';
   };
 

@@ -41,6 +41,16 @@ export default function CustomerLogin() {
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    
+    if (error === 'mobile_webview') {
+      toast({
+        title: "Google Login Not Supported",
+        description: "Google login doesn't work in mobile apps. Please open this site in your mobile browser (Chrome, Safari, etc.) to use Google login.",
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   const checkAuthStatus = async () => {

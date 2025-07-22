@@ -139,10 +139,24 @@ export function setupGoogleAuthRoutes(app: Express) {
     return;
   }
 
-  // Google OAuth login route
-  app.get("/api/auth/google",
-    passport.authenticate("google", { scope: ["profile", "email"] })
-  );
+  // Google OAuth login route with user agent detection
+  app.get("/api/auth/google", (req, res, next) => {
+    // Check if this is from a mobile browser or embedded webview
+    const userAgent = req.get('User-Agent') || '';
+    const isMobileWebview = /wv|WebView/.test(userAgent);
+    const isMobile = /Mobile|Android|iPhone|iPad/.test(userAgent);
+    
+    if (isMobileWebview) {
+      // Redirect with error for webview
+      return res.redirect("/customer/login?error=mobile_webview");
+    }
+    
+    // Proceed with Google OAuth
+    passport.authenticate("google", { 
+      scope: ["profile", "email"],
+      prompt: "select_account" // Allow account selection
+    })(req, res, next);
+  });
 
   // Google OAuth callback route
   app.get("/api/auth/google/callback",

@@ -1,0 +1,165 @@
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { storage } from "./storage";
+import type { Express } from "express";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+
+// Initialize Google OAuth Strategy
+export function initializeGoogleAuth() {
+  // Only initialize if Google credentials are provided
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.log("Google OAuth credentials not provided - Google login will be disabled");
+    return;
+  }
+
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: "/api/auth/google/callback",
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          // Check if user exists by Google ID
+          const existingUser = await storage.getUserByGoogleId(profile.id);
+          
+          if (existingUser) {
+            // User exists, return user
+            return done(null, existingUser);
+          }
+          
+          // Check if user exists by email
+          if (profile.emails && profile.emails.length > 0) {
+            const emailUser = await storage.getUserByEmail(profile.emails[0].value);
+            if (emailUser) {
+              // Link Google ID to existing email account
+              const updatedUser = await storage.updateUserGoogleId(emailUser.id, profile.id);
+              return done(null, updatedUser);
+            }
+          }
+          
+          // Create new user
+          const newUser = await storage.createGoogleUser({
+            googleId: profile.id,
+            email: profile.emails?.[0]?.value || null,
+            firstName: profile.name?.givenName || null,
+            lastName: profile.name?.familyName || null,
+            profileImageUrl: profile.photos?.[0]?.value || null,
+            authProvider: "google",
+            role: "customer",
+            isVerified: true, // Google accounts are considered verified
+          });
+          
+          return done(null, newUser);
+        } catch (error) {
+          console.error("Google OAuth error:", error);
+          return done(error, null);
+        }
+      }
+    )
+  );
+
+  // Passport session serialization
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error, null);
+    }
+  });
+}
+
+// Setup session middleware
+export function setupSession(app: Express) {
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const pgStore = connectPg(session);
+  const sessionStore = new pgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: false,
+    ttl: sessionTtl,
+    tableName: "sessions",
+  });
+
+  app.use(session({
+    secret: process.env.SESSION_SECRET || "pathak-bakery-session-secret",
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: sessionTtl,
+    },
+  }));
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+}
+
+// Google OAuth routes
+export function setupGoogleAuthRoutes(app: Express) {
+  // Only setup Google routes if credentials are provided
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    // Provide fallback routes that redirect to regular login
+    app.get("/api/auth/google", (req, res) => {
+      res.redirect("/customer/login?error=google_not_configured");
+    });
+    
+    app.get("/api/auth/google/callback", (req, res) => {
+      res.redirect("/customer/login?error=google_not_configured");
+    });
+    return;
+  }
+
+  // Google OAuth login route
+  app.get("/api/auth/google",
+    passport.authenticate("google", { scope: ["profile", "email"] })
+  );
+
+  // Google OAuth callback route
+  app.get("/api/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/customer/login" }),
+    (req, res) => {
+      // Successful authentication, redirect home
+      res.redirect("/?google_auth=success");
+    }
+  );
+
+  // Check authentication status
+  app.get("/api/auth/status", (req, res) => {
+    if (req.isAuthenticated()) {
+      res.json({ 
+        isAuthenticated: true, 
+        user: {
+          id: req.user.id,
+          username: req.user.username,
+          email: req.user.email,
+          firstName: req.user.firstName,
+          lastName: req.user.lastName,
+          profileImageUrl: req.user.profileImageUrl,
+          role: req.user.role,
+          authProvider: req.user.authProvider
+        }
+      });
+    } else {
+      res.json({ isAuthenticated: false });
+    }
+  });
+
+  // Logout route
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Error logging out" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+}

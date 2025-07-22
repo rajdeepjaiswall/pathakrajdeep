@@ -12,9 +12,13 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
   getUserByPhone(phone: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  createGoogleUser(user: any): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
+  updateUserGoogleId(id: number, googleId: string): Promise<User>;
   getCustomers(): Promise<User[]>;
 
   // Category methods
@@ -101,6 +105,16 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+    return user || undefined;
+  }
+
   async getUserByPhone(phone: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.phone, phone));
     return user || undefined;
@@ -110,6 +124,23 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .insert(users)
       .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async createGoogleUser(googleUserData: any): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(googleUserData)
+      .returning();
+    return user;
+  }
+
+  async updateUserGoogleId(id: number, googleId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ googleId, authProvider: 'google' })
+      .where(eq(users.id, id))
       .returning();
     return user;
   }

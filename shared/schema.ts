@@ -6,10 +6,15 @@ import { z } from "zod";
 // Users table (customers and admins)
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  email: text("email"),
+  username: text("username").unique(),
+  email: text("email").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
   phone: text("phone"),
-  password: text("password").notNull(),
+  password: text("password"),
+  profileImageUrl: text("profile_image_url"),
+  googleId: text("google_id").unique(),
+  authProvider: text("auth_provider").default("local"), // local, google
   role: text("role").notNull().default("customer"), // customer, admin, super_admin
   isVerified: boolean("is_verified").default(false),
   addressLine1: text("address_line_1"),
@@ -21,6 +26,7 @@ export const users = pgTable("users", {
   latitude: text("latitude"),
   longitude: text("longitude"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Categories table
@@ -167,6 +173,13 @@ export const banners = pgTable("banners", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Session storage table for express-session
+export const sessions = pgTable("sessions", {
+  sid: varchar("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
+
 // OTP table for email and WhatsApp verification
 export const otps = pgTable("otps", {
   id: serial("id").primaryKey(),
@@ -264,10 +277,32 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
 }));
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({
+export const insertUserSchema = createInsertSchema(users, {
+  password: z.string().optional(), // Make password optional for Google OAuth users
+  username: z.string().optional(), // Make username optional for Google OAuth users
+}).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
+
+// Google OAuth user schema
+export const insertGoogleUserSchema = createInsertSchema(users).omit({
+  id: true,
+  password: true,
+  username: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// User upsert schema for OAuth
+export const upsertUserSchema = insertUserSchema.extend({
+  id: z.string().optional(),
+});
+
+// User types
+export type User = typeof users.$inferSelect;
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
 
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,

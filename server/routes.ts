@@ -68,7 +68,14 @@ function requireSuperAdmin(req: any, res: any, next: any) {
   next();
 }
 
+import { initializeGoogleAuth, setupSession, setupGoogleAuthRoutes } from "./google-auth";
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup session and Google OAuth
+  setupSession(app);
+  initializeGoogleAuth();
+  setupGoogleAuthRoutes(app);
+
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {

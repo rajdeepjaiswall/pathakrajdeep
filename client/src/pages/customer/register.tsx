@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
 import { register } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { GoogleLoginButton } from '@/components/ui/google-login-button';
 import { MapPin, Loader2 } from 'lucide-react';
 import newLogo from '@assets/Screenshot_2025-05-30-23-52-51-45_10a3d211b678d435d51c62b8010e86c1.jpg';
 
@@ -16,6 +18,46 @@ export default function CustomerRegister() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isFetchingPinData, setIsFetchingPinData] = useState(false);
+
+  useEffect(() => {
+    // Check URL parameters for Google auth success or errors
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleAuth = urlParams.get('google_auth');
+    const error = urlParams.get('error');
+    
+    if (googleAuth === 'success') {
+      checkAuthStatus();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (error === 'google_not_configured') {
+      toast({
+        title: "Google Sign-up Not Available",
+        description: "Google sign-up is not configured yet. Please use regular registration.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/status');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isAuthenticated) {
+          authLogin(data.user, 'session-based');
+          setLocation('/');
+          toast({
+            title: "Welcome!",
+            description: "Your account has been created successfully with Google.",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Auth status check failed:', error);
+    }
+  };
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -254,7 +296,21 @@ export default function CustomerRegister() {
           <CardDescription className="text-navy/70">Create your account to start shopping for authentic sweets and snacks</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
+            {/* Google Login Button */}
+            <GoogleLoginButton disabled={isLoading} />
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator className="w-full" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or sign up with</span>
+              </div>
+            </div>
+
+            {/* Registration Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Input
@@ -466,6 +522,7 @@ export default function CustomerRegister() {
             >
               Sign in to your account
             </Button>
+          </div>
           </div>
         </CardContent>
       </Card>

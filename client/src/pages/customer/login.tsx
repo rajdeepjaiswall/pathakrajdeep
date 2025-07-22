@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
 import { login } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { GoogleLoginButton } from '@/components/ui/google-login-button';
 
 export default function CustomerLogin() {
   const [, setLocation] = useLocation();
@@ -16,6 +18,49 @@ export default function CustomerLogin() {
     username: '',
     password: ''
   });
+
+  useEffect(() => {
+    // Check URL parameters for Google auth success or errors
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleAuth = urlParams.get('google_auth');
+    const error = urlParams.get('error');
+    
+    if (googleAuth === 'success') {
+      // Check if user is authenticated via session
+      checkAuthStatus();
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (error === 'google_not_configured') {
+      toast({
+        title: "Google Login Not Available",
+        description: "Google login is not configured yet. Please use regular login.",
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/status');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isAuthenticated) {
+          authLogin(data.user, 'session-based'); // Use session-based auth for Google users
+          setLocation('/');
+          toast({
+            title: "Welcome!",
+            description: `Signed in successfully with Google.`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Auth status check failed:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,37 +93,53 @@ export default function CustomerLogin() {
           <CardDescription>Sign in to your Pathak Bhandar account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Input
-                type="text"
-                placeholder="Username"
-                value={formData.username}
-                onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                required
-              />
+          <div className="space-y-4">
+            {/* Google Login Button */}
+            <GoogleLoginButton disabled={isLoading} />
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator className="w-full" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              </div>
             </div>
-            <div>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                required
-              />
+
+            {/* Regular Login Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Username"
+                  value={formData.username}
+                  onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </Button>
+            </form>
+
+            <div className="text-center">
+              <Button
+                variant="link"
+                onClick={() => setLocation('/customer/register')}
+                className="text-orange-600"
+              >
+                Don't have an account? Sign up
+              </Button>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </Button>
-          </form>
-          <div className="mt-4 text-center">
-            <Button
-              variant="link"
-              onClick={() => setLocation('/customer/register')}
-              className="text-orange-600"
-            >
-              Don't have an account? Sign up
-            </Button>
           </div>
         </CardContent>
       </Card>

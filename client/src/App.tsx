@@ -44,6 +44,7 @@ function Router() {
       <Route path="/login" component={CustomerLogin} />
       <Route path="/register" component={CustomerRegister} />
       <Route path="/account" component={CustomerProfile} />
+      <Route path="/customer/login" component={CustomerLogin} />
       <Route path="/customer/register" component={CustomerRegister} />
       <Route path="/customer/profile" component={CustomerProfile} />
       <Route path="/customer/wishlist" component={CustomerWishlist} />

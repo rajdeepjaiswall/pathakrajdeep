@@ -240,8 +240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced authentication middleware that works with both JWT and sessions
   function authenticateUser(req: any, res: any, next: any) {
     // Check for session-based auth first (Google OAuth)
-    if (req.isAuthenticated && req.isAuthenticated()) {
-      req.user = req.user; // Session user
+    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+      // Session user is already set by passport, just continue
       return next();
     }
     

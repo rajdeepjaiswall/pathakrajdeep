@@ -43,7 +43,7 @@ export function CartProvider({ children }: CartProviderProps) {
   // Add to cart mutation
   const addToCartMutation = useMutation({
     mutationFn: async ({ productId, quantity }: { productId: number; quantity: number }) => {
-      return await apiRequest('/api/cart', 'POST', {
+      return await apiRequest('POST', '/api/cart', {
         product_id: productId,
         quantity,
       });
@@ -67,7 +67,7 @@ export function CartProvider({ children }: CartProviderProps) {
   // Update quantity mutation
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ cartItemId, quantity }: { cartItemId: number; quantity: number }) => {
-      return await apiRequest(`/api/cart/${cartItemId}`, 'PUT', {
+      return await apiRequest('PUT', `/api/cart/${cartItemId}`, {
         quantity,
       });
     },
@@ -86,7 +86,7 @@ export function CartProvider({ children }: CartProviderProps) {
   // Remove from cart mutation
   const removeFromCartMutation = useMutation({
     mutationFn: async (cartItemId: number) => {
-      return await apiRequest(`/api/cart/${cartItemId}`, 'DELETE');
+      return await apiRequest('DELETE', `/api/cart/${cartItemId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });

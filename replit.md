@@ -145,6 +145,15 @@ Fixed post-deployment Google OAuth issues:
 - **Profile Completion**: Fixed profile completion flow with session-based authentication and red dot notifications for incomplete profiles
 - **Database Schema**: Resolved profile_completed column issue in users table for Google OAuth users
 
+### July 25, 2025 - Google OAuth Authentication & Navigation Fixes
+Resolved critical authentication and navigation issues:
+- **Authentication Error Fix**: Fixed Google OAuth profile completion authentication errors by properly extracting user IDs from session data
+- **Session Handling**: Enhanced authentication middleware to correctly handle both Google OAuth session-based auth and JWT token auth
+- **Navigation Enhancement**: Added "Back to Store" and "Go to Cart" navigation buttons to all account pages (Profile, Orders, Wishlist, Account)
+- **Profile Completion Redirect**: Changed redirect after profile completion/skip to home page (/) instead of /account
+- **Checkout Authentication**: Updated checkout page to redirect to home with toast notification instead of non-existent /login page
+- **Error Logging**: Added console logging for debugging authentication issues in profile completion and skip flows
+
 ### July 21, 2025 - Cloud Run Deployment Fixes
 Applied comprehensive Cloud Run compatibility improvements:
 - **Port Configuration**: Updated server to properly use PORT environment variable with fallback to 5000

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User, ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/cart';
 import { apiRequest } from '@/lib/queryClient';
+import { Link } from 'wouter';
 
 export default function CustomerOrders() {
   const { user } = useAuth();
@@ -130,6 +131,22 @@ export default function CustomerOrders() {
       <Header />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Navigation Bar */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Store
+            </Button>
+          </Link>
+          <Link href="/cart">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Go to Cart
+            </Button>
+          </Link>
+        </div>
+        
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-navy mb-2">My Orders</h1>

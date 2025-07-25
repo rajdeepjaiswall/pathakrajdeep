@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
+import { Heart, ShoppingCart, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Header from '@/components/layout/header';
@@ -27,6 +27,22 @@ export default function CustomerWishlist() {
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navigation Bar */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Store
+            </Button>
+          </Link>
+          <Link href="/cart">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Go to Cart
+            </Button>
+          </Link>
+        </div>
+        
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-navy mb-2">My Wishlist</h1>
           <p className="text-gray-600">Your saved favorites</p>

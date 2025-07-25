@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { 
   User, MapPin, Phone, Mail, Edit3, Save, X, Plus, Trash2, 
   AlertCircle, CheckCircle, Clock, Package, LogOut, Verified,
@@ -336,6 +336,22 @@ export default function CustomerAccount() {
       </div>
       
       <div className="container mx-auto p-4 max-w-4xl">
+        {/* Navigation Bar */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Store
+            </Button>
+          </Link>
+          <Link href="/cart">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Store className="h-4 w-4" />
+              Go to Cart
+            </Button>
+          </Link>
+        </div>
+        
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">

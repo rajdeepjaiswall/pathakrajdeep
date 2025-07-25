@@ -11,7 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { User, MapPin, Phone, Mail, Edit3, Save, X } from 'lucide-react';
+import { User, MapPin, Phone, Mail, Edit3, Save, X, ArrowLeft, Store, Home } from 'lucide-react';
+import { useLocation, Link } from 'wouter';
+import Header from '@/components/layout/header';
+import Footer from '@/components/layout/footer';
+import MobileNav from '@/components/layout/mobile-nav';
+import CartSidebar from '@/components/cart/cart-sidebar';
 
 const profileSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -132,6 +137,22 @@ export default function CustomerProfile() {
   return (
     <div className="min-h-screen bg-cream py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Navigation Bar */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Store
+            </Button>
+          </Link>
+          <Link href="/cart">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Store className="h-4 w-4" />
+              Go to Cart
+            </Button>
+          </Link>
+        </div>
+        
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-navy">My Profile</h1>
           <p className="text-gray-600 mt-2">Manage your personal information and preferences</p>

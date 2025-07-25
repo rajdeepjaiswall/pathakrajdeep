@@ -39,7 +39,12 @@ export default function Checkout() {
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
-    setLocation('/login');
+    toast({
+      title: "Authentication Required",
+      description: "Please log in to proceed with checkout",
+      variant: "destructive",
+    });
+    setLocation('/');
     return null;
   }
 

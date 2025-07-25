@@ -49,7 +49,7 @@ export default function CompleteProfile() {
         title: "Profile Completed",
         description: "Your profile has been completed successfully!",
       });
-      navigate('/account');
+      navigate('/');
     },
     onError: (error: any) => {
       toast({
@@ -123,7 +123,7 @@ export default function CompleteProfile() {
         title: "Profile Skipped",
         description: "You can complete your profile later from the account page.",
       });
-      navigate('/customer/account');
+      navigate('/');
     },
     onError: (error: any) => {
       toast({

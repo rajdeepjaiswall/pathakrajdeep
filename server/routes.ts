@@ -339,10 +339,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.isAuthenticated && req.isAuthenticated()) {
         // Session-based authentication (Google OAuth)
         const sessionUser = req.user as any;
-        userId = sessionUser.claims?.sub;
+        userId = sessionUser.claims?.sub || sessionUser.id;
+        console.log('Google OAuth user ID:', userId, 'Full user:', sessionUser);
       } else {
         // JWT-based authentication
         userId = (req.user as any)?.id || (req.user as any)?.userId;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated properly' });
       }
       
       // Hash password if provided
@@ -364,6 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedUser);
     } catch (error: any) {
+      console.error('Complete profile error:', error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -376,10 +382,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.isAuthenticated && req.isAuthenticated()) {
         // Session-based authentication (Google OAuth)
         const sessionUser = req.user as any;
-        userId = sessionUser.claims?.sub;
+        userId = sessionUser.claims?.sub || sessionUser.id;
       } else {
         // JWT-based authentication
         userId = (req.user as any)?.id || (req.user as any)?.userId;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated properly' });
       }
       
       const updatedUser = await storage.updateUser(userId, {
@@ -388,6 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedUser);
     } catch (error: any) {
+      console.error('Skip profile error:', error);
       res.status(400).json({ message: error.message });
     }
   });

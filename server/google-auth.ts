@@ -104,9 +104,12 @@ export function setupSession(app: Express) {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Allow over HTTP for development and HTTPS proxy setups
       maxAge: sessionTtl,
+      sameSite: 'lax', // Allow cross-site requests for OAuth callbacks
+      domain: undefined, // Don't restrict domain for flexibility
     },
+    name: 'pathak.session', // Custom session name
   }));
 
   app.use(passport.initialize());
@@ -166,17 +169,7 @@ export function setupGoogleAuthRoutes(app: Express) {
     }
   );
 
-  // Check authentication status
-  app.get("/api/auth/status", (req, res) => {
-    if (req.isAuthenticated()) {
-      res.json({ 
-        isAuthenticated: true, 
-        user: req.user
-      });
-    } else {
-      res.json({ isAuthenticated: false });
-    }
-  });
+  // Note: /api/auth/status endpoint is handled in routes.ts to support both JWT and session auth
 
   // Logout route
   app.post("/api/auth/logout", (req, res) => {

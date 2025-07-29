@@ -200,30 +200,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth status route (supports both JWT and session)
   app.get('/api/auth/status', optionalAuth, async (req, res) => {
     try {
+      console.log('Auth status check:', {
+        hasIsAuthenticated: typeof req.isAuthenticated === 'function',
+        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+        hasSessionUser: !!req.user,
+        sessionData: req.session ? Object.keys(req.session) : null,
+        sessionId: req.sessionID || 'none'
+      });
+
       // Check session-based auth first (Google OAuth)
       if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+        console.log('Session user found:', req.user.id);
         // Fetch complete user data from database
         const fullUser = await storage.getUser(req.user.id);
-        res.json({ 
-          isAuthenticated: true, 
-          user: fullUser,
-          authType: 'session'
-        });
-        return;
+        if (fullUser) {
+          res.json({ 
+            isAuthenticated: true, 
+            user: fullUser,
+            authType: 'session'
+          });
+          return;
+        }
       }
       
       // Check JWT-based auth
-      if (req.user) {
+      if (req.user && !req.isAuthenticated) {
+        console.log('JWT user found:', req.user.id);
         // Fetch complete user data from database
         const fullUser = await storage.getUser(req.user.id);
-        res.json({ 
-          isAuthenticated: true, 
-          user: fullUser,
-          authType: 'jwt'
-        });
-        return;
+        if (fullUser) {
+          res.json({ 
+            isAuthenticated: true, 
+            user: fullUser,
+            authType: 'jwt'
+          });
+          return;
+        }
       }
       
+      console.log('No authentication found');
       res.json({ 
         isAuthenticated: false,
         authType: null
@@ -232,7 +247,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Auth status error:', error);
       res.json({ 
         isAuthenticated: false,
-        authType: null
+        authType: null,
+        error: error.message
       });
     }
   });

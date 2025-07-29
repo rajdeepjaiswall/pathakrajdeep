@@ -422,11 +422,15 @@ CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
 
 -- Insert default admin users
--- Note: Replace password hashes with actual bcrypt hashes
-INSERT INTO users (username, password, firstName, lastName, email, role) VALUES 
-('pathakji', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Pathak', 'Ji', 'admin@pathakbhandar.com', 'admin'),
-('rajdeep', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Rajdeep', 'Admin', 'rajdeep@pathakbhandar.com', 'super_admin')
-ON CONFLICT (username) DO NOTHING;
+-- SECURITY: Admin accounts must be created manually with secure passwords
+-- Run these commands manually after setup with your chosen secure passwords:
+-- 
+-- INSERT INTO users (username, password, firstName, lastName, email, role) VALUES 
+-- ('pathakji', '[BCRYPT_HASH_OF_SECURE_PASSWORD]', 'Pathak', 'Ji', 'admin@pathakbhandar.com', 'admin'),
+-- ('rajdeep', '[BCRYPT_HASH_OF_SECURE_PASSWORD]', 'Rajdeep', 'Admin', 'rajdeep@pathakbhandar.com', 'super_admin')
+-- ON CONFLICT (username) DO NOTHING;
+--
+-- To generate bcrypt hash: const bcrypt = require('bcrypt'); bcrypt.hashSync('your_secure_password', 10);
 
 -- Insert sample categories
 INSERT INTO categories (name, description, image) VALUES 

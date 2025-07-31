@@ -8,12 +8,14 @@ import { formatPrice } from '@/lib/cart';
 import { Link } from 'wouter';
 import { Product } from '@shared/schema';
 import { useState, useEffect } from 'react';
+import { ProductBadge } from '@/components/ui/product-badge';
 
 interface ProductCardProps {
   product: Product;
+  isPreviouslyOrdered?: boolean;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, isPreviouslyOrdered = false }: ProductCardProps) {
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist, isAdding, isRemoving } = useWishlist();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -138,6 +140,9 @@ export default function ProductCard({ product }: ProductCardProps) {
               Bestseller
             </Badge>
           )}
+
+          {/* Previously Ordered Badge */}
+          <ProductBadge isPreviouslyOrdered={isPreviouslyOrdered} />
 
           {/* Wishlist heart icon */}
           <button

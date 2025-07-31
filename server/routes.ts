@@ -968,7 +968,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's previously ordered product IDs
+  app.get("/api/previously-ordered", optionalAuth, async (req, res) => {
+    try {
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
+        return res.json([]);
+      }
 
+      const previouslyOrderedProducts = await storage.getPreviouslyOrderedProducts(userId);
+      res.json(previouslyOrderedProducts);
+    } catch (error: any) {
+      console.error('Get previously ordered products error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   // Cancel order route (only allowed for pending and getting_ready status)
   app.put("/api/orders/:id/cancel", optionalAuth, async (req, res) => {

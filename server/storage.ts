@@ -733,6 +733,17 @@ export class DatabaseStorage implements IStorage {
       .delete(otps)
       .where(sql`${otps.expiresAt} < NOW()`);
   }
+
+  async getPreviouslyOrderedProducts(userId: number): Promise<number[]> {
+    const result = await db
+      .select({ productId: orderItems.product_id })
+      .from(orderItems)
+      .innerJoin(orders, eq(orders.id, orderItems.order_id))
+      .where(eq(orders.user_id, userId))
+      .groupBy(orderItems.product_id);
+    
+    return result.map(item => item.productId);
+  }
 }
 
 export const storage = new DatabaseStorage();

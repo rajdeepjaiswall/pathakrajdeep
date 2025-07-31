@@ -17,10 +17,12 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice, getGSTBreakdown } from '@/lib/cart';
 import { apiRequest } from '@/lib/queryClient';
+import { playSuccessChime, initializeAudioContext } from '@/lib/sounds';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { insertAddressSchema, insertOrderSchema, type Address } from '@shared/schema';
 import { z } from 'zod';
+import { useEffect } from 'react';
 
 const addressFormSchema = insertAddressSchema.omit({ userId: true });
 const orderFormSchema = z.object({
@@ -36,6 +38,19 @@ export default function Checkout() {
   const queryClient = useQueryClient();
   const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+
+  // Initialize audio context on component mount for better browser compatibility
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      initializeAudioContext();
+      document.removeEventListener('click', handleUserInteraction);
+    };
+    document.addEventListener('click', handleUserInteraction);
+    
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+    };
+  }, []);
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -171,6 +186,9 @@ export default function Checkout() {
       };
       
       localStorage.setItem('lastOrderDetails', JSON.stringify(orderDetails));
+      
+      // Play success chime sound
+      playSuccessChime();
       
       clearCart();
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });

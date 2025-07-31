@@ -31,6 +31,12 @@ export default function Home() {
     queryKey: ['/api/categories'],
   });
 
+  // Fetch previously ordered products for authenticated users
+  const { data: previouslyOrderedProducts = [] } = useQuery({
+    queryKey: ['/api/previously-ordered'],
+    enabled: isAuthenticated,
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -84,7 +90,11 @@ export default function Home() {
               ))
             ) : featuredProducts.length > 0 ? (
               featuredProducts.slice(0, 12).map((product: any) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard 
+                  key={product.id} 
+                  product={product}
+                  isPreviouslyOrdered={previouslyOrderedProducts.includes(product.id)}
+                />
               ))
             ) : (
               <div className="col-span-full text-center py-12">

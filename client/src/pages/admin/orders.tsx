@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Search, Filter, Download, CheckCircle, Clock, Package, Truck, User, Phone, Edit, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { formatPrice } from '@/lib/cart';
 import { ORDER_STATUSES } from '@/lib/constants';
 import { apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
+import { playAdminNotification } from '@/lib/sounds';
 
 export default function AdminOrders() {
   const { user } = useAuth();
@@ -29,6 +30,7 @@ export default function AdminOrders() {
   const [riderPhone, setRiderPhone] = useState('');
   const [riderImage, setRiderImage] = useState('');
   const [estimatedDelivery, setEstimatedDelivery] = useState('');
+  const previousOrderCount = useRef<number>(0);
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -58,6 +60,22 @@ export default function AdminOrders() {
       return response.json();
     },
   });
+
+  // Play notification sound for new orders
+  useEffect(() => {
+    if (orders.length > 0) {
+      if (previousOrderCount.current > 0 && orders.length > previousOrderCount.current) {
+        // New order received, play admin notification
+        playAdminNotification();
+        toast({
+          title: 'New Order Received!',
+          description: `Order #${orders[0]?.orderNumber || 'New'} has been placed`,
+          variant: 'default',
+        });
+      }
+      previousOrderCount.current = orders.length;
+    }
+  }, [orders, toast]);
 
   // Update order status mutation
   const updateStatusMutation = useMutation({

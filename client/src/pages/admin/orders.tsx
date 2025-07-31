@@ -62,7 +62,7 @@ export default function AdminOrders() {
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
-      const response = await apiRequest(`/api/admin/orders/${orderId}/status`, 'PUT', { status });
+      const response = await apiRequest('PUT', `/api/admin/orders/${orderId}/status`, { status });
       return response.json();
     },
     onSuccess: () => {
@@ -84,7 +84,7 @@ export default function AdminOrders() {
   // Update rider assignment mutation
   const updateRiderMutation = useMutation({
     mutationFn: async ({ orderId, riderName, riderPhone, riderImage }: { orderId: number; riderName: string; riderPhone: string; riderImage?: string }) => {
-      const response = await apiRequest(`/api/admin/orders/${orderId}/rider`, 'PUT', { 
+      const response = await apiRequest('PUT', `/api/admin/orders/${orderId}/rider`, { 
         riderName, 
         riderPhone,
         riderImage 
@@ -114,7 +114,7 @@ export default function AdminOrders() {
   // Update estimated delivery time mutation
   const updateDeliveryTimeMutation = useMutation({
     mutationFn: async ({ orderId, estimatedDelivery }: { orderId: number; estimatedDelivery: string }) => {
-      const response = await apiRequest(`/api/admin/orders/${orderId}/delivery-time`, 'PUT', { estimatedDelivery });
+      const response = await apiRequest('PUT', `/api/admin/orders/${orderId}/delivery-time`, { estimatedDelivery });
       return response.json();
     },
     onSuccess: () => {

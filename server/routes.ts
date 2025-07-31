@@ -911,6 +911,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/orders", optionalAuth, async (req, res) => {
     try {
+      console.log('POST /api/orders - Request received', {
+        method: req.method,
+        body: req.body,
+        headers: req.headers['authorization'] ? 'Bearer [present]' : 'No auth header'
+      });
+
       // Check session auth first for Google OAuth users
       let userId = null;
       if (req.isAuthenticated && req.isAuthenticated()) {
@@ -920,14 +926,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!userId) {
+        console.log('Order creation failed: No authentication');
         return res.status(401).json({ message: 'Please login to place an order' });
       }
 
+      console.log('Creating order for user ID:', userId);
       const orderData = insertOrderSchema.parse({
         ...req.body,
         user_id: userId,
       });
       const order = await storage.createOrder(orderData);
+      console.log('Order created successfully:', order.id, order.orderNumber);
       res.json(order);
     } catch (error: any) {
       console.error('Order creation error:', error);

@@ -43,7 +43,7 @@ export default function CustomerOrders() {
   // Cancel order mutation
   const cancelOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      const response = await apiRequest(`/api/orders/${orderId}/cancel`, 'PUT', {});
+      const response = await apiRequest('PUT', `/api/orders/${orderId}/cancel`, {});
       return response.json();
     },
     onSuccess: () => {

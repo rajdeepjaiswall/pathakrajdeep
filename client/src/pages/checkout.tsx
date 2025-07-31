@@ -87,7 +87,7 @@ export default function Checkout() {
   // Add address mutation
   const addAddressMutation = useMutation({
     mutationFn: async (data: z.infer<typeof addressFormSchema>) => {
-      const response = await apiRequest('/api/addresses', 'POST', data);
+      const response = await apiRequest('POST', '/api/addresses', data);
       return response.json();
     },
     onSuccess: (newAddress) => {
@@ -138,12 +138,14 @@ export default function Checkout() {
         notes: data.notes,
       };
 
-      const response = await apiRequest('/api/orders', 'POST', orderData);
+      console.log('Placing order with data:', orderData);
+      const response = await apiRequest('POST', '/api/orders', orderData);
       const order = await response.json();
+      console.log('Order created successfully:', order);
 
       // Create order items
       for (const item of items) {
-        await apiRequest('/api/order-items', 'POST', {
+        await apiRequest('POST', '/api/order-items', {
           order_id: order.id,
           product_id: item.product_id,
           quantity: item.quantity,
@@ -179,6 +181,7 @@ export default function Checkout() {
       setLocation('/order-confirmation');
     },
     onError: (error: any) => {
+      console.error('Order placement failed:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to place order',

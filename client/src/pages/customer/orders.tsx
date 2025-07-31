@@ -101,7 +101,7 @@ export default function CustomerOrders() {
   };
 
   const canCancelOrder = (status: string) => {
-    return ['pending', 'order_received', 'preparing', 'dispatched'].includes(status);
+    return ['pending'].includes(status);
   };
 
   const getOrderProgress = (status: string) => {
@@ -237,21 +237,36 @@ export default function CustomerOrders() {
                     </div>
 
                     {/* Rider Information */}
-                    {order.status === 'out_for_delivery' && order.riderName && (
+                    {order.riderName && (
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Delivery Partner</h4>
-                        <div className="text-sm text-gray-600 space-y-1">
-                          <p className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            <span className="font-medium">{order.riderName}</span>
-                          </p>
-                          {order.riderPhone && (
-                            <p className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {order.riderPhone}
-                            </p>
+                        <div className="flex items-center gap-3">
+                          {order.riderImage && (
+                            <img
+                              src={order.riderImage}
+                              alt={order.riderName}
+                              className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                            />
                           )}
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              <span className="font-medium">{order.riderName}</span>
+                            </p>
+                            {order.riderPhone && (
+                              <p className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {order.riderPhone}
+                              </p>
+                            )}
+                          </div>
                         </div>
+                        {order.estimatedDelivery && (
+                          <div className="mt-2 text-sm text-gray-600">
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            Estimated delivery: {new Date(order.estimatedDelivery).toLocaleString()}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

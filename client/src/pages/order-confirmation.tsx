@@ -135,15 +135,54 @@ export default function OrderConfirmation() {
               </div>
 
               {/* Order Status */}
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className={`p-4 rounded-lg border ${statusInfo.color.includes('green') ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
                 <div className="flex items-center gap-3">
-                  <Package className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <h3 className="font-medium text-blue-800">Order Status</h3>
-                    <p className="text-sm text-blue-600">Your order is being processed</p>
+                  <CheckCircle className={`w-5 h-5 ${statusInfo.color.includes('green') ? 'text-green-600' : 'text-blue-600'}`} />
+                  <div className="flex-1">
+                    <h3 className={`font-medium ${statusInfo.color.includes('green') ? 'text-green-800' : 'text-blue-800'}`}>Order Status</h3>
+                    <p className={`text-sm ${statusInfo.color.includes('green') ? 'text-green-600' : 'text-blue-600'}`}>
+                      {statusInfo.label} - {statusInfo.description}
+                    </p>
                   </div>
+                  <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
                 </div>
               </div>
+
+              {/* Rider Information (if assigned) */}
+              {orderDetails.riderName && (
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <h3 className="font-medium text-yellow-800 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Delivery Agent Assigned
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    {orderDetails.riderImage && (
+                      <img
+                        src={orderDetails.riderImage}
+                        alt={orderDetails.riderName}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-yellow-300"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-yellow-800">{orderDetails.riderName}</p>
+                      {orderDetails.riderPhone && (
+                        <p className="text-sm text-yellow-600 flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          {orderDetails.riderPhone}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {orderDetails.estimatedDelivery && (
+                    <div className="mt-3 pt-3 border-t border-yellow-200">
+                      <p className="text-sm text-yellow-600 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Estimated delivery: {new Date(orderDetails.estimatedDelivery).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

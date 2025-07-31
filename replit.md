@@ -180,6 +180,18 @@ Implemented comprehensive address management with Google Maps integration:
 - **UI/UX Improvements**: Added visual sections, loading states, and helpful text to guide users through profile completion
 - **Security Features**: Implemented address ownership verification and proper authentication for all address operations
 
+### July 31, 2025 - Complete Checkout System Fix & Rider Communication Enhancement
+Fixed critical checkout issues and implemented enhanced customer-rider communication:
+- **Database Schema Fix**: Added missing rider_image and estimated_delivery columns to orders table using direct SQL ALTER statements
+- **API Parameter Fix**: Corrected apiRequest function parameter order (method, url, data) across all checkout, admin, and customer pages
+- **Enhanced Order Confirmation**: Updated confirmation page with dynamic status display, rider information with photos, and estimated delivery times
+- **Smart Button Logic**: Implemented dynamic button switching - Cancel button for pending orders, Call Rider button once order progresses beyond cancellation window
+- **Rider Communication**: Added direct phone call functionality with rider name and contact details prominently displayed
+- **Business Logic Implementation**: Order cancellation restricted to "pending" status only, with clear rejection charge warnings
+- **Comprehensive Logging**: Added detailed client and server-side logging for order processing debugging
+- **UI/UX Enhancement**: Added green success indicators, company logo display, and clear status progression messaging
+- **Customer Experience**: Seamless transition from order placement to rider communication with appropriate messaging about cancellation policies
+
 ### July 21, 2025 - Cloud Run Deployment Fixes
 Applied comprehensive Cloud Run compatibility improvements:
 - **Port Configuration**: Updated server to properly use PORT environment variable with fallback to 5000

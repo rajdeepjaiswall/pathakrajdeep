@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { CheckCircle, Package, ArrowRight, Clock, MapPin, User, Phone } from 'lucide-react';
+import { CheckCircle, Package, ArrowRight, Clock, MapPin, User, Phone, PhoneCall } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -209,6 +209,14 @@ export default function OrderConfirmation() {
                 View All Orders
               </Button>
             </Link>
+          </div>
+
+          {/* Cancellation Notice */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+            <p className="text-sm text-yellow-800 text-center">
+              <strong>Note:</strong> Orders can only be cancelled within the first few minutes after placing. 
+              Once preparation begins, rejection charges may apply.
+            </p>
           </div>
         </div>
 

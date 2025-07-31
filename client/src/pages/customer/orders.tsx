@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User, ArrowLeft, Home } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User, ArrowLeft, Home, PhoneCall } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -347,7 +347,7 @@ export default function CustomerOrders() {
                       </DialogContent>
                     </Dialog>
 
-                    {canCancelOrder(order.status) && (
+                    {canCancelOrder(order.status) ? (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" className="md:w-auto">
@@ -373,6 +373,30 @@ export default function CustomerOrders() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                    ) : order.riderName && order.riderPhone ? (
+                      <div className="md:w-auto">
+                        <Button 
+                          variant="outline" 
+                          className="w-full border-green-500 text-green-700 hover:bg-green-50"
+                          onClick={() => window.open(`tel:${order.riderPhone}`, '_self')}
+                        >
+                          <PhoneCall className="h-4 w-4 mr-2" />
+                          Call {order.riderName}
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-1 text-center">
+                          Order can't be cancelled. Rejection charges may apply.
+                        </p>
+                      </div>
+                    ) : !canCancelOrder(order.status) && (
+                      <div className="md:w-auto">
+                        <Button variant="outline" disabled className="w-full">
+                          <Clock className="h-4 w-4 mr-2" />
+                          In Progress
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-1 text-center">
+                          Order can't be cancelled. Rejection charges may apply.
+                        </p>
+                      </div>
                     )}
                   </div>
                 </CardContent>

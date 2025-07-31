@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { CheckCircle, Package, ArrowRight } from 'lucide-react';
+import { CheckCircle, Package, ArrowRight, Clock, MapPin, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import Header from '@/components/layout/header';
 import { formatPrice } from '@/lib/cart';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
@@ -25,6 +26,20 @@ export default function OrderConfirmation() {
     }
   }, [setLocation]);
 
+  // Helper function to get status display information
+  const getStatusInfo = (status: string) => {
+    const statusMap = {
+      pending: { label: 'Order Received', color: 'bg-blue-100 text-blue-800', description: 'Your order has been received and is being processed' },
+      getting_ready: { label: 'Getting Ready', color: 'bg-yellow-100 text-yellow-800', description: 'Our chefs are preparing your delicious items' },
+      packed: { label: 'Packed', color: 'bg-purple-100 text-purple-800', description: 'Your order is packed and ready for dispatch' },
+      dispatched: { label: 'Dispatched', color: 'bg-orange-100 text-orange-800', description: 'Your order has been dispatched from our kitchen' },
+      shipped: { label: 'Out for Delivery', color: 'bg-blue-100 text-blue-800', description: 'Your order is on the way to you' },
+      delivered: { label: 'Delivered', color: 'bg-green-100 text-green-800', description: 'Your order has been delivered successfully' },
+      cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800', description: 'This order has been cancelled' }
+    };
+    return statusMap[status as keyof typeof statusMap] || statusMap.pending;
+  };
+
   if (!orderDetails) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -35,6 +50,8 @@ export default function OrderConfirmation() {
       </div>
     );
   }
+
+  const statusInfo = getStatusInfo(orderDetails.status);
 
   return (
     <div className="min-h-screen bg-cream">

@@ -80,7 +80,7 @@ export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   user_id: integer("user_id").references(() => users.id),
   orderNumber: text("order_number").notNull().unique(),
-  status: text("status").notNull().default("pending"), // pending, confirmed, processing, shipped, delivered, cancelled
+  status: text("status").notNull().default("pending"), // pending, getting_ready, packed, dispatched, shipped, delivered, cancelled
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   gstAmount: decimal("gst_amount", { precision: 10, scale: 2 }).notNull(),
   deliveryCharge: decimal("delivery_charge", { precision: 10, scale: 2 }).default("0.00"),
@@ -102,6 +102,8 @@ export const orders = pgTable("orders", {
   notes: text("notes"),
   riderName: text("rider_name"),
   riderPhone: text("rider_phone"),
+  riderImage: text("rider_image"), // URL or base64 encoded image
+  estimatedDelivery: timestamp("estimated_delivery"),
 });
 
 // Order items table

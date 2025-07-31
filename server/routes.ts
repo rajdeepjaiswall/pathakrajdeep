@@ -864,18 +864,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Order routes
-  app.get("/api/orders", authenticateToken, async (req, res) => {
+  app.get("/api/orders", optionalAuth, async (req, res) => {
     try {
-      const orders = await storage.getOrders(req.user.id);
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Please login to view orders' });
+      }
+
+      const orders = await storage.getOrders(userId);
       res.json(orders);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.get("/api/orders/:id", authenticateToken, async (req, res) => {
+  app.get("/api/orders/:id", optionalAuth, async (req, res) => {
     try {
-      const order = await storage.getOrder(parseInt(req.params.id), req.user.id);
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Please login to view order details' });
+      }
+
+      const order = await storage.getOrder(parseInt(req.params.id), userId);
       if (!order) {
         return res.status(404).json({ message: 'Order not found' });
       }
@@ -885,36 +909,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/orders", authenticateToken, async (req, res) => {
+  app.post("/api/orders", optionalAuth, async (req, res) => {
     try {
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Please login to place an order' });
+      }
+
       const orderData = insertOrderSchema.parse({
         ...req.body,
-        user_id: req.user.id,
-        orderNumber: `PB${Date.now()}`,
+        user_id: userId,
       });
       const order = await storage.createOrder(orderData);
       res.json(order);
     } catch (error: any) {
+      console.error('Order creation error:', error);
       res.status(400).json({ message: error.message });
     }
   });
 
-  // Customer orders route
-  app.get("/api/orders", authenticateToken, async (req, res) => {
+  // Order items endpoint
+  app.post("/api/order-items", optionalAuth, async (req, res) => {
     try {
-      const orders = await storage.getOrders(req.user.id);
-      res.json(orders);
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Please login to create order items' });
+      }
+
+      const orderItemData = insertOrderItemSchema.parse(req.body);
+      const orderItem = await storage.createOrderItem(orderItemData);
+      res.json(orderItem);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error('Order item creation error:', error);
+      res.status(400).json({ message: error.message });
     }
   });
 
-  // Cancel order route
-  app.put("/api/orders/:id/cancel", authenticateToken, async (req, res) => {
+
+
+  // Cancel order route (only allowed for pending and getting_ready status)
+  app.put("/api/orders/:id/cancel", optionalAuth, async (req, res) => {
     try {
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Please login to cancel orders' });
+      }
+
       const orderId = parseInt(req.params.id);
-      const order = await storage.updateOrderStatus(orderId, 'cancelled');
-      res.json(order);
+      
+      // Check if order belongs to user and can be cancelled
+      const order = await storage.getOrder(orderId, userId);
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      // Only allow cancellation for pending and getting_ready status
+      if (!['pending', 'getting_ready'].includes(order.status)) {
+        return res.status(400).json({ 
+          message: 'Order cannot be cancelled at this stage' 
+        });
+      }
+
+      const updatedOrder = await storage.updateOrderStatus(orderId, 'cancelled');
+      res.json(updatedOrder);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -943,8 +1021,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/orders/:id/rider", authenticateToken, requireAdmin, async (req, res) => {
     try {
-      const { riderName, riderPhone } = req.body;
-      const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone);
+      const { riderName, riderPhone, riderImage } = req.body;
+      const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone, riderImage);
+      res.json(order);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Update estimated delivery time
+  app.put("/api/admin/orders/:id/delivery-time", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const { estimatedDelivery } = req.body;
+      const order = await storage.updateOrderDeliveryTime(parseInt(req.params.id), estimatedDelivery);
       res.json(order);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

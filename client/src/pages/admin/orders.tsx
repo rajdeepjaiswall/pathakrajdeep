@@ -27,6 +27,8 @@ export default function AdminOrders() {
   const [isEditingRider, setIsEditingRider] = useState<number | null>(null);
   const [riderName, setRiderName] = useState('');
   const [riderPhone, setRiderPhone] = useState('');
+  const [riderImage, setRiderImage] = useState('');
+  const [estimatedDelivery, setEstimatedDelivery] = useState('');
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -81,10 +83,11 @@ export default function AdminOrders() {
 
   // Update rider assignment mutation
   const updateRiderMutation = useMutation({
-    mutationFn: async ({ orderId, riderName, riderPhone }: { orderId: number; riderName: string; riderPhone: string }) => {
+    mutationFn: async ({ orderId, riderName, riderPhone, riderImage }: { orderId: number; riderName: string; riderPhone: string; riderImage?: string }) => {
       const response = await apiRequest(`/api/admin/orders/${orderId}/rider`, 'PUT', { 
         riderName, 
-        riderPhone 
+        riderPhone,
+        riderImage 
       });
       return response.json();
     },
@@ -93,15 +96,38 @@ export default function AdminOrders() {
       setIsEditingRider(null);
       setRiderName('');
       setRiderPhone('');
+      setRiderImage('');
       toast({
-        title: 'Rider Assigned',
-        description: 'Delivery rider has been assigned successfully',
+        title: 'Delivery Agent Assigned',
+        description: 'Delivery agent has been assigned successfully',
       });
     },
     onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to assign rider',
+        description: error.message || 'Failed to assign delivery agent',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Update estimated delivery time mutation
+  const updateDeliveryTimeMutation = useMutation({
+    mutationFn: async ({ orderId, estimatedDelivery }: { orderId: number; estimatedDelivery: string }) => {
+      const response = await apiRequest(`/api/admin/orders/${orderId}/delivery-time`, 'PUT', { estimatedDelivery });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      toast({
+        title: 'Delivery Time Updated',
+        description: 'Estimated delivery time has been updated successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update delivery time',
         variant: 'destructive',
       });
     },
@@ -110,10 +136,10 @@ export default function AdminOrders() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-orange-100 text-orange-800';
-      case 'order_received': return 'bg-blue-100 text-blue-800';
-      case 'preparing': return 'bg-purple-100 text-purple-800';
+      case 'getting_ready': return 'bg-yellow-100 text-yellow-800';
+      case 'packed': return 'bg-purple-100 text-purple-800';
       case 'dispatched': return 'bg-indigo-100 text-indigo-800';
-      case 'out_for_delivery': return 'bg-cyan-100 text-cyan-800';
+      case 'shipped': return 'bg-blue-100 text-blue-800';
       case 'delivered': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -135,10 +161,10 @@ export default function AdminOrders() {
   const getStatusDisplay = (status: string) => {
     switch (status) {
       case 'pending': return 'Pending';
-      case 'order_received': return 'Order Received';
-      case 'preparing': return 'Preparing';
+      case 'getting_ready': return 'Getting Ready';
+      case 'packed': return 'Packed';
       case 'dispatched': return 'Dispatched';
-      case 'out_for_delivery': return 'Out for Delivery';
+      case 'shipped': return 'Shipped';
       case 'delivered': return 'Delivered';
       case 'cancelled': return 'Cancelled';
       default: return status;
@@ -342,10 +368,10 @@ export default function AdminOrders() {
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="order_received">Order Received</SelectItem>
-                                        <SelectItem value="preparing">Preparing</SelectItem>
+                                        <SelectItem value="getting_ready">Getting Ready</SelectItem>
+                                        <SelectItem value="packed">Packed</SelectItem>
                                         <SelectItem value="dispatched">Dispatched</SelectItem>
-                                        <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                                        <SelectItem value="shipped">Shipped</SelectItem>
                                         <SelectItem value="delivered">Delivered</SelectItem>
                                         <SelectItem value="cancelled">Cancelled</SelectItem>
                                       </SelectContent>
@@ -406,13 +432,23 @@ export default function AdminOrders() {
                                                 placeholder="Enter phone number"
                                               />
                                             </div>
+                                            <div>
+                                              <Label htmlFor="riderImage">Rider Photo URL (optional)</Label>
+                                              <Input
+                                                id="riderImage"
+                                                value={riderImage}
+                                                onChange={(e) => setRiderImage(e.target.value)}
+                                                placeholder="Enter photo URL or leave blank"
+                                              />
+                                            </div>
                                             <div className="flex gap-2">
                                               <Button
                                                 size="sm"
                                                 onClick={() => updateRiderMutation.mutate({
                                                   orderId: selectedOrder.id,
                                                   riderName,
-                                                  riderPhone
+                                                  riderPhone,
+                                                  riderImage
                                                 })}
                                                 disabled={updateRiderMutation.isPending}
                                               >
@@ -426,6 +462,7 @@ export default function AdminOrders() {
                                                   setIsEditingRider(null);
                                                   setRiderName('');
                                                   setRiderPhone('');
+                                                  setRiderImage('');
                                                 }}
                                               >
                                                 <X className="h-3 w-3 mr-1" />
@@ -437,37 +474,47 @@ export default function AdminOrders() {
                                       </div>
                                     ) : (
                                       <div className="space-y-3">
-                                        <p className="text-sm text-gray-600">No rider assigned yet</p>
+                                        <p className="text-sm text-gray-600">No delivery agent assigned yet</p>
                                         <Button
                                           size="sm"
                                           onClick={() => {
                                             setIsEditingRider(selectedOrder.id);
                                             setRiderName('');
                                             setRiderPhone('');
+                                            setRiderImage('');
                                           }}
                                         >
                                           <User className="h-3 w-3 mr-1" />
-                                          Assign Rider
+                                          Assign Delivery Agent
                                         </Button>
 
                                         {isEditingRider === selectedOrder.id && (
                                           <div className="space-y-3 p-3 border rounded-lg">
                                             <div>
-                                              <Label htmlFor="riderName">Rider Name</Label>
+                                              <Label htmlFor="riderName">Agent Name</Label>
                                               <Input
                                                 id="riderName"
                                                 value={riderName}
                                                 onChange={(e) => setRiderName(e.target.value)}
-                                                placeholder="Enter rider name"
+                                                placeholder="Enter delivery agent name"
                                               />
                                             </div>
                                             <div>
-                                              <Label htmlFor="riderPhone">Rider Phone</Label>
+                                              <Label htmlFor="riderPhone">Agent Phone</Label>
                                               <Input
                                                 id="riderPhone"
                                                 value={riderPhone}
                                                 onChange={(e) => setRiderPhone(e.target.value)}
                                                 placeholder="Enter phone number"
+                                              />
+                                            </div>
+                                            <div>
+                                              <Label htmlFor="riderImageAssign">Agent Photo URL (optional)</Label>
+                                              <Input
+                                                id="riderImageAssign"
+                                                value={riderImage}
+                                                onChange={(e) => setRiderImage(e.target.value)}
+                                                placeholder="Enter photo URL or leave blank"
                                               />
                                             </div>
                                             <div className="flex gap-2">
@@ -476,12 +523,13 @@ export default function AdminOrders() {
                                                 onClick={() => updateRiderMutation.mutate({
                                                   orderId: selectedOrder.id,
                                                   riderName,
-                                                  riderPhone
+                                                  riderPhone,
+                                                  riderImage
                                                 })}
                                                 disabled={updateRiderMutation.isPending}
                                               >
                                                 <Save className="h-3 w-3 mr-1" />
-                                                Assign
+                                                Assign Agent
                                               </Button>
                                               <Button
                                                 size="sm"
@@ -490,6 +538,7 @@ export default function AdminOrders() {
                                                   setIsEditingRider(null);
                                                   setRiderName('');
                                                   setRiderPhone('');
+                                                  setRiderImage('');
                                                 }}
                                               >
                                                 <X className="h-3 w-3 mr-1" />
@@ -499,6 +548,39 @@ export default function AdminOrders() {
                                           </div>
                                         )}
                                       </div>
+                                    )}
+                                  </div>
+
+                                  {/* Estimated Delivery Time Management */}
+                                  <div>
+                                    <h4 className="font-medium mb-2">Estimated Delivery Time</h4>
+                                    <div className="flex items-center gap-3">
+                                      <Input
+                                        type="datetime-local"
+                                        value={estimatedDelivery}
+                                        onChange={(e) => setEstimatedDelivery(e.target.value)}
+                                        className="flex-1"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          if (estimatedDelivery) {
+                                            updateDeliveryTimeMutation.mutate({
+                                              orderId: selectedOrder.id,
+                                              estimatedDelivery
+                                            });
+                                          }
+                                        }}
+                                        disabled={!estimatedDelivery || updateDeliveryTimeMutation.isPending}
+                                      >
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        Update
+                                      </Button>
+                                    </div>
+                                    {selectedOrder.estimatedDelivery && (
+                                      <p className="text-sm text-gray-600 mt-2">
+                                        Current: {new Date(selectedOrder.estimatedDelivery).toLocaleString()}
+                                      </p>
                                     )}
                                   </div>
                                 </div>

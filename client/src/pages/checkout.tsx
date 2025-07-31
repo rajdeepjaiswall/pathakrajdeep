@@ -22,7 +22,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { insertAddressSchema, insertOrderSchema, type Address } from '@shared/schema';
 import { z } from 'zod';
 
-const addressFormSchema = insertAddressSchema.omit({ user_id: true });
+const addressFormSchema = insertAddressSchema.omit({ userId: true });
 const orderFormSchema = z.object({
   paymentMethod: z.enum(['upi', 'card', 'cod', 'wallet']),
   notes: z.string().optional(),

@@ -480,10 +480,24 @@ export class DatabaseStorage implements IStorage {
     return order;
   }
 
-  async updateOrderRider(id: number, riderName: string, riderPhone: string): Promise<Order> {
+  async updateOrderRider(id: number, riderName: string, riderPhone: string, riderImage?: string): Promise<Order> {
+    const updateData: any = { riderName, riderPhone };
+    if (riderImage) {
+      updateData.riderImage = riderImage;
+    }
+    
     const [order] = await db
       .update(orders)
-      .set({ riderName, riderPhone })
+      .set(updateData)
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async updateOrderDeliveryTime(id: number, estimatedDelivery: string): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({ estimatedDelivery: new Date(estimatedDelivery) })
       .where(eq(orders.id, id))
       .returning();
     return order;

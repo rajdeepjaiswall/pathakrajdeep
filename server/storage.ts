@@ -21,6 +21,9 @@ export interface IStorage {
   updateUserGoogleId(id: number, googleId: string): Promise<User>;
   getCustomers(): Promise<User[]>;
 
+  // Address methods
+  clearDefaultAddresses(userId: number): Promise<void>;
+
   // Category methods
   getCategories(): Promise<Category[]>;
   getCategory(id: number): Promise<Category | undefined>;
@@ -409,6 +412,13 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAddress(id: number): Promise<void> {
     await db.delete(addresses).where(eq(addresses.id, id));
+  }
+
+  async clearDefaultAddresses(userId: number): Promise<void> {
+    await db
+      .update(addresses)
+      .set({ isDefault: false })
+      .where(eq(addresses.userId, userId));
   }
 
   // Order methods

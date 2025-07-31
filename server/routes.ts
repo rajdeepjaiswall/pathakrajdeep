@@ -345,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Complete profile after Google OAuth
+  // Complete profile after Google OAuth (legacy endpoint)
   app.post("/api/auth/complete-profile", authenticateUser, async (req, res) => {
     try {
       const { phone, password, addressLine1, addressLine2, city, state, pinCode } = req.body;
@@ -386,6 +386,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedUser);
     } catch (error: any) {
       console.error('Complete profile error:', error);
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Enhanced complete profile with address management
+  app.post("/api/auth/complete-profile-with-address", authenticateUser, async (req, res) => {
+    try {
+      const { phone, password, address } = req.body;
+      
+      // Get user ID from session (Google OAuth) or JWT
+      let userId;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        // Session-based authentication (Google OAuth)
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub || sessionUser.id;
+        console.log('Google OAuth user ID:', userId, 'Full user:', sessionUser);
+      } else {
+        // JWT-based authentication
+        userId = (req.user as any)?.id || (req.user as any)?.userId;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated properly' });
+      }
+
+      // Validate required fields
+      if (!phone || !password || !address) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      // Validate address object
+      const requiredAddressFields = ['name', 'phone', 'addressLine1', 'city', 'state', 'pincode'];
+      const missingAddressField = requiredAddressFields.find(field => !address[field]);
+      if (missingAddressField) {
+        return res.status(400).json({ message: `Missing address field: ${missingAddressField}` });
+      }
+      
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Update user profile
+      const updatedUser = await storage.updateUser(userId, {
+        phone,
+        password: hashedPassword,
+        profileCompleted: true,
+      });
+
+      // If this is a new address (isDefault true), make sure all other addresses are not default
+      if (address.isDefault) {
+        await storage.clearDefaultAddresses(userId);
+      }
+      
+      // Create the address
+      const newAddress = await storage.createAddress({
+        userId: userId,
+        name: address.name,
+        phone: address.phone,
+        addressLine1: address.addressLine1,
+        addressLine2: address.addressLine2 || null,
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode,
+        landmark: address.landmark || null,
+        isDefault: address.isDefault || false,
+      });
+
+      res.json({ 
+        user: updatedUser, 
+        address: newAddress,
+        message: 'Profile completed and address saved successfully'
+      });
+    } catch (error: any) {
+      console.error('Complete profile with address error:', error);
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Skip profile completion
+  app.post("/api/auth/skip-profile", authenticateUser, async (req, res) => {
+    try {
+      // Get user ID from session (Google OAuth) or JWT
+      let userId;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub || sessionUser.id;
+      } else {
+        userId = (req.user as any)?.id || (req.user as any)?.userId;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated properly' });
+      }
+
+      // Mark profile as completed (so user doesn't get redirected again) but with minimal data
+      const updatedUser = await storage.updateUser(userId, {
+        profileCompleted: false, // Keep false so they can complete later
+      });
+
+      res.json({ 
+        user: updatedUser,
+        message: 'Profile completion skipped'
+      });
+    } catch (error: any) {
+      console.error('Skip profile error:', error);
       res.status(400).json({ message: error.message });
     }
   });

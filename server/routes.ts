@@ -5,7 +5,7 @@ import path from "path";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
+import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 
 const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
@@ -1023,6 +1023,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { riderName, riderPhone, riderImage } = req.body;
       const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone, riderImage);
+      res.json(order);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Add estimated delivery time update endpoint
+  app.put("/api/admin/orders/:id/delivery-time", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const { estimatedDelivery } = req.body;
+      const order = await storage.updateOrderDeliveryTime(parseInt(req.params.id), estimatedDelivery);
       res.json(order);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

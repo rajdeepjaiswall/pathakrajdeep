@@ -70,9 +70,15 @@ export interface IStorage {
   updateOrderRider(id: number, riderName: string, riderPhone: string): Promise<Order>;
   getAllOrders(status?: string): Promise<Order[]>;
 
-  // Review methods
+  // Review/Feedback methods
   getProductReviews(productId: number): Promise<(Review & { user: Pick<User, 'username'> })[]>;
+  getUserOrderReviews(userId: number, orderId: number): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
+  canUserReviewProduct(userId: number, productId: number): Promise<boolean>;
+  getFeaturedReviews(): Promise<(Review & { user: Pick<User, 'username'> | null; product: Pick<Product, 'name'> | null })[]>;
+  getAllReviews(): Promise<(Review & { user: Pick<User, 'username'> | null; product: Pick<Product, 'name'> | null })[]>;
+  updateReviewFeatureStatus(reviewId: number, isFeatured: boolean): Promise<Review>;
+  replyToReview(reviewId: number, adminReply: string): Promise<Review>;
 
   // Analytics methods
   getAnalytics(): Promise<{
@@ -594,15 +600,19 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(orders.orderDate));
   }
 
-  // Review methods
+  // Review/Feedback methods
   async getProductReviews(productId: number): Promise<(Review & { user: Pick<User, 'username'> })[]> {
     return await db
       .select({
         id: reviews.id,
         user_id: reviews.user_id,
         product_id: reviews.product_id,
+        order_id: reviews.order_id,
         rating: reviews.rating,
         comment: reviews.comment,
+        admin_reply: reviews.admin_reply,
+        admin_reply_date: reviews.admin_reply_date,
+        is_featured: reviews.is_featured,
         isApproved: reviews.isApproved,
         createdAt: reviews.createdAt,
         user: {
@@ -615,12 +625,120 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reviews.createdAt));
   }
 
+  async getUserOrderReviews(userId: number, orderId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(and(eq(reviews.user_id, userId), eq(reviews.order_id, orderId)));
+  }
+
   async createReview(insertReview: InsertReview): Promise<Review> {
     const [review] = await db
       .insert(reviews)
       .values(insertReview)
       .returning();
     return review;
+  }
+
+  async canUserReviewProduct(userId: number, productId: number): Promise<boolean> {
+    // Check if user has ordered this product and order is delivered
+    const deliveredOrders = await db
+      .select({ orderId: orders.id })
+      .from(orders)
+      .innerJoin(orderItems, eq(orders.id, orderItems.order_id))
+      .where(
+        and(
+          eq(orders.user_id, userId),
+          eq(orderItems.product_id, productId),
+          eq(orders.status, 'delivered')
+        )
+      );
+
+    if (deliveredOrders.length === 0) return false;
+
+    // Check if user has already reviewed this product for any delivered order
+    const existingReview = await db
+      .select()
+      .from(reviews)
+      .where(
+        and(
+          eq(reviews.user_id, userId),
+          eq(reviews.product_id, productId)
+        )
+      )
+      .limit(1);
+
+    return existingReview.length === 0;
+  }
+
+  async getFeaturedReviews(): Promise<(Review & { user: Pick<User, 'username'> | null; product: Pick<Product, 'name'> | null })[]> {
+    return await db
+      .select({
+        id: reviews.id,
+        user_id: reviews.user_id,
+        product_id: reviews.product_id,
+        order_id: reviews.order_id,
+        rating: reviews.rating,
+        comment: reviews.comment,
+        admin_reply: reviews.admin_reply,
+        admin_reply_date: reviews.admin_reply_date,
+        is_featured: reviews.is_featured,
+        isApproved: reviews.isApproved,
+        createdAt: reviews.createdAt,
+        user: users.username ? { username: users.username } : null,
+        product: products.name ? { name: products.name } : null,
+      })
+      .from(reviews)
+      .leftJoin(users, eq(reviews.user_id, users.id))
+      .leftJoin(products, eq(reviews.product_id, products.id))
+      .where(and(eq(reviews.is_featured, true), eq(reviews.isApproved, true)))
+      .orderBy(desc(reviews.createdAt))
+      .limit(10);
+  }
+
+  async getAllReviews(): Promise<(Review & { user: Pick<User, 'username'> | null; product: Pick<Product, 'name'> | null })[]> {
+    return await db
+      .select({
+        id: reviews.id,
+        user_id: reviews.user_id,
+        product_id: reviews.product_id,
+        order_id: reviews.order_id,
+        rating: reviews.rating,
+        comment: reviews.comment,
+        admin_reply: reviews.admin_reply,
+        admin_reply_date: reviews.admin_reply_date,
+        is_featured: reviews.is_featured,
+        isApproved: reviews.isApproved,
+        createdAt: reviews.createdAt,
+        user: users.username ? { username: users.username } : null,
+        product: products.name ? { name: products.name } : null,
+      })
+      .from(reviews)
+      .leftJoin(users, eq(reviews.user_id, users.id))
+      .leftJoin(products, eq(reviews.product_id, products.id))
+      .orderBy(desc(reviews.createdAt));
+  }
+
+  async updateReviewFeatureStatus(reviewId: number, isFeatured: boolean): Promise<Review> {
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({ is_featured: isFeatured })
+      .where(eq(reviews.id, reviewId))
+      .returning();
+    return updatedReview;
+  }
+
+  async replyToReview(reviewId: number, adminReply: string): Promise<Review> {
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({ 
+        admin_reply: adminReply,
+        admin_reply_date: new Date(),
+        isApproved: true 
+      })
+      .where(eq(reviews.id, reviewId))
+      .returning();
+    return updatedReview;
   }
 
   // Analytics methods

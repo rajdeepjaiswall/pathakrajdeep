@@ -1444,7 +1444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Review routes
+  // Review/Feedback routes
   app.get("/api/products/:id/reviews", async (req, res) => {
     try {
       const reviews = await storage.getProductReviews(parseInt(req.params.id));
@@ -1454,17 +1454,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if user can review a product
+  app.get("/api/users/:userId/products/:productId/can-review", authenticateToken, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const productId = parseInt(req.params.productId);
+      
+      // Only allow users to check their own review eligibility
+      if (req.user.id !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const canReview = await storage.canUserReviewProduct(userId, productId);
+      res.json({ canReview });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/products/:id/reviews", authenticateToken, async (req, res) => {
     try {
+      const productId = parseInt(req.params.id);
       const reviewData = insertReviewSchema.parse({
         ...req.body,
         user_id: req.user.id,
-        product_id: parseInt(req.params.id),
+        product_id: productId,
       });
+      
+      // Verify user can review this product
+      const canReview = await storage.canUserReviewProduct(req.user.id, productId);
+      if (!canReview) {
+        return res.status(400).json({ message: "You can only review products you have ordered and received" });
+      }
+      
       const review = await storage.createReview(reviewData);
       res.json(review);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Get featured reviews for homepage
+  app.get("/api/reviews/featured", async (req, res) => {
+    try {
+      const featuredReviews = await storage.getFeaturedReviews();
+      res.json(featuredReviews);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get all reviews for management
+  app.get("/api/admin/reviews", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const reviews = await storage.getAllReviews();
+      res.json(reviews);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Update review feature status
+  app.patch("/api/admin/reviews/:id/feature", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const reviewId = parseInt(req.params.id);
+      const { isFeatured } = req.body;
+      
+      const updatedReview = await storage.updateReviewFeatureStatus(reviewId, isFeatured);
+      res.json(updatedReview);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Reply to review
+  app.post("/api/admin/reviews/:id/reply", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const reviewId = parseInt(req.params.id);
+      const { adminReply } = req.body;
+      
+      if (!adminReply || adminReply.trim().length === 0) {
+        return res.status(400).json({ message: "Admin reply cannot be empty" });
+      }
+      
+      const updatedReview = await storage.replyToReview(reviewId, adminReply.trim());
+      res.json(updatedReview);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

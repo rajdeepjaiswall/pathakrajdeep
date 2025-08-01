@@ -144,9 +144,9 @@ export default function Header() {
                     <div className="relative">
                       {(user as any)?.profileImageUrl ? (
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user.username || 'Profile'} />
+                          <AvatarImage src={(user as any)?.profileImageUrl} alt={(user as any)?.firstName || user?.username || 'Profile'} />
                           <AvatarFallback className="bg-champagne text-navy text-sm font-semibold">
-                            {((user as any).firstName || user.username || 'U').charAt(0).toUpperCase()}
+                            {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       ) : (
@@ -226,11 +226,15 @@ export default function Header() {
                 </Link>
 
                 <div 
-                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
+                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer relative"
                   onClick={handleInstallApp}
                 >
-                  <Download className="h-5 w-5 text-navy" />
+                  <div className="relative">
+                    <Download className="h-5 w-5 text-navy" />
+                    <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
+                  </div>
                   <span className="text-navy font-medium">Install App</span>
+                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
                 </div>
 
                 <Button
@@ -247,6 +251,18 @@ export default function Header() {
               </div>
             ) : (
               <div className="pt-4 border-t border-almond space-y-2">
+                <div 
+                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer relative mb-3"
+                  onClick={handleInstallApp}
+                >
+                  <div className="relative">
+                    <Download className="h-5 w-5 text-navy" />
+                    <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
+                  </div>
+                  <span className="text-navy font-medium">Install App</span>
+                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
+                </div>
+                
                 <Link href="/customer/register">
                   <Button 
                     variant="outline"
@@ -315,9 +331,9 @@ export default function Header() {
                   >
                     {(user as any)?.profileImageUrl ? (
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user.username || 'Profile'} />
+                        <AvatarImage src={(user as any)?.profileImageUrl} alt={(user as any)?.firstName || user?.username || 'Profile'} />
                         <AvatarFallback className="bg-champagne text-navy font-semibold">
-                          {((user as any).firstName || user.username || 'U').charAt(0).toUpperCase()}
+                          {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     ) : (

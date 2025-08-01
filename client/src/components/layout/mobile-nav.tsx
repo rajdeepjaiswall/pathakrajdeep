@@ -1,4 +1,4 @@
-import { Home, Search, ShoppingCart, User } from 'lucide-react';
+import { Home, Search, ShoppingCart, User, Download } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
@@ -48,6 +48,11 @@ export default function MobileNav() {
     openCart();
   };
 
+  const handleInstallApp = () => {
+    const event = new CustomEvent('showInstallPrompt');
+    window.dispatchEvent(event);
+  };
+
   const isActiveRoute = (href: string) => {
     if (href === '/') return location === '/';
     if (href === '/products?search=true') return location.includes('/products') && location.includes('search');
@@ -58,11 +63,35 @@ export default function MobileNav() {
   };
 
   return (
-    <div 
-      className={`fixed bottom-0 left-0 right-0 bg-amber-50/95 backdrop-blur-sm border-t border-amber-200 md:hidden z-40 transition-transform duration-300 ease-in-out ${
-        isVisible ? 'translate-y-0' : 'translate-y-full'
-      }`}
-    >
+    <>
+      {/* PWA Install Floating Button */}
+      <div 
+        className={`fixed bottom-20 right-4 md:hidden z-50 transition-transform duration-300 ease-in-out ${
+          isVisible ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <button
+          onClick={handleInstallApp}
+          className="bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-lg transition-colors duration-200 relative group animate-bounce"
+          style={{ animationDuration: '2s' }}
+        >
+          <Download className="h-5 w-5" />
+          <span className="absolute -top-1 -right-1 h-3 w-3 bg-white rounded-full animate-pulse"></span>
+          
+          {/* Tooltip */}
+          <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block">
+            <div className="bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+              Install App
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div 
+        className={`fixed bottom-0 left-0 right-0 bg-amber-50/95 backdrop-blur-sm border-t border-amber-200 md:hidden z-40 transition-transform duration-300 ease-in-out ${
+          isVisible ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
       <div className="grid grid-cols-5 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -131,5 +160,6 @@ export default function MobileNav() {
         })}
       </div>
     </div>
+    </>
   );
 }

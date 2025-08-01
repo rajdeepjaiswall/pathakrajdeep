@@ -1568,14 +1568,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Logo management routes
   let currentLogo: Buffer | null = null;
   
-  // Load the KB logo from attached assets
+  // Load the Pathak Bhandar logo from attached assets
   try {
-    const logoPath = path.join(process.cwd(), 'attached_assets', 'project_20250528_0850089-01.png');
+    const logoPath = path.join(process.cwd(), 'attached_assets', 'project_20250528_0859055-02.png');
     if (fs.existsSync(logoPath)) {
       currentLogo = fs.readFileSync(logoPath);
     }
   } catch (error) {
-    console.log('KB logo not found, using fallback');
+    console.log('Pathak Bhandar logo not found, using fallback');
   }
   
   app.get("/api/logo", (req, res) => {

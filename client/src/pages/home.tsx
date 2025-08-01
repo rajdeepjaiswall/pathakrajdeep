@@ -16,6 +16,7 @@ import { CATEGORIES } from '@/lib/constants';
 import { preloadImages } from '@/lib/image-cache';
 import { useEffect } from 'react';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
@@ -54,6 +55,20 @@ export default function Home() {
     queryKey: ['/api/previously-ordered'],
     enabled: isAuthenticated,
   });
+
+  // Show loading spinner for mobile on initial load
+  if (productsLoading && allProducts.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="pt-20 pb-32">
+          <LoadingSpinner size="lg" className="h-64" />
+        </div>
+        <MobileNav />
+        <CartSidebar />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
@@ -16,6 +16,13 @@ export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
   const { summary, openCart } = useCart();
   const [location] = useLocation();
+
+  const handleInstallApp = () => {
+    const event = new CustomEvent('showInstallPrompt');
+    window.dispatchEvent(event);
+    setIsMobileMenuOpen(false);
+    setIsDesktopMenuOpen(false);
+  };
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -218,6 +225,14 @@ export default function Header() {
                   </div>
                 </Link>
 
+                <div 
+                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
+                  onClick={handleInstallApp}
+                >
+                  <Download className="h-5 w-5 text-navy" />
+                  <span className="text-navy font-medium">Install App</span>
+                </div>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -382,6 +397,15 @@ export default function Header() {
                     <span className="text-navy font-medium">Account Settings</span>
                   </div>
                 </Link>
+
+                {/* Install App */}
+                <div 
+                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
+                  onClick={handleInstallApp}
+                >
+                  <Download className="h-6 w-6 text-navy" />
+                  <span className="text-navy font-medium">Install App</span>
+                </div>
               </div>
 
               {/* Logout Button */}

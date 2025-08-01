@@ -102,22 +102,22 @@ export default function InstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-96 animate-in slide-in-from-bottom-4 duration-500">
-      <Card className="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 text-white shadow-2xl border-0 relative overflow-hidden">
+    <div className="fixed bottom-4 right-4 z-50 max-w-xs animate-in slide-in-from-bottom-4 duration-500">
+      <Card className="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 text-white shadow-lg border-0 relative overflow-hidden">
         {/* Animated shimmer effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
         
-        <CardContent className="p-5 relative">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                <Smartphone className="h-6 w-6" />
+        <CardContent className="p-3 relative">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Smartphone className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="font-bold text-lg">Install Pathak Bhandar</h3>
-                <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs mt-1">
-                  <Star className="h-3 w-3 mr-1" />
-                  App Experience
+                <h3 className="font-bold text-sm">Install App</h3>
+                <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px] mt-0.5">
+                  <Star className="h-2 w-2 mr-1" />
+                  Better Experience
                 </Badge>
               </div>
             </div>
@@ -129,48 +129,28 @@ export default function InstallPrompt() {
             </button>
           </div>
           
-          <p className="text-sm text-white/95 mb-4 leading-relaxed">
-            🚀 Get the full app experience! Install for faster loading, offline browsing, and instant order notifications.
+          <p className="text-xs text-white/90 mb-3 leading-relaxed">
+            Get faster loading and offline access!
           </p>
           
-          {/* Feature highlights */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="flex flex-col items-center text-center p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-              <Zap className="h-4 w-4 mb-1" />
-              <span className="text-xs font-medium">Faster</span>
-            </div>
-            <div className="flex flex-col items-center text-center p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-              <Wifi className="h-4 w-4 mb-1" />
-              <span className="text-xs font-medium">Offline</span>
-            </div>
-            <div className="flex flex-col items-center text-center p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-              <Bell className="h-4 w-4 mb-1" />
-              <span className="text-xs font-medium">Alerts</span>
-            </div>
-          </div>
-          
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <Button 
               onClick={handleInstallClick}
               size="sm"
-              className="bg-white text-orange-600 hover:bg-white/90 flex-1 font-semibold shadow-lg hover:shadow-xl transition-all"
+              className="bg-white text-orange-600 hover:bg-white/90 flex-1 font-semibold text-xs"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Install Now
+              <Download className="h-3 w-3 mr-1" />
+              Install
             </Button>
             <Button 
               onClick={handleDismiss}
               size="sm"
               variant="ghost"
-              className="text-white hover:bg-white/20 px-4"
+              className="text-white hover:bg-white/20 px-2 text-xs"
             >
               Later
             </Button>
           </div>
-          
-          <p className="text-xs text-white/70 mt-3 text-center">
-            ✨ No app store needed • Works on all devices
-          </p>
         </CardContent>
       </Card>
     </div>

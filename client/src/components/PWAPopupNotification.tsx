@@ -37,40 +37,40 @@ export default function PWAPopupNotification() {
   if (!show) return null;
 
   return (
-    <div className="fixed top-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-80 animate-in slide-in-from-top-4 duration-700">
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg shadow-2xl p-4 relative overflow-hidden">
+    <div className="fixed top-4 right-4 z-50 max-w-xs animate-in slide-in-from-top-4 duration-700">
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg shadow-lg p-3 relative overflow-hidden">
         {/* Sparkle animation */}
         <div className="absolute top-2 right-8">
           <Sparkles className="h-4 w-4 animate-pulse" />
         </div>
         
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-white/20 rounded-lg">
-            <Star className="h-5 w-5" />
+        <div className="flex items-start gap-2">
+          <div className="p-1.5 bg-white/20 rounded-lg">
+            <Star className="h-4 w-4" />
           </div>
           
           <div className="flex-1">
-            <h3 className="font-bold text-sm mb-1">Install Our App!</h3>
-            <p className="text-xs text-white/90 mb-3">
-              Get the best Pathak Bhandar experience with our app. Faster, offline support, and instant notifications!
+            <h3 className="font-bold text-xs mb-1">Install Our App!</h3>
+            <p className="text-[10px] text-white/90 mb-2">
+              Get faster loading and offline access!
             </p>
             
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <Button 
                 onClick={handleInstall}
                 size="sm" 
-                className="bg-white text-purple-600 hover:bg-white/90 text-xs font-semibold"
+                className="bg-white text-purple-600 hover:bg-white/90 text-[10px] font-semibold px-2 py-1 h-6"
               >
-                <Download className="h-3 w-3 mr-1" />
+                <Download className="h-2.5 w-2.5 mr-1" />
                 Install
               </Button>
               <Button 
                 onClick={handleDismiss}
                 size="sm" 
                 variant="ghost" 
-                className="text-white hover:bg-white/20 text-xs"
+                className="text-white hover:bg-white/20 text-[10px] px-2 py-1 h-6"
               >
-                Maybe later
+                Later
               </Button>
             </div>
           </div>

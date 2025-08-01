@@ -36,6 +36,7 @@ Supports dual database configurations:
 - **E-commerce Features**: Persistent shopping cart, wishlist, full order management lifecycle, address management, and UPI QR code payment integration.
 - **Admin Dashboard**: Comprehensive order, product, customer, and banner management, with basic sales and inventory reporting.
 - **PWA Installation**: Prominent install options in side menu and floating button with persistent red dot indicators, encouraging app installation for better user experience.
+- **Categories Page**: Modern horizontal hero banners with blur effects, scroll-triggered bottom navigation, and clean layout following PDF specifications with large logo, intro text, and stacked category banners.
 - **Data Flow**: JWT-based user authentication, category-based product display, user-specific shopping carts, and order processing with inventory updates.
 - **UI/UX Decisions**: Focus on a custom design system with Tailwind CSS and Radix UI for a consistent and premium look, with branded fallbacks for failed images.
 

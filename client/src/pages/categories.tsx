@@ -1,67 +1,146 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import Header from '@/components/layout/header';
-import MobileNav from '@/components/layout/mobile-nav';
-import SEOHead, { SEOConfigs } from '@/components/SEOHead';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Package, Home, ShoppingCart, User, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { type Category } from '@shared/schema';
+import OptimizedImage from '@/components/OptimizedImage';
+import Header from '@/components/layout/header';
+import SEOHead from '@/components/SEOHead';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
+import { useAuth } from '@/hooks/use-auth';
 
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-  imageUrl: string;
-  bannerImageUrl?: string;
-  isActive: boolean;
-}
+// Category banner images with blur effect backgrounds
+const categoryBannerImages: Record<string, string> = {
+  'Biscuits': 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+  'Sweets': 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+  'Cakes': 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+  'Snacks': 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+  'Breads': 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+};
+
+// Function to determine text color based on background
+const getTextColor = (categoryName: string): string => {
+  // Light backgrounds use dark text, dark backgrounds use light text
+  const lightBackgrounds = ['Biscuits', 'Breads'];
+  return lightBackgrounds.includes(categoryName) ? 'text-gray-900' : 'text-white';
+};
+
+// Category banner component with blur effect
+const CategoryBanner = ({ category, index }: { category: Category; index: number }) => {
+  const backgroundImage = categoryBannerImages[category.name] || categoryBannerImages['Biscuits'];
+  const textColor = getTextColor(category.name);
+  
+  return (
+    <Link href={`/products?category=${category.id}`}>
+      <div 
+        className="relative h-32 md:h-40 rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl mb-6"
+        style={{
+          animationDelay: `${index * 100}ms`
+        }}
+      >
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <OptimizedImage
+            src={backgroundImage}
+            alt={category.name}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          />
+        </div>
+        
+        {/* Blur Overlay for Text Area */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"></div>
+        <div 
+          className="absolute inset-0 backdrop-blur-sm"
+          style={{
+            background: `linear-gradient(to right, 
+              rgba(255, 255, 255, 0.1) 0%, 
+              rgba(255, 255, 255, 0.05) 30%, 
+              transparent 60%)`
+          }}
+        ></div>
+        
+        {/* Category Name */}
+        <div className="absolute inset-0 flex items-center justify-center md:justify-start md:pl-8">
+          <h3 className={`text-2xl md:text-3xl font-bold ${textColor} drop-shadow-2xl text-center md:text-left transition-all duration-300 group-hover:scale-110`}>
+            {category.name}
+          </h3>
+        </div>
+        
+        {/* Hover Effect Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-champagne/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      </div>
+    </Link>
+  );
+};
+
+// No Products Component
+const NoProductsMessage = ({ categoryName }: { categoryName: string }) => {
+  return (
+    <div className="min-h-screen bg-cream flex flex-col items-center justify-center p-4">
+      <div className="text-center">
+        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-champagne">
+          <img 
+            src={pathakLogo}
+            alt="Pathak Bhandar Logo" 
+            className="w-16 h-16 object-contain"
+          />
+        </div>
+        <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-navy mb-2">No Products Available</h2>
+        <p className="text-gray-600 mb-6">Sorry, there are no products in the {categoryName} category at the moment.</p>
+        <Link href="/categories">
+          <Button className="bg-champagne text-navy hover:bg-champagne/90">
+            Browse Other Categories
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+};
 
 export default function Categories() {
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showBottomNav, setShowBottomNav] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const { isAuthenticated } = useAuth();
 
   const { data: categories = [], isLoading } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
 
-  const activeCategories = categories.filter(cat => cat.isActive);
-
-  const scrollToCategory = (index: number) => {
-    setSelectedIndex(index);
-    const container = scrollContainerRef.current;
-    if (container) {
-      const cardWidth = 320; // Card width + margin
-      const scrollPosition = index * cardWidth - (container.clientWidth / 2) + (cardWidth / 2);
-      container.scrollTo({
-        left: scrollPosition,
-        behavior: 'smooth'
-      });
+  // Handle scroll for bottom navigation visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
       
-      // Haptic feedback (if supported)
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
+      if (currentScrollY > 200) {
+        // Show bottom nav when scrolling down after 200px
+        if (currentScrollY > lastScrollY) {
+          setShowBottomNav(true);
+        } else {
+          // Hide when scrolling up
+          setShowBottomNav(false);
+        }
+      } else {
+        setShowBottomNav(false);
       }
-    }
-  };
+      
+      setLastScrollY(currentScrollY);
+    };
 
-  const handlePrevious = () => {
-    const newIndex = selectedIndex > 0 ? selectedIndex - 1 : activeCategories.length - 1;
-    scrollToCategory(newIndex);
-  };
-
-  const handleNext = () => {
-    const newIndex = selectedIndex < activeCategories.length - 1 ? selectedIndex + 1 : 0;
-    scrollToCategory(newIndex);
-  };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-navy text-lg">Loading categories...</div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-champagne"></div>
       </div>
     );
   }
+
+  const activeCategories = categories.filter(cat => cat.isActive);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -71,168 +150,117 @@ export default function Categories() {
         keywords="bakery categories, sweets, cakes, biscuits, namkeen, snacks, rolls"
         canonical={`${window.location.origin}/categories`}
       />
-      <Header />
       
-      <div className="pt-20 pb-24 px-4">
-        {/* Brand Logo */}
-        <div className="flex justify-center mb-8">
-          <img 
-            src={pathakLogo} 
-            alt="Pathak Bhandar" 
-            className="h-16 w-auto object-contain"
-          />
-        </div>
+      <Header />
 
-        {/* Hero Text */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-navy mb-4">
-            Try Other Stuff
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Explore our other varieties of serving in the field of confectionery and snacking
-          </p>
-        </div>
-
-        {/* Navigation Arrows (Desktop) */}
-        <div className="hidden md:flex justify-between items-center mb-8">
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={handlePrevious}
-            className="text-navy hover:bg-almond/30 rounded-full p-3"
-          >
-            <ChevronLeft className="h-8 w-8" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={handleNext}
-            className="text-navy hover:bg-almond/30 rounded-full p-3"
-          >
-            <ChevronRight className="h-8 w-8" />
-          </Button>
-        </div>
-
-        {/* Category Banners Carousel */}
-        <div className="relative">
-          <div 
-            ref={scrollContainerRef}
-            className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth px-4"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {activeCategories.map((category, index) => {
-              const isSelected = index === selectedIndex;
-              const isAdjacent = Math.abs(index - selectedIndex) === 1;
-              
-              return (
-                <div
-                  key={category.id}
-                  className={`
-                    flex-shrink-0 transition-all duration-500 ease-out cursor-pointer
-                    ${isSelected 
-                      ? 'w-80 h-96 scale-105 z-10' 
-                      : isAdjacent 
-                        ? 'w-72 h-80 scale-95 opacity-75' 
-                        : 'w-64 h-72 scale-90 opacity-50'
-                    }
-                  `}
-                  onClick={() => scrollToCategory(index)}
-                >
-                  <Link href={`/products?category=${category.id}`}>
-                    <div className={`
-                      relative w-full h-full rounded-3xl overflow-hidden shadow-2xl
-                      transform transition-all duration-500 hover:scale-[1.02]
-                      ${isSelected ? 'ring-4 ring-gold ring-opacity-60' : ''}
-                    `}>
-                      {/* Banner Image */}
-                      <div className="absolute inset-0">
-                        <img
-                          src={category.bannerImageUrl || category.imageUrl || `https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80`}
-                          alt={category.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                        {/* Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                      </div>
-
-                      {/* Category Profile Image */}
-                      <div className="absolute top-6 left-6">
-                        <div className="w-16 h-16 rounded-full overflow-hidden ring-4 ring-white/20 shadow-lg">
-                          <img
-                            src={category.imageUrl || `https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=128&h=128&q=80`}
-                            alt={`${category.name} icon`}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <h3 className={`
-                          font-bold mb-2 transition-all duration-300
-                          ${isSelected ? 'text-2xl' : 'text-xl'}
-                        `}>
-                          {category.name}
-                        </h3>
-                        <p className={`
-                          text-white/90 leading-relaxed transition-all duration-300
-                          ${isSelected ? 'text-base opacity-100' : 'text-sm opacity-75'}
-                        `}>
-                          {category.description || `Discover our premium ${category.name.toLowerCase()} collection`}
-                        </p>
-                        
-                        {isSelected && (
-                          <Button
-                            className="mt-4 bg-gold hover:bg-gold/90 text-navy font-semibold transition-all duration-300"
-                            size="sm"
-                          >
-                            Explore {category.name}
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Selection Indicator */}
-                      {isSelected && (
-                        <div className="absolute top-4 right-4">
-                          <div className="w-3 h-3 bg-gold rounded-full animate-pulse" />
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                </div>
-              );
-            })}
+      <div className="pt-20 pb-32">
+        {/* Logo Section */}
+        <div className="py-12 text-center">
+          <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-champagne">
+            <img 
+              src={pathakLogo}
+              alt="Pathak Bhandar Logo" 
+              className="w-24 h-24 object-contain"
+            />
           </div>
         </div>
 
-        {/* Dots Indicator */}
-        <div className="flex justify-center mt-8 space-x-2">
-          {activeCategories.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => scrollToCategory(index)}
-              className={`
-                w-3 h-3 rounded-full transition-all duration-300
-                ${index === selectedIndex 
-                  ? 'bg-gold scale-125' 
-                  : 'bg-gray-300 hover:bg-gray-400'
-                }
-              `}
-            />
-          ))}
+        {/* Intro Section */}
+        <div className="text-center px-4 mb-12">
+          <h1 className="text-3xl md:text-4xl font-bold text-navy mb-6">
+            Try our other stuff also
+          </h1>
+          <div className="max-w-2xl mx-auto text-navy/80 text-lg leading-relaxed space-y-2">
+            <p>Discover our premium collection of handcrafted delicacies and traditional treats.</p>
+            <p>Each category features authentic recipes made with the finest ingredients.</p>
+            <p>Experience the perfect blend of taste, quality, and tradition in every bite.</p>
+          </div>
         </div>
 
-        {/* Mobile Swipe Instructions */}
-        <div className="md:hidden text-center mt-6">
-          <p className="text-sm text-gray-500">
-            👈 Swipe to explore different categories 👉
-          </p>
+        {/* Categories Section - Horizontal Banners */}
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="space-y-6">
+            {activeCategories.length > 0 ? (
+              activeCategories.map((category, index) => (
+                <div 
+                  key={category.id}
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${index * 150}ms` }}
+                >
+                  <CategoryBanner category={category} index={index} />
+                </div>
+              ))
+            ) : (
+              <NoProductsMessage categoryName="all categories" />
+            )}
+          </div>
         </div>
       </div>
 
-      <MobileNav />
+      {/* Bottom Navigation Panel */}
+      <div 
+        className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
+          showBottomNav ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <div className="flex items-center justify-around py-3 px-4 max-w-md mx-auto">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 text-navy hover:bg-champagne/20">
+              <Home className="h-5 w-5" />
+              <span className="text-xs">Home</span>
+            </Button>
+          </Link>
+          
+          <Link href="/search">
+            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 text-navy hover:bg-champagne/20">
+              <Search className="h-5 w-5" />
+              <span className="text-xs">Search</span>
+            </Button>
+          </Link>
+          
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex flex-col items-center gap-1 text-champagne bg-champagne/10"
+          >
+            <Package className="h-5 w-5" />
+            <span className="text-xs">Categories</span>
+          </Button>
+          
+          <Link href="/cart">
+            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 text-navy hover:bg-champagne/20">
+              <ShoppingCart className="h-5 w-5" />
+              <span className="text-xs">Cart</span>
+            </Button>
+          </Link>
+          
+          <Link href={isAuthenticated ? "/account" : "/login"}>
+            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 text-navy hover:bg-champagne/20">
+              <User className="h-5 w-5" />
+              <span className="text-xs">Account</span>
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out forwards;
+          opacity: 0;
+        }
+      `}</style>
     </div>
   );
 }

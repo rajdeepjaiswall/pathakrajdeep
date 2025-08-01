@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { CartProvider } from "./hooks/use-cart";
 import PWAInstaller from "./components/PWAInstaller";
 import InstallPrompt from "./components/InstallPrompt";
+import PWAPopupNotification from "./components/PWAPopupNotification";
 import GoogleOneTap from "./components/GoogleOneTap";
 
 // Pages
@@ -111,6 +112,7 @@ function AppContent() {
     <>
       <PWAInstaller />
       <InstallPrompt />
+      <PWAPopupNotification />
       <GoogleOneTap />
       <Router />
     </>

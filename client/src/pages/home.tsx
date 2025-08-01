@@ -107,7 +107,7 @@ export default function Home() {
                 <ProductCard 
                   key={product.id} 
                   product={product}
-                  isPreviouslyOrdered={previouslyOrderedProducts.includes(product.id)}
+                  isPreviouslyOrdered={Array.isArray(previouslyOrderedProducts) ? previouslyOrderedProducts.includes(product.id) : false}
                 />
               ))
             ) : (

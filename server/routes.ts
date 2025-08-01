@@ -1043,12 +1043,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cart", optionalAuth, async (req, res) => {
     try {
-      if (!req.user) {
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub || sessionUser.id;
+      } else if (req.user) {
+        userId = (req.user as any).id;
+      }
+      
+      if (!userId) {
         return res.status(401).json({ message: 'Please login to add items to cart' });
       }
+      
       const cartItemData = insertCartItemSchema.parse({
         ...req.body,
-        user_id: req.user.id,
+        user_id: userId,
       });
       const cartItem = await storage.addToCart(cartItemData);
       res.json(cartItem);
@@ -1057,19 +1067,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/cart/:id", authenticateToken, async (req, res) => {
+  app.put("/api/cart/:id", optionalAuth, async (req, res) => {
     try {
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub || sessionUser.id;
+      } else if (req.user) {
+        userId = (req.user as any).id;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Please login to update cart' });
+      }
+      
       const { quantity } = req.body;
-      const cartItem = await storage.updateCartItem(parseInt(req.params.id), quantity, req.user.id);
+      const cartItem = await storage.updateCartItem(parseInt(req.params.id), quantity, userId);
       res.json(cartItem);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.delete("/api/cart/:id", authenticateToken, async (req, res) => {
+  app.delete("/api/cart/:id", optionalAuth, async (req, res) => {
     try {
-      await storage.removeFromCart(parseInt(req.params.id), req.user.id);
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub || sessionUser.id;
+      } else if (req.user) {
+        userId = (req.user as any).id;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Please login to remove items from cart' });
+      }
+      
+      await storage.removeFromCart(parseInt(req.params.id), userId);
       res.json({ message: 'Item removed from cart' });
     } catch (error: any) {
       res.status(400).json({ message: error.message });

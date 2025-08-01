@@ -6,7 +6,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
-import ProductCard from '@/components/product/product-card';
+import LazyProductCard from '@/components/lazy-product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
 import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
@@ -133,7 +133,7 @@ export default function Home() {
               <LoadingSkeleton type="product" count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6" />
             ) : featuredProducts.length > 0 ? (
               featuredProducts.slice(0, 12).map((product: any) => (
-                <ProductCard 
+                <LazyProductCard 
                   key={product.id} 
                   product={product}
                   isPreviouslyOrdered={Array.isArray(previouslyOrderedProducts) ? previouslyOrderedProducts.includes(product.id) : false}

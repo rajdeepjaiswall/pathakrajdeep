@@ -153,7 +153,7 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
               e.stopPropagation();
               toggleWishlist(product.id);
             }}
-            disabled={isAdding || isRemoving}
+            disabled={false}
             className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
           >
             <Heart 

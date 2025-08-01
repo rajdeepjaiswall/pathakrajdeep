@@ -948,15 +948,15 @@ export class DatabaseStorage implements IStorage {
   async getProductRating(productId: number): Promise<{ averageRating: number | null; reviewCount: number; hasRatings: boolean }> {
     const result = await db
       .select({
-        averageRating: sql<number>`AVG(${reviews.rating})::numeric(2,1)`,
-        reviewCount: sql<number>`COUNT(*)::integer`,
+        averageRating: sql<number>`ROUND(AVG(${reviews.rating}), 1)`,
+        reviewCount: sql<number>`COUNT(*)`,
       })
       .from(reviews)
       .where(and(eq(reviews.product_id, productId), eq(reviews.isApproved, true)));
 
     const rating = result[0];
-    const averageRating = rating?.averageRating ? parseFloat(rating.averageRating.toString()) : null;
-    const reviewCount = rating?.reviewCount || 0;
+    const averageRating = rating?.averageRating ? Number(rating.averageRating) : null;
+    const reviewCount = Number(rating?.reviewCount) || 0;
     
     return {
       averageRating,
@@ -970,8 +970,8 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select({
         productId: reviews.product_id,
-        averageRating: sql<number>`AVG(${reviews.rating})::numeric(2,1)`,
-        reviewCount: sql<number>`COUNT(*)::integer`,
+        averageRating: sql<number>`ROUND(AVG(${reviews.rating}), 1)`,
+        reviewCount: sql<number>`COUNT(*)`,
       })
       .from(reviews)
       .where(eq(reviews.isApproved, true))
@@ -980,8 +980,8 @@ export class DatabaseStorage implements IStorage {
     const ratings: Record<number, { averageRating: number | null; reviewCount: number; hasRatings: boolean }> = {};
     
     for (const rating of result) {
-      const averageRating = rating.averageRating ? parseFloat(rating.averageRating.toString()) : null;
-      const reviewCount = rating.reviewCount || 0;
+      const averageRating = rating.averageRating ? Number(rating.averageRating) : null;
+      const reviewCount = Number(rating.reviewCount) || 0;
       
       ratings[rating.productId] = {
         averageRating,

@@ -8,7 +8,7 @@ import OptimizedImage from '@/components/OptimizedImage';
 import Header from '@/components/layout/header';
 import MobileNav from '@/components/layout/mobile-nav';
 import SEOHead from '@/components/SEOHead';
-import pathakLogo from '@assets/Screenshot_2025-08-01-15-29-00-99_10a3d211b678d435d51c62b8010e86c1_1754043457983.jpg';
+
 
 // Category banner images with blur effect backgrounds
 const categoryBannerImages: Record<string, string> = {
@@ -62,13 +62,7 @@ const NoProductsMessage = ({ categoryName }: { categoryName: string }) => {
   return (
     <div className="min-h-screen bg-cream flex flex-col items-center justify-center p-4">
       <div className="text-center">
-        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-champagne">
-          <img 
-            src={pathakLogo}
-            alt="Pathak Bhandar Logo" 
-            className="w-16 h-16 object-contain"
-          />
-        </div>
+
         <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-navy mb-2">No Products Available</h2>
         <p className="text-gray-600 mb-6">Sorry, there are no products in the {categoryName} category at the moment.</p>
@@ -109,19 +103,8 @@ export default function Categories() {
       <Header />
 
       <div className="pt-20 pb-24">
-        {/* Logo Section */}
-        <div className="py-12 text-center">
-          <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-champagne overflow-hidden">
-            <img 
-              src={pathakLogo}
-              alt="Pathak Bhandar Logo" 
-              className="w-full h-full object-contain p-2"
-            />
-          </div>
-        </div>
-
         {/* Intro Section */}
-        <div className="text-center px-4 mb-12">
+        <div className="text-center px-4 mb-12 pt-8">
           <h1 className="text-3xl md:text-4xl font-bold text-navy mb-6">
             Try our other stuff also
           </h1>
@@ -157,7 +140,7 @@ export default function Categories() {
       <MobileNav />
 
       {/* CSS for animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in-up {
           from {
             opacity: 0;

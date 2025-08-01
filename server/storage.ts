@@ -47,10 +47,12 @@ export interface IStorage {
   clearCart(userId: number): Promise<void>;
 
   // Wishlist methods
+  getWishlist(userId: number): Promise<(WishlistItem & { product: Product })[]>;
   getWishlistItems(userId: number): Promise<(WishlistItem & { product: Product })[]>;
-  addToWishlist(wishlistItem: InsertWishlistItem): Promise<WishlistItem>;
-  removeFromWishlist(productId: number, userId: number): Promise<void>;
+  addToWishlist(userId: number, productId: number): Promise<WishlistItem>;
+  removeFromWishlist(userId: number, productId: number): Promise<void>;
   isInWishlist(userId: number, productId: number): Promise<boolean>;
+  getPreviouslyOrderedProducts(userId: number): Promise<(Product & { lastOrderDate: Date; orderCount: number })[]>;
 
   // Address methods
   getAddresses(userId: number): Promise<Address[]>;
@@ -346,14 +348,31 @@ export class DatabaseStorage implements IStorage {
       .where(eq(wishlistItems.user_id, userId));
   }
 
-  async addToWishlist(insertWishlistItem: InsertWishlistItem): Promise<WishlistItem> {
+  async getWishlist(userId: number): Promise<(WishlistItem & { product: Product })[]> {
+    return this.getWishlistItems(userId);
+  }
+
+  async addToWishlist(userId: number, productId: number): Promise<WishlistItem>;
+  async addToWishlist(insertWishlistItem: InsertWishlistItem): Promise<WishlistItem>;
+  async addToWishlist(userIdOrItem: number | InsertWishlistItem, productId?: number): Promise<WishlistItem> {
+    let userId: number;
+    let prodId: number;
+
+    if (typeof userIdOrItem === 'number') {
+      userId = userIdOrItem;
+      prodId = productId!;
+    } else {
+      userId = userIdOrItem.user_id!;
+      prodId = userIdOrItem.product_id!;
+    }
+
     // Check if item already exists in wishlist
     const [existingItem] = await db
       .select()
       .from(wishlistItems)
       .where(and(
-        eq(wishlistItems.user_id, insertWishlistItem.user_id),
-        eq(wishlistItems.product_id, insertWishlistItem.product_id)
+        eq(wishlistItems.user_id, userId),
+        eq(wishlistItems.product_id, prodId)
       ));
 
     if (existingItem) {
@@ -362,12 +381,15 @@ export class DatabaseStorage implements IStorage {
 
     const [wishlistItem] = await db
       .insert(wishlistItems)
-      .values(insertWishlistItem)
+      .values({
+        user_id: userId,
+        product_id: prodId,
+      })
       .returning();
     return wishlistItem;
   }
 
-  async removeFromWishlist(productId: number, userId: number): Promise<void> {
+  async removeFromWishlist(userId: number, productId: number): Promise<void> {
     await db
       .delete(wishlistItems)
       .where(and(
@@ -385,6 +407,41 @@ export class DatabaseStorage implements IStorage {
         eq(wishlistItems.product_id, productId)
       ));
     return !!item;
+  }
+
+  async getPreviouslyOrderedProducts(userId: number): Promise<(Product & { lastOrderDate: Date; orderCount: number })[]> {
+    const result = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        weight: products.weight,
+        category_id: products.category_id,
+        images: products.images,
+        videos: products.videos,
+        stock: products.stock,
+        isActive: products.isActive,
+        hsnCode: products.hsnCode,
+        gstRate: products.gstRate,
+        tags: products.tags,
+        featured: products.featured,
+        createdAt: products.createdAt,
+        lastOrderDate: sql<Date>`MAX(${orders.orderDate})`.as('lastOrderDate'),
+        orderCount: sql<number>`COUNT(DISTINCT ${orders.id})`.as('orderCount'),
+      })
+      .from(orderItems)
+      .innerJoin(products, eq(orderItems.product_id, products.id))
+      .innerJoin(orders, eq(orderItems.order_id, orders.id))
+      .where(eq(orders.user_id, userId))
+      .groupBy(products.id)
+      .orderBy(desc(sql`MAX(${orders.orderDate})`));
+
+    return result.map(item => ({
+      ...item,
+      lastOrderDate: new Date(item.lastOrderDate),
+      orderCount: Number(item.orderCount),
+    }));
   }
 
   // Address methods

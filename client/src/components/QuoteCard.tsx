@@ -7,7 +7,7 @@ interface QuoteCardProps {
   className?: string;
 }
 
-export default function QuoteCard({ text, movie, className = "" }: QuoteCardProps) {
+export function QuoteCard({ text, movie, className = "" }: QuoteCardProps) {
   return (
     <Card className={`border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 ${className}`}>
       <CardContent className="p-4">

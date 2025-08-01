@@ -1,114 +1,145 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { WishlistItem, Product } from '@shared/schema';
+import { apiRequest } from '../lib/queryClient';
+import { useAuth } from './use-auth';
+import { useToast } from './use-toast';
 
-const apiRequest = async (url: string, options?: RequestInit) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options?.headers,
-    },
-  });
+interface WishlistContextType {
+  wishlistItems: (WishlistItem & { product: Product })[];
+  previousOrders: (Product & { lastOrderDate: Date; orderCount: number })[];
+  isLoading: boolean;
+  addToWishlist: (productId: number) => void;
+  removeFromWishlist: (productId: number) => void;
+  isInWishlist: (productId: number) => boolean;
+  toggleWishlist: (productId: number) => void;
+}
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'An error occurred' }));
-    throw new Error(error.message || 'Something went wrong');
-  }
+const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-  return response.json();
-};
+interface WishlistProviderProps {
+  children: ReactNode;
+}
 
-export function useWishlist() {
+export function WishlistProvider({ children }: WishlistProviderProps) {
+  const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: wishlistItems = [], isLoading } = useQuery({
+  // Fetch wishlist items
+  const { data: wishlistItems = [], isLoading: wishlistLoading } = useQuery({
     queryKey: ['/api/wishlist'],
-    queryFn: () => apiRequest('/api/wishlist'),
-    retry: false,
+    enabled: isAuthenticated,
   });
 
+  // Fetch previously ordered products
+  const { data: previousOrders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['/api/previous-orders'],
+    enabled: isAuthenticated,
+  });
+
+  const isLoading = wishlistLoading || ordersLoading;
+
+  // Add to wishlist mutation
   const addToWishlistMutation = useMutation({
-    mutationFn: (productId: number) => 
-      apiRequest('/api/wishlist', {
-        method: 'POST',
-        body: JSON.stringify({ product_id: productId }),
-      }),
+    mutationFn: async (productId: number) => {
+      return await apiRequest('POST', '/api/wishlist', {
+        product_id: productId,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/wishlist'] });
       toast({
         title: 'Added to wishlist',
-        description: 'Product has been added to your wishlist.',
+        description: 'Product has been added to your wishlist',
       });
     },
-    onError: (error: Error) => {
-      if (error.message.includes('login')) {
+    onError: (error: any) => {
+      if (error.message.includes('already in wishlist')) {
         toast({
-          title: 'Login Required',
-          description: 'Please login to add items to your wishlist.',
+          title: 'Already in wishlist',
+          description: 'This product is already in your wishlist',
           variant: 'destructive',
         });
       } else {
         toast({
           title: 'Error',
-          description: error.message,
+          description: error.message || 'Failed to add product to wishlist',
           variant: 'destructive',
         });
       }
     },
   });
 
+  // Remove from wishlist mutation
   const removeFromWishlistMutation = useMutation({
-    mutationFn: (productId: number) => 
-      apiRequest(`/api/wishlist/${productId}`, {
-        method: 'DELETE',
-      }),
+    mutationFn: async (productId: number) => {
+      return await apiRequest('DELETE', `/api/wishlist/${productId}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/wishlist'] });
       toast({
         title: 'Removed from wishlist',
-        description: 'Product has been removed from your wishlist.',
+        description: 'Product has been removed from your wishlist',
       });
     },
-    onError: (error: Error) => {
-      if (error.message.includes('login')) {
-        toast({
-          title: 'Login Required',
-          description: 'Please login to manage your wishlist.',
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove product from wishlist',
+        variant: 'destructive',
+      });
     },
   });
 
-  const isInWishlist = (productId: number) => {
-    return wishlistItems.some((item: any) => item.product_id === productId);
+  const addToWishlist = (productId: number) => {
+    if (!isAuthenticated) {
+      toast({
+        title: 'Authentication required',
+        description: 'Please log in to add products to your wishlist',
+        variant: 'destructive',
+      });
+      return;
+    }
+    addToWishlistMutation.mutate(productId);
+  };
+
+  const removeFromWishlist = (productId: number) => {
+    if (!isAuthenticated) {
+      return;
+    }
+    removeFromWishlistMutation.mutate(productId);
+  };
+
+  const isInWishlist = (productId: number): boolean => {
+    return wishlistItems.some(item => item.product.id === productId);
   };
 
   const toggleWishlist = (productId: number) => {
     if (isInWishlist(productId)) {
-      removeFromWishlistMutation.mutate(productId);
+      removeFromWishlist(productId);
     } else {
-      addToWishlistMutation.mutate(productId);
+      addToWishlist(productId);
     }
   };
 
-  return {
+  const contextValue: WishlistContextType = {
     wishlistItems,
+    previousOrders,
     isLoading,
+    addToWishlist,
+    removeFromWishlist,
     isInWishlist,
     toggleWishlist,
-    addToWishlist: addToWishlistMutation.mutate,
-    removeFromWishlist: removeFromWishlistMutation.mutate,
-    isAdding: addToWishlistMutation.isPending,
-    isRemoving: removeFromWishlistMutation.isPending,
   };
+
+  return React.createElement(WishlistContext.Provider, { value: contextValue }, children);
+}
+
+export function useWishlist() {
+  const context = useContext(WishlistContext);
+  if (context === undefined) {
+    throw new Error('useWishlist must be used within a WishlistProvider');
+  }
+  return context;
 }

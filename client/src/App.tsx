@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { CartProvider } from "./hooks/use-cart";
+import { WishlistProvider } from "./hooks/use-wishlist";
 import PWAInstaller from "./components/PWAInstaller";
 import InstallPrompt from "./components/InstallPrompt";
 import GoogleOneTap from "./components/GoogleOneTap";
@@ -40,6 +41,7 @@ import OTPTest from "@/pages/otp-test";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import CompleteProfile from "@/pages/complete-profile";
+import WishlistPage from "@/pages/wishlist";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -79,6 +81,7 @@ function Router() {
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/complete-profile" component={CompleteProfile} />
+      <Route path="/wishlist" component={WishlistPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -89,10 +92,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <CartProvider>
-            <Toaster />
-            <AppContent />
-          </CartProvider>
+          <WishlistProvider>
+            <CartProvider>
+              <Toaster />
+              <AppContent />
+            </CartProvider>
+          </WishlistProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

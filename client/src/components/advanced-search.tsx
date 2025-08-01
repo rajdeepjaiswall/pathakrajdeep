@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import OptimizedImage from './OptimizedImage';
 import { apiRequest } from '@/lib/queryClient';
-import QuoteCard from './QuoteCard';
+import { QuoteCard } from './QuoteCard';
 import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 // Voice recognition types
@@ -130,7 +130,7 @@ export default function AdvancedSearch() {
       setIsListening(false);
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
     };
@@ -330,7 +330,6 @@ export default function AdvancedSearch() {
                         src={product.images[0]}
                         alt={product.name}
                         className="w-full h-32 object-cover rounded-lg"
-                        fallbackSrc="/api/logo"
                       />
                       
                       {/* Match Type Badge */}

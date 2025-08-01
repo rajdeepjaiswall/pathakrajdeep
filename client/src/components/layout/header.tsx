@@ -219,7 +219,7 @@ export default function Header() {
                   <span className="text-navy font-medium">Cart ({summary.itemCount})</span>
                 </div>
 
-                <Link href="/customer/wishlist">
+                <Link href="/wishlist">
                   <div 
                     className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -423,7 +423,7 @@ export default function Header() {
                 </div>
 
                 {/* Wishlist */}
-                <Link href="/customer/wishlist">
+                <Link href="/wishlist">
                   <div 
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors"
                     onClick={() => setIsDesktopMenuOpen(false)}

@@ -8,7 +8,7 @@ import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice, getGSTBreakdown } from '@/lib/cart';
 import CartSidebar from '@/components/cart/cart-sidebar';
-import QuoteCard from '@/components/QuoteCard';
+import { QuoteCard } from '@/components/QuoteCard';
 import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 export default function Cart() {

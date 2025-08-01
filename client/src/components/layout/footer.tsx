@@ -1,6 +1,6 @@
 import { Facebook, Instagram } from 'lucide-react';
 import { COMPANY_INFO } from '@/lib/constants';
-import QuoteCard from '../QuoteCard';
+import { QuoteCard } from '../QuoteCard';
 import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 export default function Footer() {

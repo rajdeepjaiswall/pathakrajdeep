@@ -17,7 +17,7 @@ import { preloadImages } from '@/lib/image-cache';
 import { useEffect } from 'react';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import QuoteCard from '@/components/QuoteCard';
+import { QuoteCard } from '@/components/QuoteCard';
 import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 export default function Home() {

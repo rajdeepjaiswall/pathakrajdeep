@@ -8,6 +8,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import OptimizedImage from './OptimizedImage';
 import { apiRequest } from '@/lib/queryClient';
+import QuoteCard from './QuoteCard';
+import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 // Voice recognition types
 interface SpeechRecognitionEvent {
@@ -268,6 +270,13 @@ export default function AdvancedSearch() {
                 <p className="text-gray-600 mb-4">
                   Don't worry! Our AI can understand Hindi, Hinglish, and translate your search to find exactly what you're looking for.
                 </p>
+                <div className="mb-4">
+                  <QuoteCard 
+                    text={getRandomFoodQuote('tea_time').text}
+                    movie={getRandomFoodQuote('tea_time').movie}
+                    className="text-left"
+                  />
+                </div>
                 <Button
                   onClick={() => aiSearchMutation.mutate(searchQuery)}
                   disabled={aiSearchMutation.isPending}
@@ -378,6 +387,13 @@ export default function AdvancedSearch() {
                 <p className="text-gray-600 mb-4">
                   Even our AI couldn't find matching products. Try searching with different terms.
                 </p>
+                <div className="mb-4">
+                  <QuoteCard 
+                    text={getRandomFoodQuote().text}
+                    movie={getRandomFoodQuote().movie}
+                    className="text-left"
+                  />
+                </div>
                 <div className="text-sm text-gray-500">
                   <p>You can search in:</p>
                   <ul className="mt-2 space-y-1">

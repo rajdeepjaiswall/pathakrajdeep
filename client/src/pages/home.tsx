@@ -17,6 +17,8 @@ import { preloadImages } from '@/lib/image-cache';
 import { useEffect } from 'react';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import QuoteCard from '@/components/QuoteCard';
+import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
@@ -56,13 +58,24 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
-  // Show loading spinner for mobile on initial load
+  // Show loading screen with quote for mobile on initial load
   if (productsLoading && allProducts.length === 0) {
+    const loadingQuote = getRandomFoodQuote();
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="pt-20 pb-32">
-          <LoadingSpinner size="lg" className="h-64" />
+        <div className="pt-20 pb-32 px-4">
+          <div className="max-w-md mx-auto space-y-6">
+            <LoadingSpinner size="lg" className="h-64" />
+            <QuoteCard 
+              text={loadingQuote.text}
+              movie={loadingQuote.movie}
+              className="animate-pulse"
+            />
+            <p className="text-center text-gray-500 text-sm">
+              Loading fresh goodies for you...
+            </p>
+          </div>
         </div>
         <MobileNav />
         <CartSidebar />
@@ -174,6 +187,14 @@ export default function Home() {
               <h3 className="font-semibold text-navy mb-2">Quality Guarantee</h3>
               <p className="text-gray-600 text-sm">Fresh products with satisfaction guarantee</p>
             </div>
+          </div>
+          
+          {/* Inspirational Quote */}
+          <div className="max-w-2xl mx-auto mt-12">
+            <QuoteCard 
+              text={getRandomFoodQuote('home_cooking').text}
+              movie={getRandomFoodQuote('home_cooking').movie}
+            />
           </div>
         </div>
       </section>

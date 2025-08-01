@@ -60,3 +60,26 @@ Supports dual database configurations:
 - Google Maps API (for address management)
 - Postal API (for PIN code auto-population)
 - Web Audio API (for audio notifications)
+- OpenAI API (for enhanced search with AI translation - optional)
+
+## Recent Changes & Deployment Fixes (August 2025)
+
+### Production Deployment Issues Resolved
+- **OpenAI Package**: Added missing `openai` package that was causing deployment failures
+- **Environment Variables**: Enhanced error handling for missing DATABASE_URL and other critical environment variables
+- **Search Service**: Added graceful fallbacks when OpenAI API key is not configured
+- **Error Messages**: Improved debugging information for deployment troubleshooting
+
+### Environment Variables Required for Deployment
+- **DATABASE_URL**: PostgreSQL connection string (critical)
+- **JWT_SECRET**: Authentication token signing (critical)  
+- **SESSION_SECRET**: Express session encryption (critical)
+- **OPENAI_API_KEY**: AI search functionality (optional)
+- **NODE_ENV**: Set to 'production' for production deployments
+
+### Deployment Status
+✅ Application successfully starts and runs
+✅ Database connectivity working
+✅ Authentication system functional
+✅ Search works with/without OpenAI API
+✅ All core features operational

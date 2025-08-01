@@ -123,20 +123,6 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async updateUserGoogleId(userId: number, googleId: string): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({ googleId })
-      .where(eq(users.id, userId))
-      .returning();
-    return user;
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
-  }
-
   async getUserByGoogleId(googleId: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
     return user || undefined;

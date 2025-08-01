@@ -10,18 +10,12 @@ import MobileNav from '@/components/layout/mobile-nav';
 import SEOHead from '@/components/SEOHead';
 
 
-// Category banner images with blur effect backgrounds
-const categoryBannerImages: Record<string, string> = {
-  'Biscuits': 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-  'Sweets': 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-  'Cakes': 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-  'Snacks': 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-  'Breads': 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
-};
+// Default fallback banner image
+const defaultBannerImage = 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80';
 
-// Category banner component with text overlay
+// Category banner component with text overlay  
 const CategoryBanner = ({ category, index }: { category: Category; index: number }) => {
-  const backgroundImage = categoryBannerImages[category.name] || categoryBannerImages['Biscuits'];
+  const backgroundImage = category.bannerImageUrl || defaultBannerImage;
   
   return (
     <Link href={`/products?category=${category.id}`}>
@@ -65,7 +59,7 @@ const NoProductsMessage = ({ categoryName }: { categoryName: string }) => {
 
         <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-navy mb-2">No Products Available</h2>
-        <p className="text-gray-600 mb-6">Sorry, there are no products in the {categoryName} category at the moment.</p>
+        <p className="text-gray-600 mb-6">We are still working on this category, try something else.</p>
         <Link href="/categories">
           <Button className="bg-champagne text-navy hover:bg-champagne/90">
             Browse Other Categories

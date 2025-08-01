@@ -892,28 +892,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search: search as string,
       });
 
-      // Optimize image URLs for faster loading
-      const optimizedProducts = products.map(product => ({
-        ...product,
-        images: product.images?.map(img => {
-          if (typeof img === 'string' && img.includes('unsplash.com')) {
-            // Add Unsplash optimization parameters
-            const url = new URL(img);
-            url.searchParams.set('auto', 'format');
-            url.searchParams.set('fit', 'crop');
-            url.searchParams.set('w', '400');
-            url.searchParams.set('q', '80');
-            return url.toString();
-          }
-          return img;
-        }) || []
-      }));
-      
-      // Add aggressive caching for products
-      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800'); // Cache for 10 minutes, stale for 30 minutes
-      res.setHeader('ETag', `"products-${products.length}-${search || 'all'}"`);
-      
-      res.json(optimizedProducts);
+      res.json(products);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get trending products (top 10 most popular)
+  app.get("/api/products/trending", async (req, res) => {
+    try {
+      const products = await storage.getProducts();
+      // Simulate trending by shuffling and taking first 10 products
+      // In real app, this would be based on actual purchase/view data
+      const shuffled = [...products].sort(() => Math.random() - 0.5);
+      const trending = shuffled.slice(0, 10);
+      res.json(trending);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

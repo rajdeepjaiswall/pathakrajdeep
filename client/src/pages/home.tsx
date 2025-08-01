@@ -19,6 +19,7 @@ import LoadingSkeleton from '@/components/LoadingSkeleton';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { QuoteCard } from '@/components/QuoteCard';
 import { getRandomFoodQuote } from '@/data/foodQuotes';
+import { TrendingProducts } from '@/components/trending-products';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
@@ -161,6 +162,9 @@ export default function Home() {
           <MiniBannerSlideshow />
         </div>
       </div>
+
+      {/* Trending Products Section */}
+      <TrendingProducts />
 
       {/* Trust Indicators */}
 <section className="py-12 bg-background">

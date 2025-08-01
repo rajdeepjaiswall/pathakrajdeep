@@ -30,10 +30,10 @@ export function CartProvider({ children }: CartProviderProps) {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch cart items
+  // Fetch cart items - always fetch, let the server handle auth
   const { data: cartData, isLoading } = useQuery({
     queryKey: ['/api/cart'],
-    enabled: isAuthenticated,
+    retry: false,
   });
 
   const items = (cartData as CartItem[]) || [];

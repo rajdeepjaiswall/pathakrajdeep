@@ -35,8 +35,7 @@ export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  imageUrl: text("image_url"), // Round profile image (DP)
-  bannerImageUrl: text("banner_image_url"), // Rectangular banner image
+  imageUrl: text("image_url"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -150,17 +149,13 @@ export const coupons = pgTable("coupons", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Reviews/Feedback table
+// Reviews table
 export const reviews = pgTable("reviews", {
   id: serial("id").primaryKey(),
   user_id: integer("user_id").references(() => users.id),
   product_id: integer("product_id").references(() => products.id),
-  order_id: integer("order_id").references(() => orders.id),
-  rating: integer("rating").notNull(), // 1-5 stars
-  comment: text("comment"), // Max 160 words, validated on frontend
-  admin_reply: text("admin_reply"),
-  admin_reply_date: timestamp("admin_reply_date"),
-  is_featured: boolean("is_featured").default(false), // Admin can feature on homepage
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
   isApproved: boolean("is_approved").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -238,7 +233,6 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     references: [users.id],
   }),
   orderItems: many(orderItems),
-  reviews: many(reviews),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -282,10 +276,6 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
   product: one(products, {
     fields: [reviews.product_id],
     references: [products.id],
-  }),
-  order: one(orders, {
-    fields: [reviews.order_id],
-    references: [orders.id],
   }),
 }));
 
@@ -362,16 +352,9 @@ export const insertOtpSchema = createInsertSchema(otps).omit({
 
 
 
-export const insertReviewSchema = createInsertSchema(reviews, {
-  comment: z.string().max(160, "Feedback cannot exceed 160 words").optional(),
-  rating: z.number().min(1).max(5),
-}).omit({
+export const insertReviewSchema = createInsertSchema(reviews).omit({
   id: true,
   createdAt: true,
-  admin_reply: true,
-  admin_reply_date: true,
-  is_featured: true,
-  isApproved: true,
 });
 
 export const insertBannerSchema = createInsertSchema(banners).omit({

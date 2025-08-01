@@ -1,6 +1,5 @@
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
-import MobileNav from '@/components/layout/mobile-nav';
 
 export default function PrivacyPolicy() {
   return (
@@ -130,7 +129,6 @@ export default function PrivacyPolicy() {
           <p>Managed and created by <strong>Getdown Foundations</strong></p>
         </div>
       </div>
-      <MobileNav />
     </div>
   );
 }

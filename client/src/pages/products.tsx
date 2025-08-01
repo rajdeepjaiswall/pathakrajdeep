@@ -1,8 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Filter, Grid, List, Package } from 'lucide-react';
-import { useDebounce } from '@/hooks/use-debounce';
-import { useLocation } from 'wouter';
+import { Search, Filter, Grid, List } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,100 +8,44 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
-import LazyProductCard from '@/components/lazy-product-card';
-import { useAllProductRatings } from '@/hooks/use-product-ratings';
+import ProductCard from '@/components/product/product-card';
 
 export default function Products() {
-  const [location] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
-  // Get URL parameters
-  const urlParams = new URLSearchParams(location.split('?')[1] || '');
-  const categoryFromUrl = urlParams.get('category');
-
-  // Set selected category from URL
-  useEffect(() => {
-    if (categoryFromUrl) {
-      setSelectedCategory(categoryFromUrl);
-    }
-  }, [categoryFromUrl]);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ['/api/categories'],
   });
 
-  // Fetch product ratings for better performance
-  const { data: ratings = {} } = useAllProductRatings();
-
   // Fetch products
-  const { data: allProducts = [], isLoading } = useQuery({
-    queryKey: ['/api/products'],
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['/api/products', { search: searchTerm, category_id: selectedCategory !== 'all' ? selectedCategory : undefined }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedCategory !== 'all') params.append('category_id', selectedCategory);
+      
+      const response = await fetch(`/api/products?${params.toString()}`);
+      return response.json();
+    },
   });
-
-  // Optimized filtering with useMemo to prevent re-filtering on every render
-  const products = useMemo(() => {
-    let filtered = allProducts;
-    
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter((product: any) => 
-        product.categoryId?.toString() === selectedCategory.toString()
-      );
-    }
-    
-    // Filter by search term
-    if (debouncedSearchTerm.trim()) {
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      filtered = filtered.filter((product: any) =>
-        product.name.toLowerCase().includes(searchLower) ||
-        product.description?.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    return filtered;
-  }, [allProducts, selectedCategory, debouncedSearchTerm]);
-
-  // Get current category details for banner display
-  const currentCategory = categories.find((cat: any) => cat.id.toString() === selectedCategory);
 
   return (
     <div className="min-h-screen bg-cream">
       <Header />
       
-      {/* Category Banner (if category is selected) */}
-      {currentCategory && (
-        <section className="relative h-40 md:h-48 overflow-hidden">
-          <div className="absolute inset-0">
-            <img
-              src={currentCategory.bannerImageUrl || 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'}
-              alt={currentCategory.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent"></div>
-          <div className="relative h-full flex items-center justify-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-2xl text-center">
-              {currentCategory.name}
-            </h1>
-          </div>
-        </section>
-      )}
-
-      {/* Page Header (if no category selected) */}
-      {!currentCategory && (
-        <section className="bg-white py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-navy mb-4">Our Products</h1>
-            <p className="text-lg text-gray-600 max-w-2xl">
-              Discover our premium collection of traditional biscuits, cookies, and confectionery items
-            </p>
-          </div>
-        </section>
-      )}
+      {/* Page Header */}
+      <section className="bg-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-navy mb-4">Our Products</h1>
+          <p className="text-lg text-gray-600 max-w-2xl">
+            Discover our premium collection of traditional biscuits, cookies, and confectionery items
+          </p>
+        </div>
+      </section>
 
       {/* Filters */}
       <section className="bg-white border-t">
@@ -178,14 +120,8 @@ export default function Products() {
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-12">
-              <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-navy mb-2">No Products Available</h2>
-              <p className="text-gray-600 mb-6">
-                {currentCategory 
-                  ? "We are still working on this category, try something else."
-                  : "No products found. Try adjusting your search or filters."
-                }
-              </p>
+              <p className="text-gray-500 text-lg mb-4">No products found</p>
+              <p className="text-gray-400">Try adjusting your search or filters</p>
             </div>
           ) : (
             <div className={`grid gap-6 ${
@@ -194,7 +130,7 @@ export default function Products() {
                 : 'grid-cols-1'
             }`}>
               {products.map((product: any) => (
-                <LazyProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}

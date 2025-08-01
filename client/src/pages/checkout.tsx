@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -566,7 +565,6 @@ export default function Checkout() {
       </div>
 
       <Footer />
-      <MobileNav />
     </div>
   );
 }

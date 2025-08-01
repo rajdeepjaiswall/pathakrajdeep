@@ -1,6 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
-import MobileNav from '@/components/layout/mobile-nav';
 
 export default function NotFound() {
   return (
@@ -17,7 +16,6 @@ export default function NotFound() {
           </p>
         </CardContent>
       </Card>
-      <MobileNav />
     </div>
   );
 }

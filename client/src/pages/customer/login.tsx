@@ -8,7 +8,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { login } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleLoginButton } from '@/components/ui/google-login-button';
-import MobileNav from '@/components/layout/mobile-nav';
 
 export default function CustomerLogin() {
   const [, setLocation] = useLocation();
@@ -142,31 +141,6 @@ export default function CustomerLogin() {
               </Button>
             </form>
 
-            {/* Development Testing Button */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="text-center border-t pt-4">
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/debug/simulate-google-login', {
-                        method: 'POST',
-                        credentials: 'include'
-                      });
-                      if (response.ok) {
-                        window.location.href = '/';
-                      }
-                    } catch (error) {
-                      console.error('Test login failed:', error);
-                    }
-                  }}
-                  className="w-full bg-blue-50 text-blue-700 border-blue-200"
-                >
-                  🧪 Test Login (Development Only)
-                </Button>
-              </div>
-            )}
-
             <div className="text-center">
               <Button
                 variant="link"
@@ -179,7 +153,6 @@ export default function CustomerLogin() {
           </div>
         </CardContent>
       </Card>
-      <MobileNav />
     </div>
   );
 }

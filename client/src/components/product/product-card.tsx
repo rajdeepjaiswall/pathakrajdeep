@@ -1,4 +1,4 @@
-import { Plus, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { Star, Plus, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +9,6 @@ import { Link } from 'wouter';
 import { Product } from '@shared/schema';
 import { useState, useEffect } from 'react';
 import { ProductBadge } from '@/components/ui/product-badge';
-import OptimizedImage from '@/components/OptimizedImage';
-import { useProductRating } from '@/hooks/use-product-ratings';
-import { StarRating } from '@/components/ui/star-rating';
 
 interface ProductCardProps {
   product: Product;
@@ -20,11 +17,8 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, isPreviouslyOrdered = false }: ProductCardProps) {
   const { addToCart } = useCart();
-  const { isInWishlist, toggleWishlist } = useWishlist();
+  const { isInWishlist, toggleWishlist, isAdding, isRemoving } = useWishlist();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  // Fetch product rating
-  const { data: rating } = useProductRating(product.id);
 
   // Create media array from actual product images and videos
   const createMediaItems = () => {
@@ -81,7 +75,8 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
     setCurrentImageIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
   };
 
-
+  const rating = 4.5;
+  const reviewCount = 24;
 
   return (
     <Link href={`/products/${product.id}`}>
@@ -97,13 +92,16 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
             ) : (
-              <OptimizedImage
+              <img 
                 src={mediaItems[currentImageIndex].url} 
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                width={320}
-                height={160}
-                placeholder="blur"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== '/placeholder-product.jpg') {
+                    target.src = '/placeholder-product.jpg';
+                  }
+                }}
               />
             )}
             
@@ -153,7 +151,7 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
               e.stopPropagation();
               toggleWishlist(product.id);
             }}
-            disabled={false}
+            disabled={isAdding || isRemoving}
             className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
           >
             <Heart 
@@ -173,14 +171,15 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
                 Featured
               </Badge>
             )}
-            {rating?.hasRatings && (
-              <StarRating 
-                rating={rating.averageRating || 0}
-                reviewCount={rating.reviewCount}
-                size="sm"
-                className="text-xs"
-              />
-            )}
+            <div className="flex items-center text-yellow-400">
+              {[...Array(5)].map((_, i) => (
+                <Star 
+                  key={i} 
+                  className={`h-2.5 w-2.5 ${i < Math.floor(rating) ? 'fill-current' : ''}`} 
+                />
+              ))}
+              <span className="text-gray-500 text-xs ml-1">({reviewCount})</span>
+            </div>
           </div>
           
           <h3 className="font-semibold text-navy mb-1 text-sm">{product.name}</h3>

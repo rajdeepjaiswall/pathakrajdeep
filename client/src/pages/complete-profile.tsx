@@ -10,7 +10,6 @@ import { GooglePlacesInput } from '@/components/ui/google-places-input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
-import MobileNav from '@/components/layout/mobile-nav';
 import { ArrowLeft, Home, MapPin, Loader2, Phone, Lock, MapIcon } from 'lucide-react';
 
 export default function CompleteProfile() {
@@ -36,20 +35,9 @@ export default function CompleteProfile() {
   // Pre-fill user data from Google OAuth
   useEffect(() => {
     if (user) {
-      // Fix name display - don't use email as fallback, extract actual name
-      let displayName = '';
-      if (user.firstName && user.lastName) {
-        displayName = `${user.firstName} ${user.lastName}`;
-      } else if (user.firstName) {
-        displayName = user.firstName;
-      } else if (user.email) {
-        // Extract name part from email (before @) as last resort
-        displayName = user.email.split('@')[0].replace(/[._]/g, ' ');
-      }
-      
       setFormData(prev => ({
         ...prev,
-        name: displayName,
+        name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || '',
         phone: user.phone || '',
       }));
     }
@@ -145,31 +133,18 @@ export default function CompleteProfile() {
   const completeProfileMutation = useMutation({
     mutationFn: async (data: any) => {
       // Create address and complete profile in one request
-      console.log('Submitting profile data:', data);
-      
       const response = await fetch('/api/auth/complete-profile-with-address', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include cookies for session auth
+        credentials: 'include',
         body: JSON.stringify(data),
       });
       
-      console.log('Response status:', response.status);
-      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Profile completion error:', errorText);
-        let errorMessage = 'Failed to complete profile';
-        try {
-          const error = JSON.parse(errorText);
-          errorMessage = error.message || errorMessage;
-        } catch (e) {
-          // If response is not JSON, use the text as error
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to complete profile');
       }
       
       return response.json();
@@ -574,7 +549,6 @@ export default function CompleteProfile() {
           </CardContent>
         </Card>
       </div>
-      <MobileNav />
     </div>
   );
 }

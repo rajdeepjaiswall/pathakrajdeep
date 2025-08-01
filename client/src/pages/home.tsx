@@ -6,21 +6,13 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
-import LazyProductCard from '@/components/lazy-product-card';
+import ProductCard from '@/components/product/product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
 import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
-
+import GoogleOneTapDemo from '@/components/GoogleOneTapDemo';
 import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
-import { preloadImages } from '@/lib/image-cache';
-import { useEffect } from 'react';
-import LoadingSkeleton from '@/components/LoadingSkeleton';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { QuoteCard } from '@/components/QuoteCard';
-import { getRandomFoodQuote } from '@/data/foodQuotes';
-import { TrendingProducts } from '@/components/trending-products';
-import { FeedbackCarousel } from '@/components/feedback-carousel';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
@@ -29,20 +21,6 @@ export default function Home() {
   const { data: allProducts = [], isLoading: productsLoading } = useQuery({
     queryKey: ['/api/products'],
   });
-
-  // Preload critical images when products load
-  useEffect(() => {
-    if (allProducts && allProducts.length > 0) {
-      const imagesToPreload = allProducts
-        .slice(0, 8) // First 8 products
-        .flatMap((product: any) => product.images || [])
-        .filter((img: string) => img && !img.startsWith('data:'));
-      
-      if (imagesToPreload.length > 0) {
-        preloadImages(imagesToPreload, 'high').catch(console.warn);
-      }
-    }
-  }, [allProducts]);
 
   // Filter featured products or show all if none are featured
   const featuredProducts = (allProducts as any[]).filter((product: any) => product.featured).length > 0
@@ -60,31 +38,6 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
-  // Show loading screen with quote for mobile on initial load
-  if (productsLoading && allProducts.length === 0) {
-    const loadingQuote = getRandomFoodQuote();
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="pt-20 pb-32 px-4">
-          <div className="max-w-md mx-auto space-y-6">
-            <LoadingSpinner size="lg" className="h-64" />
-            <QuoteCard 
-              text={loadingQuote.text}
-              movie={loadingQuote.movie}
-              className="animate-pulse"
-            />
-            <p className="text-center text-gray-500 text-sm">
-              Loading fresh goodies for you...
-            </p>
-          </div>
-        </div>
-        <MobileNav />
-        <CartSidebar />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -94,7 +47,7 @@ export default function Home() {
         <section className="py-3 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-cream to-almond">
           <div className="max-w-7xl mx-auto text-left">
             <p className="text-sm text-navy font-serif">
-              Namaste <span className="text-xl font-bold">{(user as any)?.firstName ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() : user.username}</span> ji,<br />
+              Namaste <span className="text-xl font-bold">{user.username}</span> ji,<br />
               aapka Pathak Bhandar mein swagat hai
             </p>
           </div>
@@ -111,7 +64,18 @@ export default function Home() {
       {/* Category Showcase - Automatic Moving Carousel */}
       <CategoryShowcase />
 
-
+      {/* Google One Tap Demo - Show only for non-authenticated users */}
+      {!isAuthenticated && (
+        <section className="py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-navy mb-2">Sign In Seamlessly</h2>
+              <p className="text-gray-600">Experience our smart Google One-Tap sign in - no page reloads, cart stays intact!</p>
+            </div>
+            <GoogleOneTapDemo />
+          </div>
+        </section>
+      )}
 
       {/* Featured Products - Product Catalogue */}
       <section className="pt-2 pb-16 bg-background">
@@ -130,13 +94,20 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
             {productsLoading ? (
-              <LoadingSkeleton type="product" count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6" />
+              // Loading skeleton
+              Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-md p-4 animate-pulse">
+                  <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
+                  <div className="bg-gray-200 h-4 rounded mb-2"></div>
+                  <div className="bg-gray-200 h-4 rounded w-2/3"></div>
+                </div>
+              ))
             ) : featuredProducts.length > 0 ? (
               featuredProducts.slice(0, 12).map((product: any) => (
-                <LazyProductCard 
+                <ProductCard 
                   key={product.id} 
                   product={product}
-                  isPreviouslyOrdered={Array.isArray(previouslyOrderedProducts) ? previouslyOrderedProducts.includes(product.id) : false}
+                  isPreviouslyOrdered={previouslyOrderedProducts.includes(product.id)}
                 />
               ))
             ) : (
@@ -164,12 +135,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Trending Products Section */}
-      <TrendingProducts />
-
-      {/* Customer Feedback Carousel */}
-      <FeedbackCarousel />
-
       {/* Trust Indicators */}
 <section className="py-12 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -195,14 +160,6 @@ export default function Home() {
               <h3 className="font-semibold text-navy mb-2">Quality Guarantee</h3>
               <p className="text-gray-600 text-sm">Fresh products with satisfaction guarantee</p>
             </div>
-          </div>
-          
-          {/* Inspirational Quote */}
-          <div className="max-w-2xl mx-auto mt-12">
-            <QuoteCard 
-              text={getRandomFoodQuote('home_cooking').text}
-              movie={getRandomFoodQuote('home_cooking').movie}
-            />
           </div>
         </div>
       </section>

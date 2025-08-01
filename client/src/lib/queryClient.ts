@@ -30,19 +30,6 @@ export async function apiRequest(
     credentials: "include", // Important for session-based auth
   });
 
-  // Handle 401 errors specifically for cart/authentication issues
-  if (res.status === 401 && (url.includes('/cart') || url.includes('/wishlist'))) {
-    const errorData = await res.json().catch(() => ({}));
-    console.error('Authentication error:', errorData);
-    
-    // For debugging, try to simulate login if it's a development environment
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Development mode: Authentication failed, check Google OAuth setup');
-    }
-    
-    throw new Error(`${res.status}: ${errorData.message || 'Authentication required'}`);
-  }
-
   await throwIfResNotOk(res);
   return res;
 }

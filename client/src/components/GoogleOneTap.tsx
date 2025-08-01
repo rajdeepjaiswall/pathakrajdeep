@@ -66,7 +66,7 @@ export default function GoogleOneTap() {
 
     try {
       window.google.accounts.id.initialize({
-        client_id: '1089622312459-92mclsbhh3g05tpm4sflpcjdi8958t80.apps.googleusercontent.com',
+        client_id: '1069780387537-jnkntl3hmbqdt5lndahb58dq83tqo0ek.apps.googleusercontent.com',
         callback: handleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true,

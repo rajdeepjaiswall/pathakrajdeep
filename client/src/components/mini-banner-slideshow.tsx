@@ -53,22 +53,6 @@ export function MiniBannerSlideshow() {
               src={banner.image} 
               alt={banner.title}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const fallback = document.createElement('div');
-                fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex flex-col items-center justify-center';
-                fallback.innerHTML = `
-                  <div class="text-center">
-                    <div class="w-12 h-12 mx-auto mb-2 bg-navy rounded-lg flex items-center justify-center shadow-lg">
-                      <span class="text-champagne font-bold text-lg">PB</span>
-                    </div>
-                    <div class="text-navy font-semibold text-sm mb-1">Working on it!!</div>
-                    <div class="text-navy/70 text-xs">Banner loading...</div>
-                  </div>
-                `;
-                target.parentNode?.appendChild(fallback);
-              }}
             />
             <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
               <div className="text-center text-white px-4">

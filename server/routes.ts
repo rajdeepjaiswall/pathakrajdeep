@@ -59,6 +59,11 @@ function authenticateUser(req: any, res: any, next: any) {
 
 // Optional authentication middleware for cart/wishlist
 function optionalAuth(req: any, res: any, next: any) {
+  // Check for session-based authentication first (Google OAuth)
+  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+    return next();
+  }
+  
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -91,6 +96,13 @@ function requireSuperAdmin(req: any, res: any, next: any) {
 }
 
 import { initializeGoogleAuth, setupSession, setupGoogleAuthRoutes } from "./google-auth";
+
+// Simple in-memory notification function (can be extended with Web Push later)
+async function sendOrderStatusNotification(userId: number, orderId: number, status: string, orderNumber: string) {
+  console.log(`Sending notification to user ${userId}: Order #${orderNumber} status changed to ${status}`);
+  // For now, just log the notification - can be extended with actual push notification service
+  return true;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup session and Google OAuth
@@ -945,22 +957,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Order items endpoint
-  app.post("/api/order-items", optionalAuth, async (req, res) => {
+  app.post("/api/order-items", authenticateUser, async (req, res) => {
     try {
-      // Check session auth first for Google OAuth users
-      let userId = null;
-      if (req.isAuthenticated && req.isAuthenticated()) {
-        userId = req.user.id;
-      } else if (req.user) {
-        userId = req.user.id;
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'Please login to create order items' });
-      }
-
+      console.log('Creating order item for user:', req.user.id);
       const orderItemData = insertOrderItemSchema.parse(req.body);
       const orderItem = await storage.createOrderItem(orderItemData);
+      console.log('Order item created successfully:', orderItem.id);
       res.json(orderItem);
     } catch (error: any) {
       console.error('Order item creation error:', error);
@@ -1041,8 +1043,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/orders/:id/status", authenticateToken, requireAdmin, async (req, res) => {
     try {
+      const orderId = parseInt(req.params.id);
       const { status } = req.body;
-      const order = await storage.updateOrderStatus(parseInt(req.params.id), status);
+      const order = await storage.updateOrderStatus(orderId, status);
+      
+      // Send push notification to user about status update
+      try {
+        await sendOrderStatusNotification(order.user_id, orderId, status, order.orderNumber);
+      } catch (notifyError) {
+        console.error('Failed to send push notification:', notifyError);
+      }
+      
       res.json(order);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1087,6 +1098,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(customers);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Push notification subscription endpoint
+  app.post("/api/notifications/subscribe", authenticateUser, async (req, res) => {
+    try {
+      const { subscription } = req.body;
+      console.log(`User ${req.user.id} subscribed to push notifications`);
+      // Store subscription in database (can be implemented later)
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   });
 

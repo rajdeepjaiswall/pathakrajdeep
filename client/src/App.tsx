@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { CartProvider } from "./hooks/use-cart";
+import NotificationService from "./lib/notifications";
 
 // Pages
 import Home from "@/pages/home";

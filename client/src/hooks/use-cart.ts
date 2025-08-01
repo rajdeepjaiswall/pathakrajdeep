@@ -30,10 +30,10 @@ export function CartProvider({ children }: CartProviderProps) {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch cart items
+  // Fetch cart items - always fetch, let the server handle auth
   const { data: cartData, isLoading } = useQuery({
     queryKey: ['/api/cart'],
-    enabled: isAuthenticated,
+    retry: false,
   });
 
   const items = (cartData as CartItem[]) || [];
@@ -43,17 +43,34 @@ export function CartProvider({ children }: CartProviderProps) {
   // Add to cart mutation
   const addToCartMutation = useMutation({
     mutationFn: async ({ productId, quantity }: { productId: number; quantity: number }) => {
-      return await apiRequest('POST', '/api/cart', {
+      const response = await apiRequest('POST', '/api/cart', {
         product_id: productId,
         quantity,
       });
+      
+      // Check if response indicates authentication is required
+      const data = await response.json();
+      if (data.requiresAuth) {
+        // Handle authentication required case
+        throw new Error('Please log in to add items to cart');
+      }
+      
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      toast({
-        title: 'Added to cart',
-        description: 'Item has been added to your cart',
-      });
+    onSuccess: (data) => {
+      if (data.requiresAuth) {
+        toast({
+          title: 'Authentication Required',
+          description: data.message,
+          variant: 'destructive',
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+        toast({
+          title: 'Added to cart',
+          description: 'Item has been added to your cart',
+        });
+      }
     },
     onError: (error: any) => {
       toast({

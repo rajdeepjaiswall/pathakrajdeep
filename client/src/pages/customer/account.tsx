@@ -20,6 +20,8 @@ import {
   AlertCircle, CheckCircle, Clock, Package, LogOut, Verified,
   ArrowLeft, Home, Store
 } from 'lucide-react';
+import ProfileImageUpload from '@/components/ProfileImageUpload';
+import MobileNav from '@/components/layout/mobile-nav';
 
 // Phone verification schema
 const phoneVerificationSchema = z.object({
@@ -354,17 +356,15 @@ export default function CustomerAccount() {
         
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              {user.profileImageUrl ? (
-                <img src={user.profileImageUrl} alt="Profile" className="w-10 h-10 rounded-full" />
-              ) : (
-                <User className="w-6 h-6 text-primary" />
-              )}
-            </div>
+            <ProfileImageUpload 
+              currentImageUrl={(user as any)?.profileImageUrl} 
+              userName={(user as any)?.firstName || user?.username || 'User'}
+              size="lg"
+            />
             <div>
               <h2 className="text-xl font-bold">Account Dashboard</h2>
               <p className="text-muted-foreground">
-                Welcome back, {user.firstName || user.username}!
+                Welcome back, {(user as any)?.firstName || user?.username}!
               </p>
             </div>
         </div>
@@ -404,11 +404,11 @@ export default function CustomerAccount() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm font-medium">First Name</Label>
-                      <p className="text-lg">{user.firstName || 'Not set'}</p>
+                      <p className="text-lg">{(user as any).firstName || 'Not set'}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium">Last Name</Label>
-                      <p className="text-lg">{user.lastName || 'Not set'}</p>
+                      <p className="text-lg">{(user as any).lastName || 'Not set'}</p>
                     </div>
                   </div>
                   <div>
@@ -422,7 +422,7 @@ export default function CustomerAccount() {
                     <Label className="text-sm font-medium">Phone</Label>
                     <p className="text-lg flex items-center gap-2">
                       {user.phone || 'Not set'}
-                      {user.phone && user.isVerified ? (
+                      {user.phone && (user as any).isVerified ? (
                         <Badge variant="secondary" className="text-green-600">
                           <Verified className="w-3 h-3 mr-1" />
                           Verified
@@ -435,7 +435,7 @@ export default function CustomerAccount() {
                   <div>
                     <Label className="text-sm font-medium">Account Type</Label>
                     <p className="text-lg">
-                      <Badge variant="outline">{user.authProvider === 'google' ? 'Google Account' : 'Regular Account'}</Badge>
+                      <Badge variant="outline">{(user as any).authProvider === 'google' ? 'Google Account' : 'Regular Account'}</Badge>
                     </p>
                   </div>
                 </div>
@@ -466,9 +466,9 @@ export default function CustomerAccount() {
                       type="email"
                       {...profileForm.register('email')}
                       error={profileForm.formState.errors.email?.message}
-                      disabled={user.authProvider === 'google'}
+                      disabled={(user as any).authProvider === 'google'}
                     />
-                    {user.authProvider === 'google' && (
+                    {(user as any).authProvider === 'google' && (
                       <p className="text-sm text-muted-foreground mt-1">
                         Email cannot be changed for Google accounts
                       </p>
@@ -795,6 +795,7 @@ export default function CustomerAccount() {
         </TabsContent>
       </Tabs>
       </div>
+      <MobileNav />
     </div>
   );
 }

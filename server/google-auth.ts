@@ -15,8 +15,9 @@ export function initializeGoogleAuth() {
 
   // Determine the callback URL based on environment
   const getCallbackURL = () => {
-    // Always use custom domain for production stability (doesn't change on redeployment)
-    return `https://pathakbhandar.in/api/auth/google/callback`;
+    // Use current Replit domain for development/testing
+    const domain = process.env.REPLIT_DOMAINS || 'localhost:5000';
+    return `https://${domain}/api/auth/google/callback`;
   };
 
   const callbackURL = getCallbackURL();
@@ -35,7 +36,28 @@ export function initializeGoogleAuth() {
           const existingUser = await storage.getUserByGoogleId(profile.id);
           
           if (existingUser) {
-            // User exists, return user
+            // User exists, but update profile photo if it's changed
+            let profileImageUrl = null;
+            if (profile.photos && profile.photos.length > 0) {
+              profileImageUrl = profile.photos[0].value.replace('s96-c', 's200-c');
+            }
+            
+            // Only update if the profile photo URL has changed
+            if (profileImageUrl && profileImageUrl !== existingUser.profileImageUrl) {
+              const updatedUser = await storage.updateUser(existingUser.id, {
+                profileImageUrl: profileImageUrl,
+              });
+              
+              console.log('Updated Google user profile photo:', { 
+                id: updatedUser.id, 
+                email: updatedUser.email, 
+                oldPhoto: existingUser.profileImageUrl,
+                newPhoto: updatedUser.profileImageUrl 
+              });
+              
+              return done(null, updatedUser);
+            }
+            
             return done(null, existingUser);
           }
           
@@ -43,23 +65,53 @@ export function initializeGoogleAuth() {
           if (profile.emails && profile.emails.length > 0) {
             const emailUser = await storage.getUserByEmail(profile.emails[0].value);
             if (emailUser) {
-              // Link Google ID to existing email account
-              const updatedUser = await storage.updateUserGoogleId(emailUser.id, profile.id);
+              // Link Google ID to existing email account and update profile photo
+              let profileImageUrl = null;
+              if (profile.photos && profile.photos.length > 0) {
+                profileImageUrl = profile.photos[0].value.replace('s96-c', 's200-c');
+              }
+              
+              const updatedUser = await storage.updateUser(emailUser.id, {
+                googleId: profile.id,
+                profileImageUrl: profileImageUrl,
+                authProvider: 'google',
+                isVerified: true,
+              });
+              
+              console.log('Updated existing user with Google profile photo:', { 
+                id: updatedUser.id, 
+                email: updatedUser.email, 
+                profileImageUrl: updatedUser.profileImageUrl 
+              });
+              
               return done(null, updatedUser);
             }
           }
           
-          // Create new user
+          // Create new user with enhanced profile photo URL
+          let profileImageUrl = null;
+          if (profile.photos && profile.photos.length > 0) {
+            // Get the highest quality Google profile photo
+            profileImageUrl = profile.photos[0].value.replace('s96-c', 's200-c'); // Upgrade to 200px from 96px
+            console.log('Google profile photo URL:', profileImageUrl);
+          }
+
           const newUser = await storage.createGoogleUser({
             googleId: profile.id,
             email: profile.emails?.[0]?.value || null,
             firstName: profile.name?.givenName || null,
             lastName: profile.name?.familyName || null,
-            profileImageUrl: profile.photos?.[0]?.value || null,
+            profileImageUrl: profileImageUrl,
             authProvider: "google",
             role: "customer",
             isVerified: true, // Google accounts are considered verified
             profileCompleted: false, // New Google users need to complete profile
+          });
+          
+          console.log('Created Google user with profile photo:', { 
+            id: newUser.id, 
+            email: newUser.email, 
+            profileImageUrl: newUser.profileImageUrl 
           });
           
           return done(null, newUser);
@@ -78,9 +130,12 @@ export function initializeGoogleAuth() {
 
   passport.deserializeUser(async (id: number, done) => {
     try {
+      console.log('Deserializing user with ID:', id);
       const user = await storage.getUser(id);
+      console.log('Deserialized user:', user ? { id: user.id, email: user.email } : 'not found');
       done(null, user || false);
     } catch (error) {
+      console.error('Deserialization error:', error);
       done(error, false);
     }
   });

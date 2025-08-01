@@ -12,6 +12,7 @@ import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
+import pathakLogo from '@assets/project_20250528_0859055-02.png';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -125,6 +126,14 @@ export default function ProductDetail() {
                         src={currentMedia.url}
                         alt={product.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallback = document.createElement('div');
+                          fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex items-center justify-center p-2';
+                          fallback.innerHTML = `<img src="${pathakLogo}" alt="Pathak Bhandar Logo" class="max-w-[80%] max-h-[80%] object-contain opacity-90" />`;
+                          target.parentNode?.appendChild(fallback);
+                        }}
                       />
                     )}
                   </div>
@@ -147,6 +156,14 @@ export default function ProductDetail() {
                               src={media.url}
                               alt={`${product.name} ${index + 1}`}
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = document.createElement('div');
+                                fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex items-center justify-center p-1';
+                                fallback.innerHTML = `<img src="${pathakLogo}" alt="Pathak Bhandar Logo" class="max-w-full max-h-full object-contain opacity-90" />`;
+                                target.parentNode?.appendChild(fallback);
+                              }}
                             />
                           )}
                         </button>

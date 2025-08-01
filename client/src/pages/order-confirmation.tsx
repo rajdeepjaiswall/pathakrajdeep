@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Header from '@/components/layout/header';
+import MobileNav from '@/components/layout/mobile-nav';
 import { formatPrice } from '@/lib/cart';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
 import bakeryPattern from '@assets/project_20250607_1604012-01_1749292781428.png';
@@ -239,6 +240,7 @@ export default function OrderConfirmation() {
           <p>or call +91-XXX-XXX-XXXX</p>
         </div>
       </div>
+      <MobileNav />
     </div>
   );
 }

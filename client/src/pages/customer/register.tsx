@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { GoogleLoginButton } from '@/components/ui/google-login-button';
 import { MapPin, Loader2 } from 'lucide-react';
 import newLogo from '@assets/Screenshot_2025-05-30-23-52-51-45_10a3d211b678d435d51c62b8010e86c1.jpg';
+import MobileNav from '@/components/layout/mobile-nav';
 
 export default function CustomerRegister() {
   const [, setLocation] = useLocation();
@@ -526,6 +527,7 @@ export default function CustomerRegister() {
           </div>
         </CardContent>
       </Card>
+      <MobileNav />
     </div>
   );
 }

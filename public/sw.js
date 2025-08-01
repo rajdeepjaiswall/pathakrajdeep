@@ -2,21 +2,49 @@
 const CACHE_NAME = 'pathak-bhandar-v1';
 const STATIC_CACHE_URLS = [
   '/',
+  '/search',
+  '/products',
   '/manifest.json',
-  '/logo.png',
+  '/api/logo',
   '/offline.html'
 ];
 
 // Install event
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Caching static assets');
+        return cache.addAll(STATIC_CACHE_URLS);
+      })
+      .catch(error => {
+        console.warn('Cache installation failed:', error);
+      })
+  );
   self.skipWaiting();
 });
 
 // Activate event
 self.addEventListener('activate', (event) => {
   console.log('Service Worker activating');
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Take control of all clients
+      self.clients.claim()
+    ])
+  );
 });
 
 // Push event - handle incoming push notifications
@@ -55,6 +83,68 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     self.registration.showNotification(title, options)
+  );
+});
+
+// Fetch event - handle network requests with cache fallback
+self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests and external URLs
+  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  // Special handling for search API requests
+  if (event.request.url.includes('/api/search')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Cache successful search responses for 5 minutes
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Return cached search results if network fails
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // Cache-first strategy for static assets
+  event.respondWith(
+    caches.match(event.request)
+      .then(cachedResponse => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        
+        return fetch(event.request)
+          .then(response => {
+            // Don't cache non-successful responses
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseToCache);
+              });
+
+            return response;
+          })
+          .catch(() => {
+            // Return offline page for navigation requests
+            if (event.request.mode === 'navigate') {
+              return caches.match('/offline.html');
+            }
+          });
+      })
   );
 });
 

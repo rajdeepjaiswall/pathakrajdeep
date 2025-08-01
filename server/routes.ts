@@ -348,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
           if (err) {
             console.log('JWT verification failed:', err.message);
-            return res.status(403).json({ message: 'Invalid token' });
+            return res.status(401).json({ message: 'Please login to continue' });
           }
           req.user = user;
           console.log('JWT auth successful for user:', user.id);
@@ -358,7 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log('No valid authentication found');
-      return res.status(401).json({ message: 'Authentication required' });
+      return res.status(401).json({ message: 'Please login to continue' });
     }
     
     tryJWTAuth();
@@ -1041,20 +1041,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/cart", optionalAuth, async (req, res) => {
+  app.post("/api/cart", authenticateUser, async (req, res) => {
     try {
-      // Check session auth first for Google OAuth users
-      let userId = null;
-      if (req.isAuthenticated && req.isAuthenticated()) {
-        const sessionUser = req.user as any;
-        userId = sessionUser.claims?.sub || sessionUser.id;
-      } else if (req.user) {
-        userId = (req.user as any).id;
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'Please login to add items to cart' });
-      }
+      const userId = req.user.id;
+      console.log('Adding to cart for user:', userId);
       
       const cartItemData = insertCartItemSchema.parse({
         ...req.body,
@@ -1063,25 +1053,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cartItem = await storage.addToCart(cartItemData);
       res.json(cartItem);
     } catch (error: any) {
+      console.error('Add to cart error:', error);
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.put("/api/cart/:id", optionalAuth, async (req, res) => {
+  app.put("/api/cart/:id", authenticateUser, async (req, res) => {
     try {
-      // Check session auth first for Google OAuth users
-      let userId = null;
-      if (req.isAuthenticated && req.isAuthenticated()) {
-        const sessionUser = req.user as any;
-        userId = sessionUser.claims?.sub || sessionUser.id;
-      } else if (req.user) {
-        userId = (req.user as any).id;
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'Please login to update cart' });
-      }
-      
+      const userId = req.user.id;
       const { quantity } = req.body;
       const cartItem = await storage.updateCartItem(parseInt(req.params.id), quantity, userId);
       res.json(cartItem);
@@ -1090,21 +1069,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/cart/:id", optionalAuth, async (req, res) => {
+  app.delete("/api/cart/:id", authenticateUser, async (req, res) => {
     try {
-      // Check session auth first for Google OAuth users
-      let userId = null;
-      if (req.isAuthenticated && req.isAuthenticated()) {
-        const sessionUser = req.user as any;
-        userId = sessionUser.claims?.sub || sessionUser.id;
-      } else if (req.user) {
-        userId = (req.user as any).id;
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'Please login to remove items from cart' });
-      }
-      
+      const userId = req.user.id;      
       await storage.removeFromCart(parseInt(req.params.id), userId);
       res.json({ message: 'Item removed from cart' });
     } catch (error: any) {

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
-import { searchService } from "./search-service";
+import { SearchService } from "./search-service";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
@@ -794,21 +794,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Search query received: "${q}"`);
       
-      const results = await searchService.searchProducts(q, parseInt(limit as string));
+      // Get all products with category names
+      const products = await storage.getProducts();
+      const categories = await storage.getCategories();
       
-      // Add caching for search results
-      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600'); // Cache for 5 minutes
-      res.setHeader('ETag', `"search-${encodeURIComponent(q)}-${results.length}"`);
+      // Map products with category names
+      const productsWithCategories = products.map(product => ({
+        ...product,
+        categoryName: categories.find(cat => cat.id === product.category_id)?.name || 'Unknown'
+      }));
+
+      // Perform instant search first
+      const instantResults = SearchService.performInstantSearch(q, productsWithCategories);
       
       res.json({
         query: q,
-        results,
-        total: results.length,
-        timestamp: new Date().toISOString()
+        results: instantResults,
+        total: instantResults.length,
+        timestamp: new Date().toISOString(),
+        searchType: 'instant'
       });
+
     } catch (error: any) {
       console.error('Search error:', error);
       res.status(500).json({ message: 'Search service error', error: error.message });
+    }
+  });
+
+  // AI-powered search endpoint
+  app.post("/api/search/ai", async (req, res) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: 'Search query is required' });
+      }
+
+      console.log(`AI search query received: "${query}"`);
+      
+      // Get all products with category names
+      const products = await storage.getProducts();
+      const categories = await storage.getCategories();
+      
+      // Map products with category names
+      const productsWithCategories = products.map(product => ({
+        ...product,
+        categoryName: categories.find(cat => cat.id === product.category_id)?.name || 'Unknown'
+      }));
+
+      // Perform AI search
+      const aiResults = await SearchService.performAISearch(query, productsWithCategories);
+      
+      res.json({
+        query: query,
+        results: aiResults.results,
+        total: aiResults.results.length,
+        timestamp: new Date().toISOString(),
+        searchType: 'ai',
+        translation: aiResults.translation
+      });
+      
+    } catch (error: any) {
+      console.error('AI search error:', error);
+      res.status(500).json({ message: 'AI search service error', error: error.message });
     }
   });
 
@@ -820,9 +868,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ suggestions: [] });
       }
 
-      const suggestions = await searchService.getSearchSuggestions(q);
+      // Get simple suggestions from product names
+      const products = await storage.getProducts();
+      const suggestions = products
+        .filter(product => product.name.toLowerCase().includes(q.toLowerCase()))
+        .slice(0, 5)
+        .map(product => product.name);
       
-      res.setHeader('Cache-Control', 'public, max-age=600'); // Cache for 10 minutes
       res.json({ suggestions });
     } catch (error: any) {
       console.error('Search suggestions error:', error);

@@ -7,6 +7,7 @@ import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice, getGSTBreakdown } from '@/lib/cart';
+import CartSidebar from '@/components/cart/cart-sidebar';
 
 export default function Cart() {
   const { items, summary, updateQuantity, removeFromCart } = useCart();
@@ -30,6 +31,8 @@ export default function Cart() {
           </div>
         </div>
         <Footer />
+        <MobileNav />
+        <CartSidebar />
       </div>
     );
   }
@@ -170,6 +173,7 @@ export default function Cart() {
 
       <Footer />
       <MobileNav />
+      <CartSidebar />
     </div>
   );
 }

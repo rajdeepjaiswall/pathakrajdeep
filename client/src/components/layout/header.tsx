@@ -65,14 +65,14 @@ export default function Header() {
 
           {/* Profile & Actions */}
           <div className="flex items-center space-x-4">
-            {/* Search Button */}
-            <Link href="/search">
+            {/* Wishlist Heart Button with Beat Animation */}
+            <Link href="/wishlist">
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-navy hover:bg-almond/30 rounded-xl p-3 transition-all duration-300"
               >
-                <Search className="h-5 w-5" />
+                <Heart className="h-5 w-5 animate-heartbeat text-red-500" />
               </Button>
             </Link>
             {/* Desktop Hamburger Menu */}

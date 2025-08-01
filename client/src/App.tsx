@@ -5,7 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { CartProvider } from "./hooks/use-cart";
-import NotificationService from "./lib/notifications";
+import PWAInstaller from "./components/PWAInstaller";
+import InstallPrompt from "./components/InstallPrompt";
 
 // Pages
 import Home from "@/pages/home";
@@ -105,7 +106,13 @@ function AppContent() {
     );
   }
 
-  return <Router />;
+  return (
+    <>
+      <PWAInstaller />
+      <InstallPrompt />
+      <Router />
+    </>
+  );
 }
 
 export default App;

@@ -1,5 +1,11 @@
 // Service Worker for Push Notifications
 const CACHE_NAME = 'pathak-bhandar-v1';
+const STATIC_CACHE_URLS = [
+  '/',
+  '/manifest.json',
+  '/logo.png',
+  '/offline.html'
+];
 
 // Install event
 self.addEventListener('install', (event) => {

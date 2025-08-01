@@ -98,12 +98,12 @@ export default function MobileNav() {
                     <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
                   )}
                 </div>
-              ) : isAccount && isAuthenticated && (user as any)?.profileImageUrl ? (
+              ) : isAccount && isAuthenticated ? (
                 <div className="relative">
                   <Avatar className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'}`}>
-                    <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user?.username || 'Profile'} />
+                    <AvatarImage src={(user as any)?.profileImageUrl} alt={(user as any)?.firstName || user?.username || 'Profile'} />
                     <AvatarFallback className="bg-amber-800 text-amber-50 text-[10px] font-semibold">
-                      {((user as any).firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                      {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {isActive && (

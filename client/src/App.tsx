@@ -11,6 +11,7 @@ import GoogleOneTap from "./components/GoogleOneTap";
 // Pages
 import Home from "@/pages/home";
 import Products from "@/pages/products";
+import Categories from "@/pages/categories";
 import ProductDetail from "@/pages/product-detail";
 import SearchPage from "@/pages/search";
 import Cart from "@/pages/cart";
@@ -45,6 +46,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/products" component={Products} />
+      <Route path="/categories" component={Categories} />
       <Route path="/products/:id" component={ProductDetail} />
       <Route path="/search" component={SearchPage} />
       <Route path="/cart" component={Cart} />

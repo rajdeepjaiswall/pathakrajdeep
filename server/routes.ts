@@ -224,9 +224,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test Google login simulation for debugging
   app.post('/api/debug/simulate-google-login', async (req, res) => {
     try {
-      const user = await storage.getUser(9); // Google user we found earlier
+      // Find a Google user or create a test one
+      let user = await storage.getUserByEmail('test@example.com');
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        user = await storage.createUser({
+          username: 'test@example.com',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          password: await bcrypt.hash('password', 10),
+          role: 'customer',
+          isVerified: true,
+          authProvider: 'google',
+          profileCompleted: true,
+          googleId: 'test123'
+        });
       }
 
       // Manually log in the user via session
@@ -235,12 +247,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Login error:', err);
           return res.status(500).json({ message: 'Login failed' });
         }
+        console.log('Test user logged in:', user.id);
         res.json({ 
           message: 'Simulated login successful', 
           user: { id: user.id, email: user.email, firstName: user.firstName } 
         });
       });
     } catch (error: any) {
+      console.error('Simulate login error:', error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -302,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced authentication middleware that works with both JWT and sessions
-  function authenticateUser(req: any, res: any, next: any) {
+  async function authenticateUser(req: any, res: any, next: any) {
     console.log('Auth middleware check:', {
       hasIsAuthenticated: typeof req.isAuthenticated === 'function',
       isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
@@ -321,47 +335,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Special handling for Google OAuth users - try to fetch from session manually
     if (req.session?.passport?.user) {
       console.log('Found passport user in session:', req.session.passport.user);
-      // Try to fetch user manually and set it
-      storage.getUser(req.session.passport.user).then(user => {
+      try {
+        const user = await storage.getUser(req.session.passport.user);
         if (user) {
           req.user = user;
           console.log('Manually set user from session:', user.id);
           return next();
         } else {
           console.log('User not found in database:', req.session.passport.user);
-          // Continue to JWT fallback
-          tryJWTAuth();
         }
-      }).catch(error => {
+      } catch (error) {
         console.error('Error fetching user from session:', error);
-        tryJWTAuth();
-      });
-      return;
-    }
-    
-    function tryJWTAuth() {
-      // Fallback to JWT auth
-      const authHeader = req.headers['authorization'];
-      const token = authHeader && authHeader.split(' ')[1];
-
-      if (token) {
-        jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-          if (err) {
-            console.log('JWT verification failed:', err.message);
-            return res.status(401).json({ message: 'Please login to continue' });
-          }
-          req.user = user;
-          console.log('JWT auth successful for user:', user.id);
-          next();
-        });
-        return;
       }
-
-      console.log('No valid authentication found');
-      return res.status(401).json({ message: 'Please login to continue' });
     }
     
-    tryJWTAuth();
+    // Fallback to JWT auth
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+      try {
+        const user = jwt.verify(token, JWT_SECRET) as any;
+        req.user = user;
+        console.log('JWT auth successful for user:', user.id);
+        return next();
+      } catch (err: any) {
+        console.log('JWT verification failed:', err.message);
+      }
+    }
+
+    console.log('No valid authentication found');
+    return res.status(401).json({ 
+      message: 'Please login to continue',
+      debug: 'Try using Google OAuth or JWT token authentication',
+      simulateLogin: 'POST /api/debug/simulate-google-login for testing'
+    });
   }
 
   // Phone verification routes
@@ -945,20 +953,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cart routes
-  app.get("/api/cart", optionalAuth, async (req, res) => {
+  app.get("/api/cart", authenticateUser, async (req, res) => {
     try {
-      // Check session auth first
-      let userId = null;
-      if (req.isAuthenticated && req.isAuthenticated()) {
-        userId = req.user.id;
-      } else if (req.user) {
-        userId = req.user.id;
-      }
-      
-      if (!userId) {
-        return res.json([]);
-      }
-      
+      const userId = req.user.id;
       const cartItems = await storage.getCartItems(userId);
       res.json(cartItems);
     } catch (error: any) {

@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
+import { OAuth2Client } from 'google-auth-library';
 
 const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-default-secret-key-2024";
 
@@ -1401,13 +1402,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No credential provided' });
       }
 
-      // Decode the JWT token from Google
-      const decoded = jwt.decode(credential, { complete: true });
-      if (!decoded || !decoded.payload) {
-        return res.status(400).json({ message: 'Invalid credential' });
+      // Verify the Google JWT token
+      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      let payload;
+      
+      try {
+        const ticket = await client.verifyIdToken({
+          idToken: credential,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        payload = ticket.getPayload();
+      } catch (verifyError) {
+        console.error('Google token verification failed:', verifyError);
+        return res.status(400).json({ message: 'Invalid Google credential' });
       }
 
-      const payload = decoded.payload as any;
+      if (!payload) {
+        return res.status(400).json({ message: 'Invalid credential payload' });
+      }
       const email = payload.email;
       const name = payload.name;
       const googleId = payload.sub;

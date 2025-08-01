@@ -154,8 +154,14 @@ export default function Header() {
                   >
                     <div className="relative">
                       {(user as any)?.profileImageUrl ? (
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={(user as any)?.profileImageUrl} alt={(user as any)?.firstName || user?.username || 'Profile'} />
+                        <Avatar className="h-8 w-8 ring-2 ring-champagne">
+                          <AvatarImage 
+                            src={(user as any)?.profileImageUrl} 
+                            alt={(user as any)?.firstName || user?.username || 'Profile'} 
+                            className="object-cover"
+                            onError={(e) => console.log('Avatar image failed to load:', (user as any)?.profileImageUrl)}
+                            onLoad={() => console.log('Avatar image loaded successfully:', (user as any)?.profileImageUrl)}
+                          />
                           <AvatarFallback className="bg-champagne text-navy text-sm font-semibold">
                             {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
                           </AvatarFallback>
@@ -172,6 +178,13 @@ export default function Header() {
                       )}
                     </div>
                     <span className="text-navy font-medium">Namaste, {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() : user?.username}</span>
+                    {/* Debug user data */}
+                    {console.log('Header user data:', {
+                      id: (user as any)?.id,
+                      firstName: (user as any)?.firstName,
+                      profileImageUrl: (user as any)?.profileImageUrl,
+                      authProvider: (user as any)?.authProvider
+                    })}
                   </div>
                 </Link>
 
@@ -341,8 +354,14 @@ export default function Header() {
                     onClick={() => setIsDesktopMenuOpen(false)}
                   >
                     {(user as any)?.profileImageUrl ? (
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={(user as any)?.profileImageUrl} alt={(user as any)?.firstName || user?.username || 'Profile'} />
+                      <Avatar className="h-10 w-10 ring-2 ring-champagne">
+                        <AvatarImage 
+                          src={(user as any)?.profileImageUrl} 
+                          alt={(user as any)?.firstName || user?.username || 'Profile'} 
+                          className="object-cover"
+                          onError={(e) => console.log('Desktop avatar image failed to load:', (user as any)?.profileImageUrl)}
+                          onLoad={() => console.log('Desktop avatar image loaded successfully:', (user as any)?.profileImageUrl)}
+                        />
                         <AvatarFallback className="bg-champagne text-navy font-semibold">
                           {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
                         </AvatarFallback>

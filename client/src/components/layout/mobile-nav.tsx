@@ -150,8 +150,19 @@ export default function MobileNav() {
                 </div>
               ) : isAccount && isAuthenticated ? (
                 <div className="relative">
-                  <Avatar className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'}`}>
-                    <AvatarImage src={(user as any)?.profileImageUrl} alt={(user as any)?.firstName || user?.username || 'Profile'} />
+                  <Avatar className={`transition-all duration-200 ring-1 ring-amber-800 ${isActive ? 'h-6 w-6' : 'h-5 w-5'}`}>
+                    {console.log('Mobile nav user data:', {
+                      id: (user as any)?.id,
+                      firstName: (user as any)?.firstName,
+                      profileImageUrl: (user as any)?.profileImageUrl
+                    })}
+                    <AvatarImage 
+                      src={(user as any)?.profileImageUrl} 
+                      alt={(user as any)?.firstName || user?.username || 'Profile'} 
+                      className="object-cover"
+                      onError={(e) => console.log('Mobile nav avatar image failed to load:', (user as any)?.profileImageUrl)}
+                      onLoad={() => console.log('Mobile nav avatar image loaded successfully:', (user as any)?.profileImageUrl)}
+                    />
                     <AvatarFallback className="bg-amber-800 text-amber-50 text-[10px] font-semibold">
                       {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>

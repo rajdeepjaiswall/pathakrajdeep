@@ -210,6 +210,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug session route
+  app.get('/api/debug/session', (req, res) => {
+    res.json({
+      sessionID: req.sessionID,
+      session: req.session,
+      user: req.user,
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+      passport: req.session?.passport
+    });
+  });
+
+  // Test Google login simulation for debugging
+  app.post('/api/debug/simulate-google-login', async (req, res) => {
+    try {
+      const user = await storage.getUser(9); // Google user we found earlier
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Manually log in the user via session
+      req.login(user, (err) => {
+        if (err) {
+          console.error('Login error:', err);
+          return res.status(500).json({ message: 'Login failed' });
+        }
+        res.json({ 
+          message: 'Simulated login successful', 
+          user: { id: user.id, email: user.email, firstName: user.firstName } 
+        });
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Auth status route (supports both JWT and session)
   app.get('/api/auth/status', optionalAuth, async (req, res) => {
     try {
@@ -268,25 +303,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enhanced authentication middleware that works with both JWT and sessions
   function authenticateUser(req: any, res: any, next: any) {
+    console.log('Auth middleware check:', {
+      hasIsAuthenticated: typeof req.isAuthenticated === 'function',
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+      hasUser: !!req.user,
+      sessionID: req.sessionID,
+      sessionPassport: req.session?.passport,
+      userAgent: req.get('User-Agent')?.substring(0, 50)
+    });
+
     // Check for session-based auth first (Google OAuth)
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      // Session user is already set by passport, just continue
+      console.log('Session auth successful for user:', req.user.id);
       return next();
     }
     
-    // Fallback to JWT auth
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    // Special handling for Google OAuth users - try to fetch from session manually
+    if (req.session?.passport?.user) {
+      console.log('Found passport user in session:', req.session.passport.user);
+      // Try to fetch user manually and set it
+      storage.getUser(req.session.passport.user).then(user => {
+        if (user) {
+          req.user = user;
+          console.log('Manually set user from session:', user.id);
+          return next();
+        } else {
+          console.log('User not found in database:', req.session.passport.user);
+          // Continue to JWT fallback
+          tryJWTAuth();
+        }
+      }).catch(error => {
+        console.error('Error fetching user from session:', error);
+        tryJWTAuth();
+      });
+      return;
+    }
+    
+    function tryJWTAuth() {
+      // Fallback to JWT auth
+      const authHeader = req.headers['authorization'];
+      const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
+      if (token) {
+        jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+          if (err) {
+            console.log('JWT verification failed:', err.message);
+            return res.status(403).json({ message: 'Invalid token' });
+          }
+          req.user = user;
+          console.log('JWT auth successful for user:', user.id);
+          next();
+        });
+        return;
+      }
+
+      console.log('No valid authentication found');
       return res.status(401).json({ message: 'Authentication required' });
     }
-
-    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-      if (err) return res.status(403).json({ message: 'Invalid token' });
-      req.user = user;
-      next();
-    });
+    
+    tryJWTAuth();
   }
 
   // Phone verification routes
@@ -446,17 +521,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { phone, password, address } = req.body;
       
-      // Get user ID from session (Google OAuth) or JWT
-      let userId;
-      if (req.isAuthenticated && req.isAuthenticated()) {
-        // Session-based authentication (Google OAuth)
-        const sessionUser = req.user as any;
-        userId = sessionUser.claims?.sub || sessionUser.id;
-        console.log('Google OAuth user ID:', userId, 'Full user:', sessionUser);
-      } else {
-        // JWT-based authentication
-        userId = (req.user as any)?.id || (req.user as any)?.userId;
-      }
+      // Get user ID - req.user should already be the full user object from middleware
+      const userId = req.user?.id;
+      console.log('Complete profile user:', { 
+        userId, 
+        userObject: req.user, 
+        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false 
+      });
       
       if (!userId) {
         return res.status(401).json({ message: 'User not authenticated properly' });

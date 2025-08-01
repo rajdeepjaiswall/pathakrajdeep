@@ -79,9 +79,12 @@ export function initializeGoogleAuth() {
 
   passport.deserializeUser(async (id: number, done) => {
     try {
+      console.log('Deserializing user with ID:', id);
       const user = await storage.getUser(id);
+      console.log('Deserialized user:', user ? { id: user.id, email: user.email } : 'not found');
       done(null, user || false);
     } catch (error) {
+      console.error('Deserialization error:', error);
       done(error, false);
     }
   });

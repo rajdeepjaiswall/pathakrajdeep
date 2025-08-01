@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { login } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleLoginButton } from '@/components/ui/google-login-button';
+import MobileNav from '@/components/layout/mobile-nav';
 
 export default function CustomerLogin() {
   const [, setLocation] = useLocation();
@@ -153,6 +154,7 @@ export default function CustomerLogin() {
           </div>
         </CardContent>
       </Card>
+      <MobileNav />
     </div>
   );
 }

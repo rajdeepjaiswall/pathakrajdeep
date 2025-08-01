@@ -21,6 +21,7 @@ import {
   ArrowLeft, Home, Store
 } from 'lucide-react';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
+import MobileNav from '@/components/layout/mobile-nav';
 
 // Phone verification schema
 const phoneVerificationSchema = z.object({
@@ -794,6 +795,7 @@ export default function CustomerAccount() {
         </TabsContent>
       </Tabs>
       </div>
+      <MobileNav />
     </div>
   );
 }

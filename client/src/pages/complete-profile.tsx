@@ -10,6 +10,7 @@ import { GooglePlacesInput } from '@/components/ui/google-places-input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
+import MobileNav from '@/components/layout/mobile-nav';
 import { ArrowLeft, Home, MapPin, Loader2, Phone, Lock, MapIcon } from 'lucide-react';
 
 export default function CompleteProfile() {
@@ -549,6 +550,7 @@ export default function CompleteProfile() {
           </CardContent>
         </Card>
       </div>
+      <MobileNav />
     </div>
   );
 }

@@ -41,6 +41,13 @@ export default function InstallPrompt() {
       setDeferredPrompt(null);
     };
 
+    // Handle custom install prompt event from UI buttons
+    const handleShowInstallPrompt = () => {
+      if (!isInstalled && !dismissedToday) {
+        setShowInstallPrompt(true);
+      }
+    };
+
     // For browsers that don't fire beforeinstallprompt, show after delay
     const fallbackTimer = setTimeout(() => {
       if (!deferredPrompt && !isInstalled && !dismissedToday) {
@@ -50,10 +57,12 @@ export default function InstallPrompt() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener('showInstallPrompt', handleShowInstallPrompt);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('showInstallPrompt', handleShowInstallPrompt);
       clearTimeout(fallbackTimer);
     };
   }, [deferredPrompt, isInstalled]);

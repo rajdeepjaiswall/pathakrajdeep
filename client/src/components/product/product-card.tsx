@@ -9,6 +9,7 @@ import { Link } from 'wouter';
 import { Product } from '@shared/schema';
 import { useState, useEffect } from 'react';
 import { ProductBadge } from '@/components/ui/product-badge';
+import OptimizedImage from '@/components/OptimizedImage';
 
 interface ProductCardProps {
   product: Product;
@@ -92,16 +93,13 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
             ) : (
-              <img 
+              <OptimizedImage
                 src={mediaItems[currentImageIndex].url} 
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  if (target.src !== '/placeholder-product.jpg') {
-                    target.src = '/placeholder-product.jpg';
-                  }
-                }}
+                width={320}
+                height={160}
+                placeholder="blur"
               />
             )}
             

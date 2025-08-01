@@ -13,6 +13,9 @@ import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
 import GoogleOneTapDemo from '@/components/GoogleOneTapDemo';
 import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
+import { preloadImages } from '@/lib/image-cache';
+import { useEffect } from 'react';
+import LoadingSkeleton from '@/components/LoadingSkeleton';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
@@ -21,6 +24,20 @@ export default function Home() {
   const { data: allProducts = [], isLoading: productsLoading } = useQuery({
     queryKey: ['/api/products'],
   });
+
+  // Preload critical images when products load
+  useEffect(() => {
+    if (allProducts && allProducts.length > 0) {
+      const imagesToPreload = allProducts
+        .slice(0, 8) // First 8 products
+        .flatMap((product: any) => product.images || [])
+        .filter((img: string) => img && !img.startsWith('data:'));
+      
+      if (imagesToPreload.length > 0) {
+        preloadImages(imagesToPreload, 'high').catch(console.warn);
+      }
+    }
+  }, [allProducts]);
 
   // Filter featured products or show all if none are featured
   const featuredProducts = (allProducts as any[]).filter((product: any) => product.featured).length > 0
@@ -94,14 +111,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
             {productsLoading ? (
-              // Loading skeleton
-              Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="bg-white rounded-lg shadow-md p-4 animate-pulse">
-                  <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
-                  <div className="bg-gray-200 h-4 rounded mb-2"></div>
-                  <div className="bg-gray-200 h-4 rounded w-2/3"></div>
-                </div>
-              ))
+              <LoadingSkeleton type="product" count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6" />
             ) : featuredProducts.length > 0 ? (
               featuredProducts.slice(0, 12).map((product: any) => (
                 <ProductCard 

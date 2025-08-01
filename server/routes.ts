@@ -673,7 +673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product routes
+  // Product routes with caching and optimization
   app.get("/api/products", async (req, res) => {
     try {
       const { category_id, featured, search } = req.query;
@@ -682,7 +682,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featured: featured === 'true',
         search: search as string,
       });
-      res.json(products);
+
+      // Optimize image URLs for faster loading
+      const optimizedProducts = products.map(product => ({
+        ...product,
+        images: product.images?.map(img => {
+          if (typeof img === 'string' && img.includes('unsplash.com')) {
+            // Add Unsplash optimization parameters
+            const url = new URL(img);
+            url.searchParams.set('auto', 'format');
+            url.searchParams.set('fit', 'crop');
+            url.searchParams.set('w', '400');
+            url.searchParams.set('q', '80');
+            return url.toString();
+          }
+          return img;
+        }) || []
+      }));
+      
+      // Add aggressive caching for products
+      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800'); // Cache for 10 minutes, stale for 30 minutes
+      res.setHeader('ETag', `"products-${products.length}-${search || 'all'}"`);
+      
+      res.json(optimizedProducts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1222,20 +1244,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   app.get("/api/logo", (req, res) => {
+    // Generate ETag for caching
+    const etag = currentLogo ? `"logo-${currentLogo.length}"` : '"logo-default"';
+    
+    // Check if client has cached version
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).send();
+    }
+
     if (currentLogo) {
       res.setHeader('Content-Type', 'image/png');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
+      res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate'); // Cache for 1 hour
+      res.setHeader('ETag', etag);
+      res.setHeader('Vary', 'Accept-Encoding');
       res.send(currentLogo);
     } else {
-      // Default logo SVG
-      const defaultLogo = `<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-        <rect width="32" height="32" rx="6" fill="#ea580c"/>
-        <text x="16" y="20" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="white">PB</text>
+      // Optimized default logo SVG
+      const defaultLogo = `<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#ea580c;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#c2410c;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <rect width="120" height="120" rx="15" fill="url(#bgGradient)"/>
+        <circle cx="60" cy="50" r="28" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+        <path d="M45 45 Q60 30 75 45 Q68 55 60 52 Q52 55 45 45 Z" fill="white" opacity="0.9"/>
+        <circle cx="52" cy="47" r="2" fill="white"/>
+        <circle cx="68" cy="47" r="2" fill="white"/>
+        <path d="M52 56 Q60 60 68 56" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <text x="60" y="85" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">PB</text>
+        <text x="60" y="100" font-family="Arial, sans-serif" font-size="8" text-anchor="middle" fill="rgba(255,255,255,0.8)">PATHAK BHANDAR</text>
       </svg>`;
       res.setHeader('Content-Type', 'image/svg+xml');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Cache-Control', 'public, max-age=86400, immutable'); // Cache for 24 hours
+      res.setHeader('ETag', etag);
+      res.setHeader('Vary', 'Accept-Encoding');
       res.send(defaultLogo);
     }
   });
@@ -1262,11 +1306,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Banner routes
+  // Banner routes with caching
   app.get("/api/banners", async (req, res) => {
     try {
       const activeOnly = req.query.active === 'true';
       const banners = await storage.getBanners(activeOnly);
+      
+      // Add caching headers
+      res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
+      res.setHeader('ETag', `"banners-${banners.length}-${Date.now()}"`);
+      
       res.json(banners);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

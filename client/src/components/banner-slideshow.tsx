@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
+import OptimizedImage from '@/components/OptimizedImage';
+import LoadingSkeleton from '@/components/LoadingSkeleton';
 
 interface Banner {
   id: number;
@@ -26,7 +28,7 @@ export default function BannerSlideshow() {
     queryKey: ['/api/banners'],
   });
 
-  const activeBanners = banners.filter((banner: Banner) => banner.isActive);
+  const activeBanners = (banners as Banner[]).filter((banner: Banner) => banner.isActive);
 
   useEffect(() => {
     if (activeBanners.length > 1) {
@@ -69,9 +71,13 @@ export default function BannerSlideshow() {
     const content = (
       <div className="relative h-[200px] md:h-[250px] overflow-hidden rounded-lg">
         {banner.imageUrl ? (
-          <div 
-            className="w-full h-full bg-cover bg-center cursor-pointer transition-transform duration-300 hover:scale-105"
-            style={{ backgroundImage: `url(${banner.imageUrl})` }}
+          <OptimizedImage
+            src={banner.imageUrl}
+            alt={banner.title}
+            className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
+            width={800}
+            height={250}
+            priority={true}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-almond to-cream flex items-center justify-center">
@@ -96,11 +102,7 @@ export default function BannerSlideshow() {
   };
 
   if (isLoading) {
-    return (
-      <div className="h-[200px] md:h-[250px] bg-gray-200 animate-pulse flex items-center justify-center rounded-lg">
-        <div className="text-gray-500 text-lg">Loading banners...</div>
-      </div>
-    );
+    return <LoadingSkeleton type="banner" className="h-[200px] md:h-[250px]" />;
   }
 
   if (activeBanners.length === 0) {

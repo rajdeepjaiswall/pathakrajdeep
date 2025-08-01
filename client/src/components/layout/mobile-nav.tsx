@@ -12,6 +12,8 @@ export default function MobileNav() {
   const { isAuthenticated, user } = useAuth();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [showDownloadIcon, setShowDownloadIcon] = useState(false);
+  const [isFlipping, setIsFlipping] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,6 +37,21 @@ export default function MobileNav() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  // Flip animation every 5 seconds
+  useEffect(() => {
+    const flipInterval = setInterval(() => {
+      setIsFlipping(true);
+      
+      // After heartbeat animation (0.5s), switch the icon
+      setTimeout(() => {
+        setShowDownloadIcon(prev => !prev);
+        setIsFlipping(false);
+      }, 500);
+    }, 5000);
+
+    return () => clearInterval(flipInterval);
+  }, []);
+
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
     { icon: Search, label: 'Search', href: '/products?search=true' },
@@ -53,6 +70,14 @@ export default function MobileNav() {
     window.dispatchEvent(event);
   };
 
+  const handleLogoClick = (e: React.MouseEvent, href: string) => {
+    if (showDownloadIcon) {
+      e.preventDefault();
+      handleInstallApp();
+    }
+    // If not showing download icon, let the normal navigation work (categories page)
+  };
+
   const isActiveRoute = (href: string) => {
     if (href === '/') return location === '/';
     if (href === '/products?search=true') return location.includes('/products') && location.includes('search');
@@ -63,35 +88,11 @@ export default function MobileNav() {
   };
 
   return (
-    <>
-      {/* PWA Install Floating Button */}
-      <div 
-        className={`fixed bottom-20 right-4 md:hidden z-50 transition-transform duration-300 ease-in-out ${
-          isVisible ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
-        <button
-          onClick={handleInstallApp}
-          className="bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-lg transition-colors duration-200 relative group animate-bounce"
-          style={{ animationDuration: '2s' }}
-        >
-          <Download className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 h-3 w-3 bg-white rounded-full animate-pulse"></span>
-          
-          {/* Tooltip */}
-          <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block">
-            <div className="bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-              Install App
-            </div>
-          </div>
-        </button>
-      </div>
-
-      <div 
-        className={`fixed bottom-0 left-0 right-0 bg-amber-50/95 backdrop-blur-sm border-t border-amber-200 md:hidden z-40 transition-transform duration-300 ease-in-out ${
-          isVisible ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
+    <div 
+      className={`fixed bottom-0 left-0 right-0 bg-amber-50/95 backdrop-blur-sm border-t border-amber-200 md:hidden z-40 transition-transform duration-300 ease-in-out ${
+        isVisible ? 'translate-y-0' : 'translate-y-full'
+      }`}
+    >
       <div className="grid grid-cols-5 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -104,7 +105,7 @@ export default function MobileNav() {
             <Link
               key={item.label}
               href={item.href}
-              onClick={isCart ? handleCartClick : undefined}
+              onClick={isCart ? handleCartClick : (isLogo ? (e) => handleLogoClick(e, item.href) : undefined)}
               className={`flex flex-col items-center justify-center py-2 relative transition-all duration-200 ${
                 isActive 
                   ? 'text-amber-800 bg-amber-200/40 rounded-lg mx-1' 
@@ -113,16 +114,36 @@ export default function MobileNav() {
             >
               {isLogo ? (
                 <div className={`relative transition-all duration-200 ${isActive ? '-top-1' : '-top-2'}`}>
-                  <img 
-                    src={`/api/logo?v=${Date.now()}`} 
-                    alt="KB Logo" 
-                    className={`object-contain transition-all duration-200 animate-pulse-logo ${isActive ? 'h-9 w-9' : 'h-8 w-8'}`}
-                    style={{ 
-                      filter: isActive 
-                        ? 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%)' 
-                        : 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%) opacity(0.8)'
-                    }}
-                  />
+                  <div className={`relative ${isActive ? 'h-9 w-9' : 'h-8 w-8'} ${isFlipping ? 'animate-pulse' : ''}`} 
+                       style={{ 
+                         transformStyle: 'preserve-3d',
+                         animation: isFlipping ? 'heartbeat 0.5s ease-in-out' : undefined
+                       }}>
+                    {showDownloadIcon ? (
+                      <div className="relative">
+                        <Download 
+                          className={`${isActive ? 'h-9 w-9' : 'h-8 w-8'} transition-all duration-200`}
+                          style={{ 
+                            color: isActive 
+                              ? '#92400e' 
+                              : '#92400ecc'
+                          }}
+                        />
+                        <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
+                      </div>
+                    ) : (
+                      <img 
+                        src={`/api/logo?v=${Date.now()}`} 
+                        alt="KB Logo" 
+                        className="object-contain transition-all duration-200 animate-pulse-logo w-full h-full"
+                        style={{ 
+                          filter: isActive 
+                            ? 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%)' 
+                            : 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%) opacity(0.8)'
+                        }}
+                      />
+                    )}
+                  </div>
                   {isActive && (
                     <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
                   )}
@@ -148,7 +169,7 @@ export default function MobileNav() {
                 </div>
               )}
               <span className={`text-xs mt-1 transition-all duration-200 ${isActive ? 'text-amber-800 font-medium' : 'text-amber-700/80'}`}>
-                {item.label}
+                {isLogo && showDownloadIcon ? 'Install' : item.label}
               </span>
               {isCart && summary.itemCount > 0 && (
                 <div className="absolute -top-1 right-2 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
@@ -160,6 +181,5 @@ export default function MobileNav() {
         })}
       </div>
     </div>
-    </>
   );
 }

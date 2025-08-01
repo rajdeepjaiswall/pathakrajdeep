@@ -553,6 +553,22 @@ export default function AdminProducts() {
                     src={product.images[0] || '/placeholder-product.jpg'}
                     alt={product.name}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = document.createElement('div');
+                      fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex flex-col items-center justify-center p-4';
+                      fallback.innerHTML = `
+                        <div class="text-center">
+                          <div class="w-12 h-12 mx-auto mb-2 bg-navy rounded-lg flex items-center justify-center shadow-lg">
+                            <span class="text-champagne font-bold text-lg">PB</span>
+                          </div>
+                          <div class="text-navy font-semibold text-sm mb-1">Working on it!!</div>
+                          <div class="text-navy/70 text-xs">Image loading...</div>
+                        </div>
+                      `;
+                      target.parentNode?.appendChild(fallback);
+                    }}
                   />
                   <div className="absolute top-2 left-2 flex gap-1">
                     {product.featured && (

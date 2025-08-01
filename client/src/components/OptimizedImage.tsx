@@ -96,12 +96,17 @@ export default function OptimizedImage({
         <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
       )}
 
-      {/* Error fallback */}
+      {/* Error fallback with company logo */}
       {isError && (
-        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-          <div className="text-center text-gray-400">
-            <div className="w-8 h-8 mx-auto mb-2 bg-gray-300 rounded"></div>
-            <span className="text-xs">Image unavailable</span>
+        <div className="absolute inset-0 bg-gradient-to-br from-almond to-champagne/20 flex flex-col items-center justify-center p-4">
+          <div className="text-center">
+            {/* Company Logo */}
+            <div className="w-16 h-16 mx-auto mb-3 bg-navy rounded-lg flex items-center justify-center shadow-lg">
+              <span className="text-champagne font-bold text-xl">PB</span>
+            </div>
+            {/* Working message */}
+            <div className="text-navy font-semibold text-sm mb-1">Working on it!!</div>
+            <div className="text-navy/70 text-xs">Image loading...</div>
           </div>
         </div>
       )}

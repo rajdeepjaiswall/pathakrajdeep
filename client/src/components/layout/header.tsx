@@ -153,7 +153,7 @@ export default function Header() {
                         <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
                       )}
                     </div>
-                    <span className="text-navy font-medium">Namaste, {(user as any)?.firstName || user?.username}</span>
+                    <span className="text-navy font-medium">Namaste, {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() : user?.username}</span>
                   </div>
                 </Link>
 
@@ -314,7 +314,7 @@ export default function Header() {
                     )}
                     <div>
                       <p className="text-sm text-navy/70">Welcome back</p>
-                      <p className="font-semibold text-navy">Namaste, {(user as any)?.firstName || user?.username}</p>
+                      <p className="font-semibold text-navy">Namaste, {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() : user?.username}</p>
                     </div>
                   </div>
                 </Link>

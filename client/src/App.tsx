@@ -12,6 +12,7 @@ import GoogleOneTap from "./components/GoogleOneTap";
 import Home from "@/pages/home";
 import Products from "@/pages/products";
 import ProductDetail from "@/pages/product-detail";
+import SearchPage from "@/pages/search";
 import Cart from "@/pages/cart";
 import Checkout from "@/pages/checkout";
 import CustomerLogin from "@/pages/customer/login";
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/products" component={Products} />
       <Route path="/products/:id" component={ProductDetail} />
+      <Route path="/search" component={SearchPage} />
       <Route path="/cart" component={Cart} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/login" component={CustomerLogin} />

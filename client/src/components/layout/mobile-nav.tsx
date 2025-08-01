@@ -54,7 +54,7 @@ export default function MobileNav() {
 
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
-    { icon: Search, label: 'Search', href: '/products?search=true' },
+    { icon: Search, label: 'Search', href: '/search' },
     { icon: 'logo', label: 'Categories', href: '/products' },
     { icon: ShoppingCart, label: 'Cart', href: '/cart' },
     { icon: User, label: 'Account', href: isAuthenticated ? '/account' : '/login' },

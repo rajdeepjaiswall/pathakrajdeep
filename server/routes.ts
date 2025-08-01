@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
+import { searchService } from "./search-service";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
@@ -708,6 +709,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Category deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Enhanced Search Routes
+  app.get("/api/search", async (req, res) => {
+    try {
+      const { q, limit = 20 } = req.query;
+      
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ message: 'Search query is required' });
+      }
+
+      console.log(`Search query received: "${q}"`);
+      
+      const results = await searchService.searchProducts(q, parseInt(limit as string));
+      
+      // Add caching for search results
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600'); // Cache for 5 minutes
+      res.setHeader('ETag', `"search-${encodeURIComponent(q)}-${results.length}"`);
+      
+      res.json({
+        query: q,
+        results,
+        total: results.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Search error:', error);
+      res.status(500).json({ message: 'Search service error', error: error.message });
+    }
+  });
+
+  app.get("/api/search/suggestions", async (req, res) => {
+    try {
+      const { q } = req.query;
+      
+      if (!q || typeof q !== 'string') {
+        return res.json({ suggestions: [] });
+      }
+
+      const suggestions = await searchService.getSearchSuggestions(q);
+      
+      res.setHeader('Cache-Control', 'public, max-age=600'); // Cache for 10 minutes
+      res.json({ suggestions });
+    } catch (error: any) {
+      console.error('Search suggestions error:', error);
+      res.status(500).json({ message: 'Search suggestions error', error: error.message });
     }
   });
 

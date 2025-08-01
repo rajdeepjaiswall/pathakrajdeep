@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,6 +27,7 @@ export default function Header() {
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Products', href: '/products' },
+    { name: 'Search', href: '/search' },
     { name: 'Categories', href: '/products?category=all' },
     { name: 'About', href: '/#about' },
     { name: 'Contact', href: '/#contact' },
@@ -64,6 +65,16 @@ export default function Header() {
 
           {/* Profile & Actions */}
           <div className="flex items-center space-x-4">
+            {/* Search Button */}
+            <Link href="/search">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-navy hover:bg-almond/30 rounded-xl p-3 transition-all duration-300"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </Link>
             {/* Desktop Hamburger Menu */}
             {isAuthenticated ? (
               <div className="hidden md:flex items-center">

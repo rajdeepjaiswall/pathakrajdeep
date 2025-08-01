@@ -59,7 +59,7 @@ export default function MobileNav() {
 
   return (
     <div 
-      className={`fixed bottom-0 left-0 right-0 bg-champagne/95 backdrop-blur-sm border-t border-almond md:hidden z-40 transition-transform duration-300 ease-in-out ${
+      className={`fixed bottom-0 left-0 right-0 bg-amber-50/95 backdrop-blur-sm border-t border-amber-200 md:hidden z-40 transition-transform duration-300 ease-in-out ${
         isVisible ? 'translate-y-0' : 'translate-y-full'
       }`}
     >
@@ -78,8 +78,8 @@ export default function MobileNav() {
               onClick={isCart ? handleCartClick : undefined}
               className={`flex flex-col items-center justify-center py-2 relative transition-all duration-200 ${
                 isActive 
-                  ? 'text-navy bg-almond/30 rounded-lg mx-1' 
-                  : 'text-navy/70 hover:text-navy hover:bg-almond/20 rounded-lg mx-1'
+                  ? 'text-amber-800 bg-amber-200/40 rounded-lg mx-1' 
+                  : 'text-amber-700/80 hover:text-amber-800 hover:bg-amber-200/20 rounded-lg mx-1'
               }`}
             >
               {isLogo ? (
@@ -90,8 +90,8 @@ export default function MobileNav() {
                     className={`object-contain transition-all duration-200 ${isActive ? 'h-9 w-9' : 'h-8 w-8'}`}
                     style={{ 
                       filter: isActive 
-                        ? 'brightness(0) saturate(100%) invert(17%) sepia(25%) saturate(1315%) hue-rotate(195deg) brightness(94%) contrast(96%)' 
-                        : 'brightness(0) saturate(100%) invert(17%) sepia(25%) saturate(1315%) hue-rotate(195deg) brightness(94%) contrast(96%) opacity(0.7)'
+                        ? 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%)' 
+                        : 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%) opacity(0.8)'
                     }}
                   />
                   {isActive && (
@@ -102,23 +102,23 @@ export default function MobileNav() {
                 <div className="relative">
                   <Avatar className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'}`}>
                     <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user?.username || 'Profile'} />
-                    <AvatarFallback className="bg-navy text-champagne text-[10px] font-semibold">
+                    <AvatarFallback className="bg-amber-800 text-amber-50 text-[10px] font-semibold">
                       {((user as any).firstName || user?.username || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-navy rounded-full"></div>
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
                   )}
                 </div>
               ) : (
                 <div className="relative">
-                  <Icon className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'} ${isActive ? 'text-navy' : 'text-navy/70'}`} />
+                  <Icon className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'} ${isActive ? 'text-amber-800' : 'text-amber-700/80'}`} />
                   {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-navy rounded-full"></div>
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
                   )}
                 </div>
               )}
-              <span className={`text-xs mt-1 transition-all duration-200 ${isActive ? 'text-navy font-medium' : 'text-navy/70'}`}>
+              <span className={`text-xs mt-1 transition-all duration-200 ${isActive ? 'text-amber-800 font-medium' : 'text-amber-700/80'}`}>
                 {item.label}
               </span>
               {isCart && summary.itemCount > 0 && (

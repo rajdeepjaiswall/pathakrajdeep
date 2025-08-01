@@ -3,13 +3,13 @@ import { createServer, type Server } from "http";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
-import { SearchService } from "./search-service";
+import { searchService } from "./search-service";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 
-const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-default-secret-key-2024";
+const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
 
 // Extend Request interface to include user
 declare global {
@@ -59,26 +59,12 @@ function authenticateUser(req: any, res: any, next: any) {
 }
 
 // Optional authentication middleware for cart/wishlist
-async function optionalAuth(req: any, res: any, next: any) {
+function optionalAuth(req: any, res: any, next: any) {
   // Check for session-based authentication first (Google OAuth)
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
   }
   
-  // Special handling for Google OAuth users - try to fetch from session manually
-  if (req.session?.passport?.user) {
-    try {
-      const user = await storage.getUser(req.session.passport.user);
-      if (user) {
-        req.user = user;
-        return next();
-      }
-    } catch (error) {
-      console.error('Error fetching user from session:', error);
-    }
-  }
-  
-  // Check JWT token
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -238,21 +224,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test Google login simulation for debugging
   app.post('/api/debug/simulate-google-login', async (req, res) => {
     try {
-      // Find a Google user or create a test one
-      let user = await storage.getUserByEmail('test@example.com');
+      const user = await storage.getUser(9); // Google user we found earlier
       if (!user) {
-        user = await storage.createUser({
-          username: 'test@example.com',
-          email: 'test@example.com',
-          firstName: 'Test',
-          lastName: 'User',
-          password: await bcrypt.hash('password', 10),
-          role: 'customer',
-          isVerified: true,
-          authProvider: 'google',
-          profileCompleted: true,
-          googleId: 'test123'
-        });
+        return res.status(404).json({ message: 'User not found' });
       }
 
       // Manually log in the user via session
@@ -261,14 +235,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Login error:', err);
           return res.status(500).json({ message: 'Login failed' });
         }
-        console.log('Test user logged in:', user.id);
         res.json({ 
           message: 'Simulated login successful', 
           user: { id: user.id, email: user.email, firstName: user.firstName } 
         });
       });
     } catch (error: any) {
-      console.error('Simulate login error:', error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -330,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced authentication middleware that works with both JWT and sessions
-  async function authenticateUser(req: any, res: any, next: any) {
+  function authenticateUser(req: any, res: any, next: any) {
     console.log('Auth middleware check:', {
       hasIsAuthenticated: typeof req.isAuthenticated === 'function',
       isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
@@ -349,41 +321,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Special handling for Google OAuth users - try to fetch from session manually
     if (req.session?.passport?.user) {
       console.log('Found passport user in session:', req.session.passport.user);
-      try {
-        const user = await storage.getUser(req.session.passport.user);
+      // Try to fetch user manually and set it
+      storage.getUser(req.session.passport.user).then(user => {
         if (user) {
           req.user = user;
           console.log('Manually set user from session:', user.id);
           return next();
         } else {
           console.log('User not found in database:', req.session.passport.user);
+          // Continue to JWT fallback
+          tryJWTAuth();
         }
-      } catch (error) {
+      }).catch(error => {
         console.error('Error fetching user from session:', error);
-      }
+        tryJWTAuth();
+      });
+      return;
     }
     
-    // Fallback to JWT auth
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    function tryJWTAuth() {
+      // Fallback to JWT auth
+      const authHeader = req.headers['authorization'];
+      const token = authHeader && authHeader.split(' ')[1];
 
-    if (token) {
-      try {
-        const user = jwt.verify(token, JWT_SECRET) as any;
-        req.user = user;
-        console.log('JWT auth successful for user:', user.id);
-        return next();
-      } catch (err: any) {
-        console.log('JWT verification failed:', err.message);
+      if (token) {
+        jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+          if (err) {
+            console.log('JWT verification failed:', err.message);
+            return res.status(403).json({ message: 'Invalid token' });
+          }
+          req.user = user;
+          console.log('JWT auth successful for user:', user.id);
+          next();
+        });
+        return;
       }
-    }
 
-    console.log('No valid authentication found');
-    return res.status(401).json({ 
-      message: 'Please login to continue',
-      debug: 'Try using Google OAuth or JWT token authentication',
-      simulateLogin: 'POST /api/debug/simulate-google-login for testing'
-    });
+      console.log('No valid authentication found');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    tryJWTAuth();
   }
 
   // Phone verification routes
@@ -692,12 +670,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Address management routes
-  app.get("/api/addresses", optionalAuth, async (req, res) => {
+  app.get("/api/addresses", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.json([]);
-      }
-      
       const userId = req.user.id;
       const addresses = await storage.getAddresses(userId);
       res.json(addresses);
@@ -706,16 +680,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/addresses", optionalAuth, async (req, res) => {
+  app.post("/api/addresses", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to add addresses',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
       const addressData = insertAddressSchema.parse({
         ...req.body,
         userId: req.user.id,
@@ -727,16 +693,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/addresses/:id", optionalAuth, async (req, res) => {
+  app.put("/api/addresses/:id", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to update addresses',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
       const id = parseInt(req.params.id);
       const addressData = insertAddressSchema.partial().parse(req.body);
       const address = await storage.updateAddress(id, addressData);
@@ -746,16 +704,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/addresses/:id", optionalAuth, async (req, res) => {
+  app.delete("/api/addresses/:id", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to delete addresses',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
       const id = parseInt(req.params.id);
       // Add security check to ensure user owns this address
       const address = await storage.getAddress(id);
@@ -771,12 +721,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User order history
-  app.get("/api/orders/user", optionalAuth, async (req, res) => {
+  app.get("/api/orders/user", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.json([]);
-      }
-      
       const userId = req.user.id;
       const orders = await storage.getOrders(userId);
       res.json(orders);
@@ -848,69 +794,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Search query received: "${q}"`);
       
-      // Get all products with category names
-      const products = await storage.getProducts();
-      const categories = await storage.getCategories();
+      const results = await searchService.searchProducts(q, parseInt(limit as string));
       
-      // Map products with category names
-      const productsWithCategories = products.map(product => ({
-        ...product,
-        categoryName: categories.find(cat => cat.id === product.category_id)?.name || 'Unknown'
-      }));
-
-      // Perform instant search first
-      const instantResults = SearchService.performInstantSearch(q, productsWithCategories);
+      // Add caching for search results
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600'); // Cache for 5 minutes
+      res.setHeader('ETag', `"search-${encodeURIComponent(q)}-${results.length}"`);
       
       res.json({
         query: q,
-        results: instantResults,
-        total: instantResults.length,
-        timestamp: new Date().toISOString(),
-        searchType: 'instant'
+        results,
+        total: results.length,
+        timestamp: new Date().toISOString()
       });
-
     } catch (error: any) {
       console.error('Search error:', error);
       res.status(500).json({ message: 'Search service error', error: error.message });
-    }
-  });
-
-  // AI-powered search endpoint
-  app.post("/api/search/ai", async (req, res) => {
-    try {
-      const { query } = req.body;
-      
-      if (!query || typeof query !== 'string') {
-        return res.status(400).json({ message: 'Search query is required' });
-      }
-
-      console.log(`AI search query received: "${query}"`);
-      
-      // Get all products with category names
-      const products = await storage.getProducts();
-      const categories = await storage.getCategories();
-      
-      // Map products with category names
-      const productsWithCategories = products.map(product => ({
-        ...product,
-        categoryName: categories.find(cat => cat.id === product.category_id)?.name || 'Unknown'
-      }));
-
-      // Perform AI search
-      const aiResults = await SearchService.performAISearch(query, productsWithCategories);
-      
-      res.json({
-        query: query,
-        results: aiResults.results,
-        total: aiResults.results.length,
-        timestamp: new Date().toISOString(),
-        searchType: 'ai',
-        translation: aiResults.translation
-      });
-      
-    } catch (error: any) {
-      console.error('AI search error:', error);
-      res.status(500).json({ message: 'AI search service error', error: error.message });
     }
   });
 
@@ -922,13 +820,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ suggestions: [] });
       }
 
-      // Get simple suggestions from product names
-      const products = await storage.getProducts();
-      const suggestions = products
-        .filter(product => product.name.toLowerCase().includes(q.toLowerCase()))
-        .slice(0, 5)
-        .map(product => product.name);
+      const suggestions = await searchService.getSearchSuggestions(q);
       
+      res.setHeader('Cache-Control', 'public, max-age=600'); // Cache for 10 minutes
       res.json({ suggestions });
     } catch (error: any) {
       console.error('Search suggestions error:', error);
@@ -946,21 +840,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search: search as string,
       });
 
-      res.json(products);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get trending products (top 10 most popular)
-  app.get("/api/products/trending", async (req, res) => {
-    try {
-      const products = await storage.getProducts();
-      // Simulate trending by shuffling and taking first 10 products
-      // In real app, this would be based on actual purchase/view data
-      const shuffled = [...products].sort(() => Math.random() - 0.5);
-      const trending = shuffled.slice(0, 10);
-      res.json(trending);
+      // Optimize image URLs for faster loading
+      const optimizedProducts = products.map(product => ({
+        ...product,
+        images: product.images?.map(img => {
+          if (typeof img === 'string' && img.includes('unsplash.com')) {
+            // Add Unsplash optimization parameters
+            const url = new URL(img);
+            url.searchParams.set('auto', 'format');
+            url.searchParams.set('fit', 'crop');
+            url.searchParams.set('w', '400');
+            url.searchParams.set('q', '80');
+            return url.toString();
+          }
+          return img;
+        }) || []
+      }));
+      
+      // Add aggressive caching for products
+      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800'); // Cache for 10 minutes, stale for 30 minutes
+      res.setHeader('ETag', `"products-${products.length}-${search || 'all'}"`);
+      
+      res.json(optimizedProducts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -998,15 +899,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cart routes - Use optional auth to prevent 401 errors
+  // Cart routes
   app.get("/api/cart", optionalAuth, async (req, res) => {
     try {
-      // If no user is authenticated, return empty cart
-      if (!req.user) {
+      // Check session auth first
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
         return res.json([]);
       }
       
-      const userId = req.user.id;
       const cartItems = await storage.getCartItems(userId);
       res.json(cartItems);
     } catch (error: any) {
@@ -1091,68 +998,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cart", optionalAuth, async (req, res) => {
     try {
-      // If no user is authenticated, provide helpful message instead of 401
       if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to add items to cart',
-          requiresAuth: true,
-          action: 'login'
-        });
+        return res.status(401).json({ message: 'Please login to add items to cart' });
       }
-      
-      const userId = req.user.id;
-      console.log('Adding to cart for user:', userId);
-      
       const cartItemData = insertCartItemSchema.parse({
         ...req.body,
-        user_id: userId,
+        user_id: req.user.id,
       });
       const cartItem = await storage.addToCart(cartItemData);
       res.json(cartItem);
     } catch (error: any) {
-      console.error('Add to cart error:', error);
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.put("/api/cart/:id", optionalAuth, async (req, res) => {
+  app.put("/api/cart/:id", authenticateToken, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to update cart',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
-      const userId = req.user.id;
       const { quantity } = req.body;
-      const cartItem = await storage.updateCartItem(parseInt(req.params.id), quantity, userId);
+      const cartItem = await storage.updateCartItem(parseInt(req.params.id), quantity, req.user.id);
       res.json(cartItem);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.delete("/api/cart/:id", optionalAuth, async (req, res) => {
+  app.delete("/api/cart/:id", authenticateToken, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to remove cart items',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
-      const userId = req.user.id;      
-      await storage.removeFromCart(parseInt(req.params.id), userId);
+      await storage.removeFromCart(parseInt(req.params.id), req.user.id);
       res.json({ message: 'Item removed from cart' });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
 
+  // Address routes
+  app.get("/api/addresses", authenticateToken, async (req, res) => {
+    try {
+      const addresses = await storage.getAddresses(req.user.id);
+      res.json(addresses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
+  app.post("/api/addresses", authenticateToken, async (req, res) => {
+    try {
+      const addressData = insertAddressSchema.parse({
+        ...req.body,
+        user_id: req.user.id,
+      });
+      const address = await storage.createAddress(addressData);
+      res.json(address);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
 
   // Order routes
   app.get("/api/orders", optionalAuth, async (req, res) => {
@@ -1499,7 +1399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Review/Feedback routes
+  // Review routes
   app.get("/api/products/:id/reviews", async (req, res) => {
     try {
       const reviews = await storage.getProductReviews(parseInt(req.params.id));
@@ -1509,114 +1409,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check if user can review a product
-  app.get("/api/users/:userId/products/:productId/can-review", authenticateToken, async (req, res) => {
-    try {
-      const userId = parseInt(req.params.userId);
-      const productId = parseInt(req.params.productId);
-      
-      // Only allow users to check their own review eligibility
-      if (req.user.id !== userId) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-      
-      const canReview = await storage.canUserReviewProduct(userId, productId);
-      res.json({ canReview });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   app.post("/api/products/:id/reviews", authenticateToken, async (req, res) => {
     try {
-      const productId = parseInt(req.params.id);
       const reviewData = insertReviewSchema.parse({
         ...req.body,
         user_id: req.user.id,
-        product_id: productId,
+        product_id: parseInt(req.params.id),
       });
-      
-      // Verify user can review this product
-      const canReview = await storage.canUserReviewProduct(req.user.id, productId);
-      if (!canReview) {
-        return res.status(400).json({ message: "You can only review products you have ordered and received" });
-      }
-      
       const review = await storage.createReview(reviewData);
       res.json(review);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
-    }
-  });
-
-  // Get featured reviews for homepage
-  app.get("/api/reviews/featured", async (req, res) => {
-    try {
-      const featuredReviews = await storage.getFeaturedReviews();
-      res.json(featuredReviews);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get product ratings (average rating and review count)
-  app.get("/api/products/:id/rating", async (req, res) => {
-    try {
-      const productId = parseInt(req.params.id);
-      const rating = await storage.getProductRating(productId);
-      res.json(rating);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get all product ratings at once for better performance
-  app.get("/api/products/ratings", async (req, res) => {
-    try {
-      const ratings = await storage.getAllProductRatings();
-      res.json(ratings);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Admin: Get all reviews for management
-  app.get("/api/admin/reviews", authenticateToken, requireAdmin, async (req, res) => {
-    try {
-      const reviews = await storage.getAllReviews();
-      res.json(reviews);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Admin: Update review feature status
-  app.patch("/api/admin/reviews/:id/feature", authenticateToken, requireAdmin, async (req, res) => {
-    try {
-      const reviewId = parseInt(req.params.id);
-      const { isFeatured } = req.body;
-      
-      const updatedReview = await storage.updateReviewFeatureStatus(reviewId, isFeatured);
-      res.json(updatedReview);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Admin: Reply to review
-  app.post("/api/admin/reviews/:id/reply", authenticateToken, requireAdmin, async (req, res) => {
-    try {
-      const reviewId = parseInt(req.params.id);
-      const { adminReply } = req.body;
-      
-      if (!adminReply || adminReply.trim().length === 0) {
-        return res.status(400).json({ message: "Admin reply cannot be empty" });
-      }
-      
-      const updatedReview = await storage.replyToReview(reviewId, adminReply.trim());
-      res.json(updatedReview);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
     }
   });
 

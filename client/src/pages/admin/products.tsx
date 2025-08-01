@@ -557,8 +557,16 @@ export default function AdminProducts() {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
                       const fallback = document.createElement('div');
-                      fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex items-center justify-center p-2';
-                      fallback.innerHTML = `<img src="/api/logo" alt="Pathak Bhandar Logo" class="max-w-[80%] max-h-[80%] object-contain opacity-90" />`;
+                      fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex flex-col items-center justify-center p-4';
+                      fallback.innerHTML = `
+                        <div class="text-center">
+                          <div class="w-12 h-12 mx-auto mb-2 bg-navy rounded-lg flex items-center justify-center shadow-lg">
+                            <span class="text-champagne font-bold text-lg">PB</span>
+                          </div>
+                          <div class="text-navy font-semibold text-sm mb-1">Working on it!!</div>
+                          <div class="text-navy/70 text-xs">Image loading...</div>
+                        </div>
+                      `;
                       target.parentNode?.appendChild(fallback);
                     }}
                   />

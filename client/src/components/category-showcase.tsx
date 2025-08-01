@@ -18,7 +18,7 @@ export default function CategoryShowcase() {
     id: category.id,
     name: category.name,
     image: category.imageUrl || 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=200&h=200&fit=crop',
-    link: `/categories`,
+    link: `/products?category=${category.id}`,
   }));
 
   if (isLoading) {

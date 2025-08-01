@@ -15,8 +15,9 @@ export function initializeGoogleAuth() {
 
   // Determine the callback URL based on environment
   const getCallbackURL = () => {
-    // Always use custom domain for production stability (doesn't change on redeployment)
-    return `https://pathakbhandar.in/api/auth/google/callback`;
+    // Use current Replit domain for development/testing
+    const domain = process.env.REPLIT_DOMAINS || 'localhost:5000';
+    return `https://${domain}/api/auth/google/callback`;
   };
 
   const callbackURL = getCallbackURL();

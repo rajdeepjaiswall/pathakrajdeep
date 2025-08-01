@@ -30,11 +30,18 @@ export function CartProvider({ children }: CartProviderProps) {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch cart items - always fetch, let the server handle auth
-  const { data: cartData, isLoading } = useQuery({
+  // Fetch cart items - refetch when auth state changes
+  const { data: cartData, isLoading, refetch } = useQuery({
     queryKey: ['/api/cart'],
     retry: false,
   });
+
+  // Refetch cart when authentication state changes
+  useEffect(() => {
+    if (!isLoading) {
+      refetch();
+    }
+  }, [isAuthenticated, refetch, isLoading]);
 
   const items = (cartData as CartItem[]) || [];
   // Calculate cart summary

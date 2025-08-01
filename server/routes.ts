@@ -692,8 +692,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Address management routes
-  app.get("/api/addresses", authenticateUser, async (req, res) => {
+  app.get("/api/addresses", optionalAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.json([]);
+      }
+      
       const userId = req.user.id;
       const addresses = await storage.getAddresses(userId);
       res.json(addresses);
@@ -702,8 +706,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/addresses", authenticateUser, async (req, res) => {
+  app.post("/api/addresses", optionalAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(200).json({ 
+          message: 'Please log in to add addresses',
+          requiresAuth: true,
+          action: 'login'
+        });
+      }
+      
       const addressData = insertAddressSchema.parse({
         ...req.body,
         userId: req.user.id,
@@ -715,8 +727,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/addresses/:id", authenticateUser, async (req, res) => {
+  app.put("/api/addresses/:id", optionalAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(200).json({ 
+          message: 'Please log in to update addresses',
+          requiresAuth: true,
+          action: 'login'
+        });
+      }
+      
       const id = parseInt(req.params.id);
       const addressData = insertAddressSchema.partial().parse(req.body);
       const address = await storage.updateAddress(id, addressData);
@@ -726,8 +746,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/addresses/:id", authenticateUser, async (req, res) => {
+  app.delete("/api/addresses/:id", optionalAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(200).json({ 
+          message: 'Please log in to delete addresses',
+          requiresAuth: true,
+          action: 'login'
+        });
+      }
+      
       const id = parseInt(req.params.id);
       // Add security check to ensure user owns this address
       const address = await storage.getAddress(id);
@@ -743,8 +771,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User order history
-  app.get("/api/orders/user", authenticateUser, async (req, res) => {
+  app.get("/api/orders/user", optionalAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.json([]);
+      }
+      
       const userId = req.user.id;
       const orders = await storage.getOrders(userId);
       res.json(orders);
@@ -1120,28 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Address routes
-  app.get("/api/addresses", authenticateToken, async (req, res) => {
-    try {
-      const addresses = await storage.getAddresses(req.user.id);
-      res.json(addresses);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
 
-  app.post("/api/addresses", authenticateToken, async (req, res) => {
-    try {
-      const addressData = insertAddressSchema.parse({
-        ...req.body,
-        user_id: req.user.id,
-      });
-      const address = await storage.createAddress(addressData);
-      res.json(address);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
 
   // Order routes
   app.get("/api/orders", optionalAuth, async (req, res) => {

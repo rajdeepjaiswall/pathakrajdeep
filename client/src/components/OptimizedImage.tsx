@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { imageCache } from '@/lib/image-cache';
 import { optimizeImageUrl, getConnectionSpeed, getImageQuality, imageMonitor } from '@/lib/performance';
+import pathakLogo from '@assets/project_20250528_0859055-02.png';
 
 interface OptimizedImageProps {
   src: string;
@@ -98,16 +99,12 @@ export default function OptimizedImage({
 
       {/* Error fallback with company logo */}
       {isError && (
-        <div className="absolute inset-0 bg-gradient-to-br from-almond to-champagne/20 flex flex-col items-center justify-center p-4">
-          <div className="text-center">
-            {/* Company Logo */}
-            <div className="w-16 h-16 mx-auto mb-3 bg-navy rounded-lg flex items-center justify-center shadow-lg">
-              <span className="text-champagne font-bold text-xl">PB</span>
-            </div>
-            {/* Working message */}
-            <div className="text-navy font-semibold text-sm mb-1">Working on it!!</div>
-            <div className="text-navy/70 text-xs">Image loading...</div>
-          </div>
+        <div className="absolute inset-0 bg-gradient-to-br from-almond to-champagne/20 flex items-center justify-center p-2">
+          <img
+            src={pathakLogo}
+            alt="Pathak Bhandar Logo"
+            className="max-w-[80%] max-h-[80%] object-contain opacity-90"
+          />
         </div>
       )}
 

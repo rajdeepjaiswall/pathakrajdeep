@@ -126,8 +126,12 @@ export function TrendingProducts() {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-champagne/20 to-almond/30 flex items-center justify-center">
-                    <div className="text-champagne text-4xl font-bold">PB</div>
+                  <div className="w-full h-full bg-gradient-to-br from-champagne/20 to-almond/30 flex items-center justify-center p-4">
+                    <img
+                      src="/api/logo"
+                      alt="Pathak Bhandar Logo"
+                      className="max-w-full max-h-full object-contain opacity-90"
+                    />
                   </div>
                 )}
               </div>

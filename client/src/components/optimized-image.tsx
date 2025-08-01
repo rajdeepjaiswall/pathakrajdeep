@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import pathakLogo from '@assets/project_20250528_0859055-02.png';
 
 interface OptimizedImageProps {
   src: string;
@@ -19,7 +20,7 @@ export default function OptimizedImage({
   height,
   placeholder = 'blur',
   loading = 'lazy',
-  fallback = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300&q=80'
+  fallback = pathakLogo
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);

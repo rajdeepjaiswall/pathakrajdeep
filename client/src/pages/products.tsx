@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Filter, Grid, List, Package } from 'lucide-react';
+import { useDebounce } from '@/hooks/use-debounce';
 import { useLocation } from 'wouter';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,12 +10,14 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
-import ProductCard from '@/components/product/product-card';
+import LazyProductCard from '@/components/lazy-product-card';
+import { useAllProductRatings } from '@/hooks/use-product-ratings';
 
 export default function Products() {
   const [location] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Get URL parameters
@@ -33,21 +36,39 @@ export default function Products() {
     queryKey: ['/api/categories'],
   });
 
-  // Get current category details for banner display
-  const currentCategory = categories.find((cat: any) => cat.id.toString() === selectedCategory);
+  // Fetch product ratings for better performance
+  const { data: ratings = {} } = useAllProductRatings();
 
   // Fetch products
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ['/api/products', { search: searchTerm, category_id: selectedCategory !== 'all' ? selectedCategory : undefined }],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedCategory !== 'all') params.append('category_id', selectedCategory);
-      
-      const response = await fetch(`/api/products?${params.toString()}`);
-      return response.json();
-    },
+  const { data: allProducts = [], isLoading } = useQuery({
+    queryKey: ['/api/products'],
   });
+
+  // Optimized filtering with useMemo to prevent re-filtering on every render
+  const products = useMemo(() => {
+    let filtered = allProducts;
+    
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter((product: any) => 
+        product.categoryId?.toString() === selectedCategory.toString()
+      );
+    }
+    
+    // Filter by search term
+    if (debouncedSearchTerm.trim()) {
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter((product: any) =>
+        product.name.toLowerCase().includes(searchLower) ||
+        product.description?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return filtered;
+  }, [allProducts, selectedCategory, debouncedSearchTerm]);
+
+  // Get current category details for banner display
+  const currentCategory = categories.find((cat: any) => cat.id.toString() === selectedCategory);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -173,7 +194,7 @@ export default function Products() {
                 : 'grid-cols-1'
             }`}>
               {products.map((product: any) => (
-                <ProductCard key={product.id} product={product} />
+                <LazyProductCard key={product.id} product={product} />
               ))}
             </div>
           )}

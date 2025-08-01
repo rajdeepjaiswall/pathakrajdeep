@@ -5,7 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { CartProvider } from "./hooks/use-cart";
+import { WishlistProvider } from "./hooks/use-wishlist";
 import PWAInstaller from "./components/PWAInstaller";
+import InstallPrompt from "./components/InstallPrompt";
 import GoogleOneTap from "./components/GoogleOneTap";
 
 // Pages
@@ -30,6 +32,7 @@ import AdminProducts from "@/pages/admin/products";
 import AdminCustomers from "@/pages/admin/customers";
 import AdminBanners from "@/pages/admin/banners";
 import AdminCategories from "@/pages/admin/categories";
+import AdminFeedback from "@/pages/admin/feedback";
 import SuperAdminLogin from "@/pages/super-admin/login";
 import SuperAdminDashboard from "@/pages/super-admin/dashboard";
 import LogoManager from "@/pages/super-admin/logo-manager";
@@ -39,6 +42,7 @@ import OTPTest from "@/pages/otp-test";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import CompleteProfile from "@/pages/complete-profile";
+import WishlistPage from "@/pages/wishlist";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -69,6 +73,7 @@ function Router() {
       <Route path="/admin/customers" component={AdminCustomers} />
       <Route path="/admin/banners" component={AdminBanners} />
       <Route path="/admin/categories" component={AdminCategories} />
+      <Route path="/admin/feedback" component={AdminFeedback} />
       <Route path="/super-admin/login" component={SuperAdminLogin} />
       <Route path="/super-admin" component={SuperAdminDashboard} />
       <Route path="/super-admin/logo-manager" component={LogoManager} />
@@ -78,6 +83,7 @@ function Router() {
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/complete-profile" component={CompleteProfile} />
+      <Route path="/wishlist" component={WishlistPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -88,10 +94,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <CartProvider>
-            <Toaster />
-            <AppContent />
-          </CartProvider>
+          <WishlistProvider>
+            <CartProvider>
+              <Toaster />
+              <AppContent />
+            </CartProvider>
+          </WishlistProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
@@ -113,6 +121,7 @@ function AppContent() {
   return (
     <>
       <PWAInstaller />
+      <InstallPrompt />
       <GoogleOneTap />
       <Router />
     </>

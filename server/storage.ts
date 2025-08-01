@@ -47,10 +47,12 @@ export interface IStorage {
   clearCart(userId: number): Promise<void>;
 
   // Wishlist methods
+  getWishlist(userId: number): Promise<(WishlistItem & { product: Product })[]>;
   getWishlistItems(userId: number): Promise<(WishlistItem & { product: Product })[]>;
-  addToWishlist(wishlistItem: InsertWishlistItem): Promise<WishlistItem>;
-  removeFromWishlist(productId: number, userId: number): Promise<void>;
+  addToWishlist(userId: number, productId: number): Promise<WishlistItem>;
+  removeFromWishlist(userId: number, productId: number): Promise<void>;
   isInWishlist(userId: number, productId: number): Promise<boolean>;
+  getPreviouslyOrderedProducts(userId: number): Promise<(Product & { lastOrderDate: Date; orderCount: number })[]>;
 
   // Address methods
   getAddresses(userId: number): Promise<Address[]>;
@@ -68,9 +70,15 @@ export interface IStorage {
   updateOrderRider(id: number, riderName: string, riderPhone: string): Promise<Order>;
   getAllOrders(status?: string): Promise<Order[]>;
 
-  // Review methods
+  // Review/Feedback methods
   getProductReviews(productId: number): Promise<(Review & { user: Pick<User, 'username'> })[]>;
+  getUserOrderReviews(userId: number, orderId: number): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
+  canUserReviewProduct(userId: number, productId: number): Promise<boolean>;
+  getFeaturedReviews(): Promise<(Review & { user: Pick<User, 'username'> | null; product: Pick<Product, 'name'> | null })[]>;
+  getAllReviews(): Promise<(Review & { user: Pick<User, 'username'> | null; product: Pick<Product, 'name'> | null })[]>;
+  updateReviewFeatureStatus(reviewId: number, isFeatured: boolean): Promise<Review>;
+  replyToReview(reviewId: number, adminReply: string): Promise<Review>;
 
   // Analytics methods
   getAnalytics(): Promise<{
@@ -346,14 +354,31 @@ export class DatabaseStorage implements IStorage {
       .where(eq(wishlistItems.user_id, userId));
   }
 
-  async addToWishlist(insertWishlistItem: InsertWishlistItem): Promise<WishlistItem> {
+  async getWishlist(userId: number): Promise<(WishlistItem & { product: Product })[]> {
+    return this.getWishlistItems(userId);
+  }
+
+  async addToWishlist(userId: number, productId: number): Promise<WishlistItem>;
+  async addToWishlist(insertWishlistItem: InsertWishlistItem): Promise<WishlistItem>;
+  async addToWishlist(userIdOrItem: number | InsertWishlistItem, productId?: number): Promise<WishlistItem> {
+    let userId: number;
+    let prodId: number;
+
+    if (typeof userIdOrItem === 'number') {
+      userId = userIdOrItem;
+      prodId = productId!;
+    } else {
+      userId = userIdOrItem.user_id!;
+      prodId = userIdOrItem.product_id!;
+    }
+
     // Check if item already exists in wishlist
     const [existingItem] = await db
       .select()
       .from(wishlistItems)
       .where(and(
-        eq(wishlistItems.user_id, insertWishlistItem.user_id),
-        eq(wishlistItems.product_id, insertWishlistItem.product_id)
+        eq(wishlistItems.user_id, userId),
+        eq(wishlistItems.product_id, prodId)
       ));
 
     if (existingItem) {
@@ -362,12 +387,15 @@ export class DatabaseStorage implements IStorage {
 
     const [wishlistItem] = await db
       .insert(wishlistItems)
-      .values(insertWishlistItem)
+      .values({
+        user_id: userId,
+        product_id: prodId,
+      })
       .returning();
     return wishlistItem;
   }
 
-  async removeFromWishlist(productId: number, userId: number): Promise<void> {
+  async removeFromWishlist(userId: number, productId: number): Promise<void> {
     await db
       .delete(wishlistItems)
       .where(and(
@@ -385,6 +413,41 @@ export class DatabaseStorage implements IStorage {
         eq(wishlistItems.product_id, productId)
       ));
     return !!item;
+  }
+
+  async getPreviouslyOrderedProducts(userId: number): Promise<(Product & { lastOrderDate: Date; orderCount: number })[]> {
+    const result = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        weight: products.weight,
+        category_id: products.category_id,
+        images: products.images,
+        videos: products.videos,
+        stock: products.stock,
+        isActive: products.isActive,
+        hsnCode: products.hsnCode,
+        gstRate: products.gstRate,
+        tags: products.tags,
+        featured: products.featured,
+        createdAt: products.createdAt,
+        lastOrderDate: sql<Date>`MAX(${orders.orderDate})`.as('lastOrderDate'),
+        orderCount: sql<number>`COUNT(DISTINCT ${orders.id})`.as('orderCount'),
+      })
+      .from(orderItems)
+      .innerJoin(products, eq(orderItems.product_id, products.id))
+      .innerJoin(orders, eq(orderItems.order_id, orders.id))
+      .where(eq(orders.user_id, userId))
+      .groupBy(products.id)
+      .orderBy(desc(sql`MAX(${orders.orderDate})`));
+
+    return result.map(item => ({
+      ...item,
+      lastOrderDate: new Date(item.lastOrderDate),
+      orderCount: Number(item.orderCount),
+    }));
   }
 
   // Address methods
@@ -537,15 +600,19 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(orders.orderDate));
   }
 
-  // Review methods
+  // Review/Feedback methods
   async getProductReviews(productId: number): Promise<(Review & { user: Pick<User, 'username'> })[]> {
     return await db
       .select({
         id: reviews.id,
         user_id: reviews.user_id,
         product_id: reviews.product_id,
+        order_id: reviews.order_id,
         rating: reviews.rating,
         comment: reviews.comment,
+        admin_reply: reviews.admin_reply,
+        admin_reply_date: reviews.admin_reply_date,
+        is_featured: reviews.is_featured,
         isApproved: reviews.isApproved,
         createdAt: reviews.createdAt,
         user: {
@@ -558,12 +625,120 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reviews.createdAt));
   }
 
+  async getUserOrderReviews(userId: number, orderId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(and(eq(reviews.user_id, userId), eq(reviews.order_id, orderId)));
+  }
+
   async createReview(insertReview: InsertReview): Promise<Review> {
     const [review] = await db
       .insert(reviews)
       .values(insertReview)
       .returning();
     return review;
+  }
+
+  async canUserReviewProduct(userId: number, productId: number): Promise<boolean> {
+    // Check if user has ordered this product and order is delivered
+    const deliveredOrders = await db
+      .select({ orderId: orders.id })
+      .from(orders)
+      .innerJoin(orderItems, eq(orders.id, orderItems.order_id))
+      .where(
+        and(
+          eq(orders.user_id, userId),
+          eq(orderItems.product_id, productId),
+          eq(orders.status, 'delivered')
+        )
+      );
+
+    if (deliveredOrders.length === 0) return false;
+
+    // Check if user has already reviewed this product for any delivered order
+    const existingReview = await db
+      .select()
+      .from(reviews)
+      .where(
+        and(
+          eq(reviews.user_id, userId),
+          eq(reviews.product_id, productId)
+        )
+      )
+      .limit(1);
+
+    return existingReview.length === 0;
+  }
+
+  async getFeaturedReviews(): Promise<(Review & { user: Pick<User, 'username'> | null; product: Pick<Product, 'name'> | null })[]> {
+    return await db
+      .select({
+        id: reviews.id,
+        user_id: reviews.user_id,
+        product_id: reviews.product_id,
+        order_id: reviews.order_id,
+        rating: reviews.rating,
+        comment: reviews.comment,
+        admin_reply: reviews.admin_reply,
+        admin_reply_date: reviews.admin_reply_date,
+        is_featured: reviews.is_featured,
+        isApproved: reviews.isApproved,
+        createdAt: reviews.createdAt,
+        user: users.username ? { username: users.username } : null,
+        product: products.name ? { name: products.name } : null,
+      })
+      .from(reviews)
+      .leftJoin(users, eq(reviews.user_id, users.id))
+      .leftJoin(products, eq(reviews.product_id, products.id))
+      .where(and(eq(reviews.is_featured, true), eq(reviews.isApproved, true)))
+      .orderBy(desc(reviews.createdAt))
+      .limit(10);
+  }
+
+  async getAllReviews(): Promise<(Review & { user: Pick<User, 'username'> | null; product: Pick<Product, 'name'> | null })[]> {
+    return await db
+      .select({
+        id: reviews.id,
+        user_id: reviews.user_id,
+        product_id: reviews.product_id,
+        order_id: reviews.order_id,
+        rating: reviews.rating,
+        comment: reviews.comment,
+        admin_reply: reviews.admin_reply,
+        admin_reply_date: reviews.admin_reply_date,
+        is_featured: reviews.is_featured,
+        isApproved: reviews.isApproved,
+        createdAt: reviews.createdAt,
+        user: users.username ? { username: users.username } : null,
+        product: products.name ? { name: products.name } : null,
+      })
+      .from(reviews)
+      .leftJoin(users, eq(reviews.user_id, users.id))
+      .leftJoin(products, eq(reviews.product_id, products.id))
+      .orderBy(desc(reviews.createdAt));
+  }
+
+  async updateReviewFeatureStatus(reviewId: number, isFeatured: boolean): Promise<Review> {
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({ is_featured: isFeatured })
+      .where(eq(reviews.id, reviewId))
+      .returning();
+    return updatedReview;
+  }
+
+  async replyToReview(reviewId: number, adminReply: string): Promise<Review> {
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({ 
+        admin_reply: adminReply,
+        admin_reply_date: new Date(),
+        isApproved: true 
+      })
+      .where(eq(reviews.id, reviewId))
+      .returning();
+    return updatedReview;
   }
 
   // Analytics methods
@@ -767,6 +942,55 @@ export class DatabaseStorage implements IStorage {
       .groupBy(orderItems.product_id);
     
     return result.map(item => item.productId);
+  }
+
+  // Get product rating data
+  async getProductRating(productId: number): Promise<{ averageRating: number | null; reviewCount: number; hasRatings: boolean }> {
+    const result = await db
+      .select({
+        averageRating: sql<number>`ROUND(AVG(${reviews.rating}), 1)`,
+        reviewCount: sql<number>`COUNT(*)`,
+      })
+      .from(reviews)
+      .where(and(eq(reviews.product_id, productId), eq(reviews.isApproved, true)));
+
+    const rating = result[0];
+    const averageRating = rating?.averageRating ? Number(rating.averageRating) : null;
+    const reviewCount = Number(rating?.reviewCount) || 0;
+    
+    return {
+      averageRating,
+      reviewCount,
+      hasRatings: reviewCount > 0
+    };
+  }
+
+  // Get all product ratings for better performance
+  async getAllProductRatings(): Promise<Record<number, { averageRating: number | null; reviewCount: number; hasRatings: boolean }>> {
+    const result = await db
+      .select({
+        productId: reviews.product_id,
+        averageRating: sql<number>`ROUND(AVG(${reviews.rating}), 1)`,
+        reviewCount: sql<number>`COUNT(*)`,
+      })
+      .from(reviews)
+      .where(eq(reviews.isApproved, true))
+      .groupBy(reviews.product_id);
+
+    const ratings: Record<number, { averageRating: number | null; reviewCount: number; hasRatings: boolean }> = {};
+    
+    for (const rating of result) {
+      const averageRating = rating.averageRating ? Number(rating.averageRating) : null;
+      const reviewCount = Number(rating.reviewCount) || 0;
+      
+      ratings[rating.productId] = {
+        averageRating,
+        reviewCount,
+        hasRatings: reviewCount > 0
+      };
+    }
+    
+    return ratings;
   }
 }
 

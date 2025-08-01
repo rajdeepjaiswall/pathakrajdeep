@@ -1,5 +1,7 @@
 import { Facebook, Instagram } from 'lucide-react';
 import { COMPANY_INFO } from '@/lib/constants';
+import { QuoteCard } from '../QuoteCard';
+import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 export default function Footer() {
   const quickLinks = [
@@ -135,6 +137,15 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-cream/20 mt-8 pt-8">
+          {/* Inspirational Quote */}
+          <div className="max-w-lg mx-auto mb-6">
+            <QuoteCard 
+              text={getRandomFoodQuote('sharing').text}
+              movie={getRandomFoodQuote('sharing').movie}
+              className="bg-navy border-cream/20"
+            />
+          </div>
+          
           <div className="flex flex-col md:flex-row justify-between items-center mb-4">
             <p className="text-cream/60 text-sm">© 2025 {COMPANY_INFO.name}. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">

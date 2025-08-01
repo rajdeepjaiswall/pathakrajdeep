@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Loader2, Globe, Mic, MicOff } from 'lucide-react';
+import { Search, Loader2, Globe, Mic, MicOff, Sparkles, Brain } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import OptimizedImage from './OptimizedImage';
+import { apiRequest } from '@/lib/queryClient';
+import { QuoteCard } from './QuoteCard';
+import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 // Voice recognition types
 interface SpeechRecognitionEvent {
@@ -43,6 +46,13 @@ interface SearchResponse {
   results: SearchResult[];
   total: number;
   timestamp: string;
+  searchType?: 'instant' | 'ai';
+  translation?: {
+    originalQuery: string;
+    translatedQuery: string;
+    detectedLanguage: string;
+    confidence: number;
+  };
 }
 
 export default function AdvancedSearch() {
@@ -51,6 +61,8 @@ export default function AdvancedSearch() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showAISearch, setShowAISearch] = useState(false);
+  const queryClient = useQueryClient();
 
   // Debounce search query
   useEffect(() => {
@@ -74,6 +86,21 @@ export default function AdvancedSearch() {
     enabled: debouncedQuery.length > 1 && showSuggestions,
     staleTime: 10 * 60 * 1000, // 10 minutes
   }) as { data: { suggestions: string[] } | undefined };
+
+  // AI search mutation
+  const aiSearchMutation = useMutation({
+    mutationFn: async (query: string) => {
+      return await apiRequest('/api/search/ai', 'POST', { query });
+    },
+    onSuccess: (data) => {
+      // Update the cache with AI search results
+      queryClient.setQueryData(['/api/search', searchQuery], data);
+      setShowAISearch(false);
+    },
+    onError: (error) => {
+      console.error('AI search error:', error);
+    }
+  });
 
   // Voice search functionality
   const startVoiceSearch = useCallback(() => {
@@ -103,7 +130,7 @@ export default function AdvancedSearch() {
       setIsListening(false);
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
     };
@@ -232,6 +259,61 @@ export default function AdvancedSearch() {
             <span>Search powered by AI • Multi-language support</span>
           </div>
 
+          {/* No Results - Show AI Search Option */}
+          {searchData.total === 0 && searchData.searchType === 'instant' && (
+            <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50">
+              <CardContent className="p-6 text-center">
+                <Brain className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                  No instant results found
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Don't worry! Our AI can understand Hindi, Hinglish, and translate your search to find exactly what you're looking for.
+                </p>
+                <div className="mb-4">
+                  <QuoteCard 
+                    text={getRandomFoodQuote('tea_time').text}
+                    movie={getRandomFoodQuote('tea_time').movie}
+                    className="text-left"
+                  />
+                </div>
+                <Button
+                  onClick={() => aiSearchMutation.mutate(searchQuery)}
+                  disabled={aiSearchMutation.isPending}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium"
+                >
+                  {aiSearchMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      AI is thinking...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Should I try harder?
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Translation Info */}
+          {searchData.translation && (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <Globe className="h-4 w-4" />
+                  <span className="font-medium">Translation:</span>
+                  <span>"{searchData.translation.originalQuery}" → "{searchData.translation.translatedQuery}"</span>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    {searchData.translation.detectedLanguage}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Results Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {searchData.results.map((product) => (
@@ -248,7 +330,6 @@ export default function AdvancedSearch() {
                         src={product.images[0]}
                         alt={product.name}
                         className="w-full h-32 object-cover rounded-lg"
-                        fallbackSrc="/api/logo"
                       />
                       
                       {/* Match Type Badge */}
@@ -296,15 +377,22 @@ export default function AdvancedSearch() {
             ))}
           </div>
 
-          {/* No Results */}
-          {searchData.results.length === 0 && (
+          {/* No Results for AI Search */}
+          {searchData.results.length === 0 && searchData.searchType === 'ai' && (
             <Card className="border-amber-200">
               <CardContent className="p-8 text-center">
                 <Search className="h-12 w-12 text-amber-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-navy mb-2">No products found</h3>
                 <p className="text-gray-600 mb-4">
-                  Try searching with different terms or in another language.
+                  Even our AI couldn't find matching products. Try searching with different terms.
                 </p>
+                <div className="mb-4">
+                  <QuoteCard 
+                    text={getRandomFoodQuote().text}
+                    movie={getRandomFoodQuote().movie}
+                    className="text-left"
+                  />
+                </div>
                 <div className="text-sm text-gray-500">
                   <p>You can search in:</p>
                   <ul className="mt-2 space-y-1">

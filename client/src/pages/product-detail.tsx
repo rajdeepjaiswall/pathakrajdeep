@@ -12,6 +12,7 @@ import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
+import pathakLogo from '@assets/project_20250528_0859055-02.png';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -129,16 +130,8 @@ export default function ProductDetail() {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
                           const fallback = document.createElement('div');
-                          fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex flex-col items-center justify-center p-4';
-                          fallback.innerHTML = `
-                            <div class="text-center">
-                              <div class="w-16 h-16 mx-auto mb-3 bg-navy rounded-lg flex items-center justify-center shadow-lg">
-                                <span class="text-champagne font-bold text-xl">PB</span>
-                              </div>
-                              <div class="text-navy font-semibold text-sm mb-1">Working on it!!</div>
-                              <div class="text-navy/70 text-xs">Image loading...</div>
-                            </div>
-                          `;
+                          fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex items-center justify-center p-2';
+                          fallback.innerHTML = `<img src="${pathakLogo}" alt="Pathak Bhandar Logo" class="max-w-[80%] max-h-[80%] object-contain opacity-90" />`;
                           target.parentNode?.appendChild(fallback);
                         }}
                       />
@@ -167,15 +160,8 @@ export default function ProductDetail() {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = 'none';
                                 const fallback = document.createElement('div');
-                                fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex flex-col items-center justify-center p-1';
-                                fallback.innerHTML = `
-                                  <div class="text-center">
-                                    <div class="w-6 h-6 mx-auto mb-1 bg-navy rounded flex items-center justify-center">
-                                      <span class="text-champagne font-bold text-xs">PB</span>
-                                    </div>
-                                    <div class="text-navy font-semibold text-xs">Working on it!!</div>
-                                  </div>
-                                `;
+                                fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex items-center justify-center p-1';
+                                fallback.innerHTML = `<img src="${pathakLogo}" alt="Pathak Bhandar Logo" class="max-w-full max-h-full object-contain opacity-90" />`;
                                 target.parentNode?.appendChild(fallback);
                               }}
                             />

@@ -6,7 +6,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
-import ProductCard from '@/components/product/product-card';
+import LazyProductCard from '@/components/lazy-product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
 import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
@@ -17,6 +17,10 @@ import { preloadImages } from '@/lib/image-cache';
 import { useEffect } from 'react';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { QuoteCard } from '@/components/QuoteCard';
+import { getRandomFoodQuote } from '@/data/foodQuotes';
+import { TrendingProducts } from '@/components/trending-products';
+import { FeedbackCarousel } from '@/components/feedback-carousel';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
@@ -56,13 +60,24 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
-  // Show loading spinner for mobile on initial load
+  // Show loading screen with quote for mobile on initial load
   if (productsLoading && allProducts.length === 0) {
+    const loadingQuote = getRandomFoodQuote();
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="pt-20 pb-32">
-          <LoadingSpinner size="lg" className="h-64" />
+        <div className="pt-20 pb-32 px-4">
+          <div className="max-w-md mx-auto space-y-6">
+            <LoadingSpinner size="lg" className="h-64" />
+            <QuoteCard 
+              text={loadingQuote.text}
+              movie={loadingQuote.movie}
+              className="animate-pulse"
+            />
+            <p className="text-center text-gray-500 text-sm">
+              Loading fresh goodies for you...
+            </p>
+          </div>
         </div>
         <MobileNav />
         <CartSidebar />
@@ -118,7 +133,7 @@ export default function Home() {
               <LoadingSkeleton type="product" count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6" />
             ) : featuredProducts.length > 0 ? (
               featuredProducts.slice(0, 12).map((product: any) => (
-                <ProductCard 
+                <LazyProductCard 
                   key={product.id} 
                   product={product}
                   isPreviouslyOrdered={Array.isArray(previouslyOrderedProducts) ? previouslyOrderedProducts.includes(product.id) : false}
@@ -149,6 +164,12 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Trending Products Section */}
+      <TrendingProducts />
+
+      {/* Customer Feedback Carousel */}
+      <FeedbackCarousel />
+
       {/* Trust Indicators */}
 <section className="py-12 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -174,6 +195,14 @@ export default function Home() {
               <h3 className="font-semibold text-navy mb-2">Quality Guarantee</h3>
               <p className="text-gray-600 text-sm">Fresh products with satisfaction guarantee</p>
             </div>
+          </div>
+          
+          {/* Inspirational Quote */}
+          <div className="max-w-2xl mx-auto mt-12">
+            <QuoteCard 
+              text={getRandomFoodQuote('home_cooking').text}
+              movie={getRandomFoodQuote('home_cooking').movie}
+            />
           </div>
         </div>
       </section>

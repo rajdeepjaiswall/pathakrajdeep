@@ -7,6 +7,9 @@ import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice, getGSTBreakdown } from '@/lib/cart';
+import CartSidebar from '@/components/cart/cart-sidebar';
+import { QuoteCard } from '@/components/QuoteCard';
+import { getRandomFoodQuote } from '@/data/foodQuotes';
 
 export default function Cart() {
   const { items, summary, updateQuantity, removeFromCart } = useCart();
@@ -22,6 +25,12 @@ export default function Cart() {
             <ShoppingBag className="h-24 w-24 text-gray-300 mx-auto mb-8" />
             <h1 className="text-3xl font-bold text-navy mb-4">Your cart is empty</h1>
             <p className="text-gray-600 mb-8">Looks like you haven't added anything to your cart yet.</p>
+            <div className="max-w-md mx-auto mb-8">
+              <QuoteCard 
+                text={getRandomFoodQuote('hunger').text}
+                movie={getRandomFoodQuote('hunger').movie}
+              />
+            </div>
             <Link href="/products">
               <Button className="bg-champagne text-navy hover:bg-champagne/90">
                 Start Shopping
@@ -30,6 +39,8 @@ export default function Cart() {
           </div>
         </div>
         <Footer />
+        <MobileNav />
+        <CartSidebar />
       </div>
     );
   }
@@ -170,6 +181,7 @@ export default function Cart() {
 
       <Footer />
       <MobileNav />
+      <CartSidebar />
     </div>
   );
 }

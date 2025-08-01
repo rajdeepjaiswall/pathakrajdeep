@@ -65,14 +65,14 @@ export default function Header() {
 
           {/* Profile & Actions */}
           <div className="flex items-center space-x-4">
-            {/* Search Button */}
-            <Link href="/search">
+            {/* Wishlist Heart Button with Beat Animation */}
+            <Link href="/wishlist">
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-navy hover:bg-almond/30 rounded-xl p-3 transition-all duration-300"
               >
-                <Search className="h-5 w-5" />
+                <Heart className="h-5 w-5 animate-heartbeat text-red-500" />
               </Button>
             </Link>
             {/* Desktop Hamburger Menu */}
@@ -219,7 +219,7 @@ export default function Header() {
                   <span className="text-navy font-medium">Cart ({summary.itemCount})</span>
                 </div>
 
-                <Link href="/customer/wishlist">
+                <Link href="/wishlist">
                   <div 
                     className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -423,7 +423,7 @@ export default function Header() {
                 </div>
 
                 {/* Wishlist */}
-                <Link href="/customer/wishlist">
+                <Link href="/wishlist">
                   <div 
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors"
                     onClick={() => setIsDesktopMenuOpen(false)}

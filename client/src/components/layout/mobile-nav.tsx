@@ -151,11 +151,7 @@ export default function MobileNav() {
               ) : isAccount && isAuthenticated ? (
                 <div className="relative">
                   <Avatar className={`transition-all duration-200 ring-1 ring-amber-800 ${isActive ? 'h-6 w-6' : 'h-5 w-5'}`}>
-                    {console.log('Mobile nav user data:', {
-                      id: (user as any)?.id,
-                      firstName: (user as any)?.firstName,
-                      profileImageUrl: (user as any)?.profileImageUrl
-                    })}
+
                     <AvatarImage 
                       src={(user as any)?.profileImageUrl} 
                       alt={(user as any)?.firstName || user?.username || 'Profile'} 

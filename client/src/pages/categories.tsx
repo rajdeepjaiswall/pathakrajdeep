@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Package, Home, ShoppingCart, User, Search } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { type Category } from '@shared/schema';
 import OptimizedImage from '@/components/OptimizedImage';
 import Header from '@/components/layout/header';
+import MobileNav from '@/components/layout/mobile-nav';
 import SEOHead from '@/components/SEOHead';
-import pathakLogo from '@assets/project_20250528_0859055-02.png';
-import { useAuth } from '@/hooks/use-auth';
+import pathakLogo from '@assets/Screenshot_2025-08-01-15-29-00-99_10a3d211b678d435d51c62b8010e86c1_1754043457983.jpg';
 
 // Category banner images with blur effect backgrounds
 const categoryBannerImages: Record<string, string> = {
@@ -19,17 +19,9 @@ const categoryBannerImages: Record<string, string> = {
   'Breads': 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
 };
 
-// Function to determine text color based on background
-const getTextColor = (categoryName: string): string => {
-  // Light backgrounds use dark text, dark backgrounds use light text
-  const lightBackgrounds = ['Biscuits', 'Breads'];
-  return lightBackgrounds.includes(categoryName) ? 'text-gray-900' : 'text-white';
-};
-
-// Category banner component with blur effect
+// Category banner component with text overlay
 const CategoryBanner = ({ category, index }: { category: Category; index: number }) => {
   const backgroundImage = categoryBannerImages[category.name] || categoryBannerImages['Biscuits'];
-  const textColor = getTextColor(category.name);
   
   return (
     <Link href={`/products?category=${category.id}`}>
@@ -48,21 +40,12 @@ const CategoryBanner = ({ category, index }: { category: Category; index: number
           />
         </div>
         
-        {/* Blur Overlay for Text Area */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"></div>
-        <div 
-          className="absolute inset-0 backdrop-blur-sm"
-          style={{
-            background: `linear-gradient(to right, 
-              rgba(255, 255, 255, 0.1) 0%, 
-              rgba(255, 255, 255, 0.05) 30%, 
-              transparent 60%)`
-          }}
-        ></div>
+        {/* Text Overlay Background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent"></div>
         
         {/* Category Name */}
         <div className="absolute inset-0 flex items-center justify-center md:justify-start md:pl-8">
-          <h3 className={`text-2xl md:text-3xl font-bold ${textColor} drop-shadow-2xl text-center md:text-left transition-all duration-300 group-hover:scale-110`}>
+          <h3 className="text-2xl md:text-3xl font-bold text-white drop-shadow-2xl text-center md:text-left transition-all duration-300 group-hover:scale-110">
             {category.name}
           </h3>
         </div>
@@ -100,37 +83,9 @@ const NoProductsMessage = ({ categoryName }: { categoryName: string }) => {
 };
 
 export default function Categories() {
-  const [showBottomNav, setShowBottomNav] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const { isAuthenticated } = useAuth();
-
   const { data: categories = [], isLoading } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
-
-  // Handle scroll for bottom navigation visibility
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      if (currentScrollY > 200) {
-        // Show bottom nav when scrolling down after 200px
-        if (currentScrollY > lastScrollY) {
-          setShowBottomNav(true);
-        } else {
-          // Hide when scrolling up
-          setShowBottomNav(false);
-        }
-      } else {
-        setShowBottomNav(false);
-      }
-      
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
 
   if (isLoading) {
     return (
@@ -153,14 +108,14 @@ export default function Categories() {
       
       <Header />
 
-      <div className="pt-20 pb-32">
+      <div className="pt-20 pb-24">
         {/* Logo Section */}
         <div className="py-12 text-center">
-          <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-champagne">
+          <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-champagne overflow-hidden">
             <img 
               src={pathakLogo}
               alt="Pathak Bhandar Logo" 
-              className="w-24 h-24 object-contain"
+              className="w-full h-full object-contain p-2"
             />
           </div>
         </div>
@@ -197,51 +152,9 @@ export default function Categories() {
         </div>
       </div>
 
-      {/* Bottom Navigation Panel */}
-      <div 
-        className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
-          showBottomNav ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
-        <div className="flex items-center justify-around py-3 px-4 max-w-md mx-auto">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 text-navy hover:bg-champagne/20">
-              <Home className="h-5 w-5" />
-              <span className="text-xs">Home</span>
-            </Button>
-          </Link>
-          
-          <Link href="/search">
-            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 text-navy hover:bg-champagne/20">
-              <Search className="h-5 w-5" />
-              <span className="text-xs">Search</span>
-            </Button>
-          </Link>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex flex-col items-center gap-1 text-champagne bg-champagne/10"
-          >
-            <Package className="h-5 w-5" />
-            <span className="text-xs">Categories</span>
-          </Button>
-          
-          <Link href="/cart">
-            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 text-navy hover:bg-champagne/20">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="text-xs">Cart</span>
-            </Button>
-          </Link>
-          
-          <Link href={isAuthenticated ? "/account" : "/login"}>
-            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 text-navy hover:bg-champagne/20">
-              <User className="h-5 w-5" />
-              <span className="text-xs">Account</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
+
+
+      <MobileNav />
 
       {/* CSS for animations */}
       <style jsx>{`

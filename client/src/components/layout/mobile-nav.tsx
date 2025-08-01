@@ -2,11 +2,13 @@ import { Home, Search, ShoppingCart, User } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import pathakLogo from '@assets/project_20250528_0859055-02.png';
 
 export default function MobileNav() {
   const [location] = useLocation();
   const { summary, openCart } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
@@ -29,6 +31,7 @@ export default function MobileNav() {
           const isActive = location === item.href;
           const isCart = item.label === 'Cart';
           const isLogo = item.icon === 'logo';
+          const isAccount = item.label === 'Account';
 
           return (
             <Link
@@ -46,6 +49,13 @@ export default function MobileNav() {
                     style={{ filter: 'brightness(0) saturate(100%) invert(17%) sepia(25%) saturate(1315%) hue-rotate(195deg) brightness(94%) contrast(96%)' }}
                   />
                 </div>
+              ) : isAccount && isAuthenticated && (user as any)?.profileImageUrl ? (
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user?.username || 'Profile'} />
+                  <AvatarFallback className="bg-navy text-champagne text-[10px] font-semibold">
+                    {((user as any).firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               ) : (
                 <Icon className="h-5 w-5 text-navy" />
               )}

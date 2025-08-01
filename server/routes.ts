@@ -357,6 +357,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload profile image
+  app.post("/api/profile/upload-image", authenticateUser, async (req, res) => {
+    try {
+      const { imageData } = req.body;
+      
+      // Get user ID from session (Google OAuth) or JWT
+      let userId;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub || sessionUser.id;
+      } else {
+        userId = (req.user as any)?.id || (req.user as any)?.userId;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated properly' });
+      }
+      
+      if (!imageData) {
+        return res.status(400).json({ message: "No image data provided" });
+      }
+      
+      // For now, we'll store the base64 image directly
+      // In a production environment, you'd want to upload to a cloud storage service
+      const updatedUser = await storage.updateUser(userId, {
+        profileImageUrl: imageData,
+      });
+      
+      res.json({ 
+        message: "Profile image updated successfully",
+        profileImageUrl: imageData,
+        user: updatedUser
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Complete profile after Google OAuth (legacy endpoint)
   app.post("/api/auth/complete-profile", authenticateUser, async (req, res) => {
     try {

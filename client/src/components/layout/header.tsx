@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
 import { COMPANY_INFO } from '@/lib/constants';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
 import bakeryPattern from '@assets/project_20250607_1604012-01_1749292781428.png';
+import OptimizedImage from '@/components/OptimizedImage';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -133,12 +135,25 @@ export default function Header() {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <div className="relative">
-                      <User className="h-5 w-5 text-navy" />
-                      {user?.authProvider === 'google' && !user?.profileCompleted && (
+                      {(user as any)?.profileImageUrl ? (
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user.username || 'Profile'} />
+                          <AvatarFallback className="bg-champagne text-navy text-sm font-semibold">
+                            {((user as any).firstName || user.username || 'U').charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <Avatar className="h-8 w-8 bg-champagne">
+                          <AvatarFallback className="bg-champagne text-navy text-sm font-semibold">
+                            {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      {(user as any)?.authProvider === 'google' && !(user as any)?.profileCompleted && (
                         <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
                       )}
                     </div>
-                    <span className="text-navy font-medium">Namaste, {user?.firstName || user?.username}</span>
+                    <span className="text-navy font-medium">Namaste, {(user as any)?.firstName || user?.username}</span>
                   </div>
                 </Link>
 
@@ -283,10 +298,23 @@ export default function Header() {
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
                     onClick={() => setIsDesktopMenuOpen(false)}
                   >
-                    <User className="h-6 w-6 text-navy" />
+                    {(user as any)?.profileImageUrl ? (
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user.username || 'Profile'} />
+                        <AvatarFallback className="bg-champagne text-navy font-semibold">
+                          {((user as any).firstName || user.username || 'U').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <Avatar className="h-10 w-10 bg-champagne">
+                        <AvatarFallback className="bg-champagne text-navy font-semibold">
+                          {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div>
                       <p className="text-sm text-navy/70">Welcome back</p>
-                      <p className="font-semibold text-navy">Namaste, {user?.username}</p>
+                      <p className="font-semibold text-navy">Namaste, {(user as any)?.firstName || user?.username}</p>
                     </div>
                   </div>
                 </Link>

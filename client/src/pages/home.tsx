@@ -10,6 +10,7 @@ import ProductCard from '@/components/product/product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
 import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
+import GoogleOneTapDemo from '@/components/GoogleOneTapDemo';
 import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
 
@@ -62,6 +63,19 @@ export default function Home() {
 
       {/* Category Showcase - Automatic Moving Carousel */}
       <CategoryShowcase />
+
+      {/* Google One Tap Demo - Show only for non-authenticated users */}
+      {!isAuthenticated && (
+        <section className="py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-navy mb-2">Sign In Seamlessly</h2>
+              <p className="text-gray-600">Experience our smart Google One-Tap sign in - no page reloads, cart stays intact!</p>
+            </div>
+            <GoogleOneTapDemo />
+          </div>
+        </section>
+      )}
 
       {/* Featured Products - Product Catalogue */}
       <section className="pt-2 pb-16 bg-background">

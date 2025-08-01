@@ -1113,6 +1113,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Google One Tap verification endpoint
+  app.post("/api/auth/google/verify", async (req, res) => {
+    try {
+      const { credential } = req.body;
+      
+      if (!credential) {
+        return res.status(400).json({ message: 'No credential provided' });
+      }
+
+      // Decode the JWT token from Google
+      const decoded = jwt.decode(credential, { complete: true });
+      if (!decoded || !decoded.payload) {
+        return res.status(400).json({ message: 'Invalid credential' });
+      }
+
+      const payload = decoded.payload as any;
+      const email = payload.email;
+      const name = payload.name;
+      const googleId = payload.sub;
+
+      // Check if user exists
+      let user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Create new user with Google account
+        const newUser = {
+          username: email,
+          email: email,
+          password: '', // Empty password for Google users
+          role: 'customer' as const,
+          googleId: googleId,
+        };
+        
+        user = await storage.createUser(newUser);
+      } else if (!user.googleId) {
+        // Link existing account with Google
+        await storage.updateUserGoogleId(user.id, googleId);
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user.id, username: user.username, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+      });
+
+    } catch (error: any) {
+      console.error('Google verification error:', error);
+      res.status(500).json({ message: 'Authentication failed' });
+    }
+  });
+
   app.get("/api/admin/analytics", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const analytics = await storage.getAnalytics();

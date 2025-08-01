@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { CartProvider } from "./hooks/use-cart";
 import PWAInstaller from "./components/PWAInstaller";
 import InstallPrompt from "./components/InstallPrompt";
+import GoogleOneTap from "./components/GoogleOneTap";
 
 // Pages
 import Home from "@/pages/home";
@@ -110,6 +111,7 @@ function AppContent() {
     <>
       <PWAInstaller />
       <InstallPrompt />
+      <GoogleOneTap />
       <Router />
     </>
   );

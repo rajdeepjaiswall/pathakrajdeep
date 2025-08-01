@@ -10,6 +10,7 @@ import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
 import ProductCard from '@/components/product/product-card';
+import { useAllProductRatings } from '@/hooks/use-product-ratings';
 
 export default function Products() {
   const [location] = useLocation();
@@ -32,6 +33,9 @@ export default function Products() {
   const { data: categories = [] } = useQuery({
     queryKey: ['/api/categories'],
   });
+
+  // Fetch product ratings for better performance
+  const { data: ratings = {} } = useAllProductRatings();
 
   // Get current category details for banner display
   const currentCategory = categories.find((cat: any) => cat.id.toString() === selectedCategory);

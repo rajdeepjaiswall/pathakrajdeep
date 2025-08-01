@@ -7,6 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useWishlist } from '@/hooks/use-wishlist';
 import { Product } from '@shared/schema';
+import { useAllProductRatings } from '@/hooks/use-product-ratings';
+import { StarRating } from '@/components/ui/star-rating';
 
 export function TrendingProducts() {
   const [, setLocation] = useLocation();
@@ -14,6 +16,7 @@ export function TrendingProducts() {
     queryKey: ['/api/products/trending'],
   });
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { data: ratings = {} } = useAllProductRatings();
 
   const scrollLeft = () => {
     const container = document.getElementById('trending-scroll');
@@ -136,7 +139,17 @@ export function TrendingProducts() {
                   </h3>
                 </div>
                 
-                <div className="mt-auto">
+                <div className="mt-auto space-y-2">
+                  {/* Star rating display */}
+                  {ratings[product.id]?.hasRatings && (
+                    <StarRating 
+                      rating={ratings[product.id].averageRating || 0}
+                      reviewCount={ratings[product.id].reviewCount}
+                      size="sm"
+                      className="justify-center"
+                    />
+                  )}
+                  
                   <div className="flex items-center justify-between">
                     <Badge variant="secondary" className="bg-orange-100 text-orange-700 text-xs">
                       Trending

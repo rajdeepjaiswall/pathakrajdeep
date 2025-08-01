@@ -1504,6 +1504,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get product ratings (average rating and review count)
+  app.get("/api/products/:id/rating", async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const rating = await storage.getProductRating(productId);
+      res.json(rating);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all product ratings at once for better performance
+  app.get("/api/products/ratings", async (req, res) => {
+    try {
+      const ratings = await storage.getAllProductRatings();
+      res.json(ratings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin: Get all reviews for management
   app.get("/api/admin/reviews", authenticateToken, requireAdmin, async (req, res) => {
     try {

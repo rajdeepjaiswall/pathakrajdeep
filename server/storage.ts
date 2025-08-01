@@ -943,6 +943,55 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(item => item.productId);
   }
+
+  // Get product rating data
+  async getProductRating(productId: number): Promise<{ averageRating: number | null; reviewCount: number; hasRatings: boolean }> {
+    const result = await db
+      .select({
+        averageRating: sql<number>`AVG(${reviews.rating})::numeric(2,1)`,
+        reviewCount: sql<number>`COUNT(*)::integer`,
+      })
+      .from(reviews)
+      .where(and(eq(reviews.product_id, productId), eq(reviews.isApproved, true)));
+
+    const rating = result[0];
+    const averageRating = rating?.averageRating ? parseFloat(rating.averageRating.toString()) : null;
+    const reviewCount = rating?.reviewCount || 0;
+    
+    return {
+      averageRating,
+      reviewCount,
+      hasRatings: reviewCount > 0
+    };
+  }
+
+  // Get all product ratings for better performance
+  async getAllProductRatings(): Promise<Record<number, { averageRating: number | null; reviewCount: number; hasRatings: boolean }>> {
+    const result = await db
+      .select({
+        productId: reviews.product_id,
+        averageRating: sql<number>`AVG(${reviews.rating})::numeric(2,1)`,
+        reviewCount: sql<number>`COUNT(*)::integer`,
+      })
+      .from(reviews)
+      .where(eq(reviews.isApproved, true))
+      .groupBy(reviews.product_id);
+
+    const ratings: Record<number, { averageRating: number | null; reviewCount: number; hasRatings: boolean }> = {};
+    
+    for (const rating of result) {
+      const averageRating = rating.averageRating ? parseFloat(rating.averageRating.toString()) : null;
+      const reviewCount = rating.reviewCount || 0;
+      
+      ratings[rating.productId] = {
+        averageRating,
+        reviewCount,
+        hasRatings: reviewCount > 0
+      };
+    }
+    
+    return ratings;
+  }
 }
 
 export const storage = new DatabaseStorage();

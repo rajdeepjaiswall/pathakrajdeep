@@ -21,23 +21,13 @@ export default function AdminLogin() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate admin credentials
-    if (username !== ADMIN_CREDENTIALS.shopkeeper.username || password !== ADMIN_CREDENTIALS.shopkeeper.password) {
-      toast({
-        title: 'Invalid Credentials',
-        description: 'Please check your username and password',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setIsLoading(true);
+    
     try {
       const response = await login({ username, password });
       
       if (response.user.role !== 'admin' && response.user.role !== 'super_admin') {
-        throw new Error('Unauthorized access');
+        throw new Error('Unauthorized access - Admin privileges required');
       }
 
       authLogin(response.user, response.token);

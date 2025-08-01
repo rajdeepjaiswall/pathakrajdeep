@@ -21,23 +21,13 @@ export default function SuperAdminLogin() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate super admin credentials
-    if (username !== ADMIN_CREDENTIALS.superAdmin.username || password !== ADMIN_CREDENTIALS.superAdmin.password) {
-      toast({
-        title: 'Invalid Credentials',
-        description: 'Please check your username and password',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setIsLoading(true);
+    
     try {
       const response = await login({ username, password });
       
       if (response.user.role !== 'super_admin') {
-        throw new Error('Super admin access required');
+        throw new Error('Unauthorized access - Super Admin privileges required');
       }
 
       authLogin(response.user, response.token);

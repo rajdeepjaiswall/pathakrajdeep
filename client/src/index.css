@@ -68,6 +68,23 @@
     background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="bakery" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="1" fill="%23D4B483" opacity="0.1"/><path d="M15 10c0-2 1-3 2-3s2 1 2 3-1 3-2 3-2-1-2-3z" fill="%23E6C7A6" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23bakery)"/></svg>');
   }
   
+  /* Logo pulse animation - subtle scaling every 2 seconds */
+  @keyframes pulse-logo {
+    0%, 90%, 100% {
+      transform: scale(1);
+    }
+    5% {
+      transform: scale(1.1);
+    }
+    10% {
+      transform: scale(1);
+    }
+  }
+  
+  .animate-pulse-logo {
+    animation: pulse-logo 2s ease-in-out infinite;
+  }
+  
   .gradient-overlay {
     background: linear-gradient(135deg, rgba(252,232,213,0.9) 0%, rgba(230,199,166,0.8) 100%);
   }

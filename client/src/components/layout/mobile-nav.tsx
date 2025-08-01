@@ -87,7 +87,7 @@ export default function MobileNav() {
                   <img 
                     src={`/api/logo?v=${Date.now()}`} 
                     alt="KB Logo" 
-                    className={`object-contain transition-all duration-200 ${isActive ? 'h-9 w-9' : 'h-8 w-8'}`}
+                    className={`object-contain transition-all duration-200 animate-pulse-logo ${isActive ? 'h-9 w-9' : 'h-8 w-8'}`}
                     style={{ 
                       filter: isActive 
                         ? 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%)' 
@@ -95,7 +95,7 @@ export default function MobileNav() {
                     }}
                   />
                   {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-navy rounded-full"></div>
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
                   )}
                 </div>
               ) : isAccount && isAuthenticated && (user as any)?.profileImageUrl ? (

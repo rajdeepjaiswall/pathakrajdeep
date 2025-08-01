@@ -97,14 +97,32 @@ export default function Footer() {
                 </svg>
                 <span className="text-sm">{COMPANY_INFO.phone}</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <svg className="h-5 w-5 text-champagne flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                </svg>
-                <a href="mailto:rajdeep.jaiswal7@gmail.com" className="text-sm hover:text-champagne transition-colors">
-                  rajdeep.jaiswal7@gmail.com
-                </a>
+              <div className="space-y-3">
+                <div>
+                  <h5 className="text-champagne text-sm font-semibold mb-2">Support Email</h5>
+                  <div className="flex items-center space-x-3">
+                    <svg className="h-5 w-5 text-champagne flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                    </svg>
+                    <a href="mailto:rajdeep.jaiswal7@gmail.com" className="text-sm hover:text-champagne transition-colors">
+                      rajdeep.jaiswal7@gmail.com
+                    </a>
+                  </div>
+                </div>
+                <div>
+                  <h5 className="text-champagne text-sm font-semibold mb-2">Data Privacy & Consent</h5>
+                  <div className="flex items-center space-x-3">
+                    <svg className="h-5 w-5 text-champagne flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                    </svg>
+                    <a href="mailto:getdownaf@gmail.com" className="text-sm hover:text-champagne transition-colors">
+                      getdownaf@gmail.com
+                    </a>
+                  </div>
+                  <p className="text-cream/60 text-xs mt-1">For questions about data privacy and consent</p>
+                </div>
               </div>
               <div className="flex items-center space-x-3">
                 <svg className="h-5 w-5 text-champagne flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">

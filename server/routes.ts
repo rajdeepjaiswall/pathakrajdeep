@@ -1192,26 +1192,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const email = payload.email;
       const name = payload.name;
       const googleId = payload.sub;
+      const profilePicture = payload.picture; // Extract profile picture URL
+      const firstName = payload.given_name;
+      const lastName = payload.family_name;
 
       // Check if user exists
       let user = await storage.getUserByEmail(email);
       
       if (!user) {
-        // Create new user with Google account
+        // Create new user with Google account including profile picture
         const newUser = {
           username: email,
           email: email,
+          firstName: firstName || name?.split(' ')[0] || null,
+          lastName: lastName || name?.split(' ').slice(1).join(' ') || null,
           password: '', // Empty password for Google users
           role: 'customer' as const,
           googleId: googleId,
+          profileImageUrl: profilePicture || null, // Save Google profile picture
+          authProvider: 'google',
+          isVerified: true, // Google accounts are verified
         };
         
         user = await storage.createUser(newUser);
       } else if (!user.googleId) {
-        // Link existing account with Google
+        // Link existing account with Google and update profile picture
         await storage.updateUserGoogleId(user.id, googleId);
+        
+        // Update profile picture if user doesn't have one or if it's from Google
+        if (!user.profileImageUrl || user.authProvider === 'google') {
+          await storage.updateUserProfile(user.id, {
+            profileImageUrl: profilePicture || null,
+            firstName: firstName || user.firstName,
+            lastName: lastName || user.lastName,
+            authProvider: 'google',
+            isVerified: true,
+          });
+        }
+      } else if (user.googleId === googleId) {
+        // Update existing Google user's profile picture if changed
+        if (profilePicture && user.profileImageUrl !== profilePicture) {
+          await storage.updateUserProfile(user.id, {
+            profileImageUrl: profilePicture,
+            firstName: firstName || user.firstName,
+            lastName: lastName || user.lastName,
+          });
+        }
       }
 
+      // Fetch updated user data to include profile picture
+      const updatedUser = await storage.getUser(user.id);
+      
       // Generate JWT token
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role },
@@ -1222,10 +1253,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         token,
         user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
+          id: updatedUser?.id || user.id,
+          username: updatedUser?.username || user.username,
+          email: updatedUser?.email || user.email,
+          firstName: updatedUser?.firstName,
+          lastName: updatedUser?.lastName,
+          profileImageUrl: updatedUser?.profileImageUrl,
+          role: updatedUser?.role || user.role,
+          authProvider: updatedUser?.authProvider,
+          isVerified: updatedUser?.isVerified,
         },
       });
 

@@ -19,6 +19,7 @@ export interface IStorage {
   createGoogleUser(user: any): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
   updateUserGoogleId(id: number, googleId: string): Promise<User>;
+  updateUserProfile(id: number, profile: Partial<InsertUser>): Promise<User>;
   getCustomers(): Promise<User[]>;
 
   // Address methods
@@ -167,6 +168,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set(updateUser)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserProfile(id: number, profile: Partial<InsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ ...profile, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
     return user;

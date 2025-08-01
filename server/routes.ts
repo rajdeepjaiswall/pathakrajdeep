@@ -9,7 +9,7 @@ import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 
-const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-default-secret-key-2024";
 
 // Extend Request interface to include user
 declare global {

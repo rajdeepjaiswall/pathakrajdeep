@@ -21,10 +21,10 @@ declare global {
 // Session-based authentication middleware
 async function authenticateUser(req: any, res: any, next: any) {
   // Check if user is authenticated via session
-  if (req.session?.user) {
+  if ((req.session as any)?.user) {
     try {
       // Get fresh user data from database
-      const user = await storage.getUser(req.session.user.id);
+      const user = await storage.getUser((req.session as any).user.id);
       if (user) {
         req.user = user;
         return next();
@@ -45,10 +45,10 @@ async function authenticateUser(req: any, res: any, next: any) {
 // Optional authentication middleware for cart/wishlist
 async function optionalAuth(req: any, res: any, next: any) {
   // Check if user is authenticated via session
-  if (req.session?.user) {
+  if ((req.session as any)?.user) {
     try {
       // Get fresh user data from database
-      const user = await storage.getUser(req.session.user.id);
+      const user = await storage.getUser((req.session as any).user.id);
       if (user) {
         req.user = user;
         return next();
@@ -64,9 +64,9 @@ async function optionalAuth(req: any, res: any, next: any) {
   }
   
   // Special handling for Google OAuth users - try to fetch from session manually
-  if (req.session?.passport?.user) {
+  if ((req.session as any)?.passport?.user) {
     try {
-      const user = await storage.getUser(req.session.passport.user);
+      const user = await storage.getUser((req.session as any).passport.user);
       if (user) {
         req.user = user;
         return next();
@@ -165,14 +165,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create session for the authenticated user
-      req.session.user = {
+      (req.session as any).user = {
         id: user.id,
         username: user.username,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role
+        role: user.role,
+        profileCompleted: user.profileCompleted
       };
+
+      console.log('Login successful - Session created for user:', user.id);
 
       res.json({ 
         message: 'Login successful',
@@ -181,7 +184,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: user.username, 
           role: user.role, 
           email: user.email, 
-          phone: user.phone 
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+          authProvider: user.authProvider,
+          isVerified: user.isVerified,
+          profileCompleted: user.profileCompleted,
         } 
       });
     } catch (error: any) {
@@ -299,27 +307,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/status', optionalAuth, async (req, res) => {
     try {
       console.log('Auth status check:', {
-        hasSessionUser: !!req.session?.user,
+        hasSessionUser: !!((req.session as any)?.user),
         hasPassportUser: !!req.user,
         sessionId: req.sessionID || 'none'
       });
 
       // If we have a user from middleware (session), return it
       if (req.user) {
-        console.log('Authenticated user found:', req.user.id);
+        console.log('Authenticated user found:', (req.user as any).id);
         return res.json({
           isAuthenticated: true,
           authType: 'session',
           user: {
-            id: req.user.id,
-            username: req.user.username,
-            email: req.user.email,
-            firstName: req.user.firstName,
-            lastName: req.user.lastName,
-            role: req.user.role,
-            profileImageUrl: req.user.profileImageUrl,
-            authProvider: req.user.authProvider,
-            isVerified: req.user.isVerified,
+            id: (req.user as any).id,
+            username: (req.user as any).username,
+            email: (req.user as any).email,
+            firstName: (req.user as any).firstName,
+            lastName: (req.user as any).lastName,
+            role: (req.user as any).role,
+            profileImageUrl: (req.user as any).profileImageUrl,
+            authProvider: (req.user as any).authProvider,
+            isVerified: (req.user as any).isVerified,
+            profileCompleted: (req.user as any).profileCompleted,
           }
         });
       }

@@ -1,5 +1,6 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { OAuth2Client } from "google-auth-library";
 import { storage } from "./storage";
 import type { Express } from "express";
 import session from "express-session";
@@ -152,6 +153,15 @@ export function setupSession(app: Express) {
     tableName: "sessions",
   });
 
+  // Enhanced session configuration with debugging
+  console.log('Session configuration:', {
+    environment: process.env.NODE_ENV,
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: '1 hour',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  });
+
   app.use(session({
     secret: process.env.SESSION_SECRET || "pathak-bakery-session-secret",
     store: sessionStore,
@@ -159,9 +169,9 @@ export function setupSession(app: Express) {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Only secure in production
+      secure: process.env.NODE_ENV === 'production',
       maxAge: sessionTtl, // 1 hour
-      sameSite: 'lax', // Allow cross-site requests for OAuth callbacks
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site for OAuth
       domain: undefined, // Don't restrict domain for flexibility
     },
     name: 'pathak.session', // Custom session name
@@ -217,7 +227,7 @@ export function setupGoogleAuthRoutes(app: Express) {
         }
 
         // Create session for the authenticated user
-        req.session.user = {
+        (req.session as any).user = {
           id: user.id,
           username: user.username,
           email: user.email,
@@ -241,13 +251,112 @@ export function setupGoogleAuthRoutes(app: Express) {
     }
   );
 
+  // Google One Tap credential verification endpoint
+  app.post("/api/auth/google/verify", async (req, res) => {
+    try {
+      const { credential } = req.body;
+      
+      if (!credential) {
+        return res.status(400).json({ message: "No credential provided" });
+      }
+
+      console.log('Verifying Google One Tap credential...');
+      
+      // Create OAuth2Client to verify the credential
+      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      
+      // Verify the credential
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      
+      const payload = ticket.getPayload();
+      if (!payload) {
+        throw new Error('Invalid token payload');
+      }
+
+      console.log('Google One Tap verification successful:', { 
+        sub: payload.sub, 
+        email: payload.email 
+      });
+
+      // Check if user exists by Google ID
+      let user = await storage.getUserByGoogleId(payload.sub);
+      
+      if (!user && payload.email) {
+        // Check if user exists by email
+        user = await storage.getUserByEmail(payload.email);
+        if (user) {
+          // Link Google ID to existing account
+          user = await storage.updateUser(user.id, {
+            googleId: payload.sub,
+            profileImageUrl: payload.picture?.replace('s96-c', 's200-c'),
+          });
+        }
+      }
+      
+      if (!user) {
+        // Create new user from Google One Tap
+        const userData = {
+          username: payload.email?.split('@')[0] || 'user',
+          email: payload.email || '',
+          firstName: payload.given_name || '',
+          lastName: payload.family_name || '',
+          googleId: payload.sub,
+          profileImageUrl: payload.picture?.replace('s96-c', 's200-c'),
+          authProvider: 'google' as const,
+          isVerified: true,
+          profileCompleted: false,
+        };
+        
+        user = await storage.createUser(userData);
+        console.log('Created new user from Google One Tap:', user.id);
+      }
+
+      // Create session for the authenticated user
+      (req.session as any).user = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        profileCompleted: user.profileCompleted
+      };
+
+      console.log('Google One Tap session created for user:', user.id);
+
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          profileCompleted: user.profileCompleted,
+          profileImageUrl: user.profileImageUrl,
+          authProvider: user.authProvider
+        }
+      });
+      
+    } catch (error) {
+      console.error('Google One Tap verification failed:', error);
+      res.status(401).json({ 
+        message: 'Authentication failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Note: /api/auth/status endpoint is handled in routes.ts to support both JWT and session auth
 
   // Logout route (destroys session and clears cookies)
   app.post("/api/auth/logout", (req, res) => {
     // Clear session user data
     if (req.session) {
-      req.session.user = null;
+      (req.session as any).user = null;
     }
     
     // Also clear passport session if it exists

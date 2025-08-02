@@ -67,26 +67,39 @@ Supports dual database configurations:
 ### JWT to Session-Based Authentication Migration
 - **Complete JWT Removal**: Eliminated all JWT token dependencies (jsonwebtoken, cookie-parser packages)
 - **Session-Only Authentication**: Migrated to pure express-session with PostgreSQL storage
-- **Session Configuration**: 1-hour session expiry, httpOnly and secure cookies in production
+- **Enhanced Session Configuration**: 1-hour session expiry, httpOnly and secure cookies, sameSite settings for OAuth
 - **Authentication Middleware**: Updated all auth middleware to use req.session.user instead of JWT tokens
 - **Client-Side Updates**: Modified auth functions to use session cookies with credentials: 'include'
 - **Google OAuth Integration**: Updated Google OAuth callback to create sessions instead of JWT tokens
 
+### Google One Tap Implementation (August 2025)
+- **Enhanced Google One Tap**: Added comprehensive environment checks (HTTPS, iframe detection)
+- **Automatic Fallback Handling**: Graceful degradation when One Tap is blocked or unavailable
+- **Verification Endpoint**: New /api/auth/google/verify endpoint for One Tap credential handling
+- **Session Integration**: Google One Tap creates proper sessions with full user data
+- **Debugging & Logging**: Extensive console logging for OAuth flows and session management
+- **Security Improvements**: Better error handling and user feedback for failed authentications
+
 ### Environment Variables Required for Deployment
 - **DATABASE_URL**: PostgreSQL connection string (critical)
 - **SESSION_SECRET**: Express session encryption (critical)
+- **GOOGLE_CLIENT_ID**: Google OAuth client ID (required for Google authentication)
+- **GOOGLE_CLIENT_SECRET**: Google OAuth client secret (required for Google authentication)
 - **OPENAI_API_KEY**: AI search functionality (optional)
 - **NODE_ENV**: Set to 'production' for production deployments
 
 ### Authentication Flow Changes
 - Login/Register: Creates server-side session instead of returning JWT token
-- Google OAuth: Creates session on successful authentication callback
+- Google OAuth: Creates session on successful authentication callback with enhanced debugging
+- Google One Tap: Direct credential verification with automatic session creation
 - Client Authentication: Uses session cookies automatically, no Authorization headers
 - Logout: Destroys server session and clears session cookie
 
 ### Deployment Status
 ✅ Application successfully starts and runs
 ✅ Database connectivity working
-✅ Session-based authentication functional
+✅ Session-based authentication functional with enhanced security
+✅ Google One Tap implemented with fallback handling
+✅ Comprehensive debugging for OAuth flows
 ✅ Search works with/without OpenAI API
 ✅ All core features operational with sessions

@@ -103,9 +103,20 @@ export async function verifyOTP(phone: string, otp: string): Promise<AuthRespons
   return data;
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
+  // Clear localStorage first
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  
+  // Also call server logout to clear cookie and session
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include', // Include cookies in the request
+    });
+  } catch (error) {
+    console.log('Server logout failed, but localStorage cleared');
+  }
 }
 
 export function getStoredToken(): string | null {
@@ -117,8 +128,43 @@ export function getStoredUser(): User | null {
   return user ? JSON.parse(user) : null;
 }
 
+// Function to get user data from server for cookie-authenticated users (Google OAuth)
+export async function getCurrentUser(): Promise<User | null> {
+  try {
+    const response = await fetch('/api/auth/status', {
+      credentials: 'include', // Include cookies
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.isAuthenticated && data.user) {
+      // For Google OAuth users, store user data locally for consistency
+      localStorage.setItem('user', JSON.stringify(data.user));
+      return data.user;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    return null;
+  }
+}
+
 export function isAuthenticated(): boolean {
-  return !!getStoredToken();
+  // Check localStorage token first
+  if (getStoredToken()) {
+    return true;
+  }
+  
+  // Check if cookie-based authentication is present (for Google OAuth users)
+  const cookies = document.cookie.split(';');
+  const isLoggedInCookie = cookies.find(cookie => cookie.trim().startsWith('isLoggedIn='));
+  
+  return isLoggedInCookie ? isLoggedInCookie.split('=')[1] === 'true' : false;
 }
 
 export function hasRole(role: string): boolean {

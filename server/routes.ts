@@ -37,14 +37,29 @@ function authenticateToken(req: any, res: any, next: any) {
   });
 }
 
-// Hybrid authentication middleware (JWT or Session)
-function authenticateUser(req: any, res: any, next: any) {
-  // Check for session-based authentication first (Google OAuth)
+// Hybrid authentication middleware (JWT from cookies/headers or Session)
+async function authenticateUser(req: any, res: any, next: any) {
+  // First, check for JWT token in HTTP-only cookie (Google OAuth users)  
+  const cookieToken = req.cookies?.authToken;
+  if (cookieToken) {
+    try {
+      const decoded = jwt.verify(cookieToken, JWT_SECRET) as any;
+      const user = await storage.getUser(decoded.id);
+      if (user) {
+        req.user = user;
+        return next();
+      }
+    } catch (error) {
+      console.error('Error verifying cookie token:', error);
+    }
+  }
+
+  // Check for session-based authentication (Google OAuth fallback)
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
   }
   
-  // Fall back to JWT authentication
+  // Fall back to JWT authentication from Authorization header
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -52,16 +67,42 @@ function authenticateUser(req: any, res: any, next: any) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+  jwt.verify(token, JWT_SECRET, async (err: any, decoded: any) => {
     if (err) return res.status(401).json({ message: 'Authentication required' });
-    req.user = user;
-    next();
+    
+    // Get full user object instead of just using decoded token
+    try {
+      const user = await storage.getUser(decoded.id);
+      if (user) {
+        req.user = user;
+        next();
+      } else {
+        res.status(401).json({ message: 'User not found' });
+      }
+    } catch (error) {
+      res.status(401).json({ message: 'Authentication failed' });
+    }
   });
 }
 
 // Optional authentication middleware for cart/wishlist
 async function optionalAuth(req: any, res: any, next: any) {
-  // Check for session-based authentication first (Google OAuth)
+  // First, check for JWT token in HTTP-only cookie (Google OAuth users)
+  const cookieToken = req.cookies?.authToken;
+  if (cookieToken) {
+    try {
+      const decoded = jwt.verify(cookieToken, JWT_SECRET) as any;
+      const user = await storage.getUser(decoded.id);
+      if (user) {
+        req.user = user;
+        return next();
+      }
+    } catch (error) {
+      console.error('Error verifying cookie token:', error);
+    }
+  }
+
+  // Check for session-based authentication (Google OAuth fallback)
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
   }
@@ -79,16 +120,23 @@ async function optionalAuth(req: any, res: any, next: any) {
     }
   }
   
-  // Check JWT token
+  // Check JWT token in Authorization header (regular login users)
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (token) {
-    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
       if (!err) {
-        req.user = user;
+        // Store full user object instead of just decoded token
+        storage.getUser(decoded.id).then(user => {
+          if (user) {
+            req.user = user;
+          }
+          next();
+        }).catch(() => next());
+      } else {
+        next();
       }
-      next();
     });
   } else {
     next();
@@ -282,10 +330,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
         hasSessionUser: !!req.user,
         sessionData: req.session ? Object.keys(req.session) : null,
-        sessionId: req.sessionID || 'none'
+        sessionId: req.sessionID || 'none',
+        hasCookieToken: !!req.cookies?.authToken
       });
 
-      // Check session-based auth first (Google OAuth)
+      // If we have a user from middleware (JWT or session), return it
+      if (req.user) {
+        console.log('Authenticated user found:', req.user.id);
+        return res.json({
+          isAuthenticated: true,
+          authType: req.cookies?.authToken ? 'cookie-jwt' : 'session',
+          user: {
+            id: req.user.id,
+            username: req.user.username,
+            email: req.user.email,
+            firstName: req.user.firstName,
+            lastName: req.user.lastName,
+            role: req.user.role,
+            profileImageUrl: req.user.profileImageUrl,
+            authProvider: req.user.authProvider,
+            isVerified: req.user.isVerified,
+          }
+        });
+      }
+
+      // Check session-based auth first (Google OAuth fallback)
       if (req.isAuthenticated && req.isAuthenticated() && req.user) {
         console.log('Session user found:', req.user.id);
         // Fetch complete user data from database

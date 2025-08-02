@@ -210,12 +210,45 @@ export function setupGoogleAuthRoutes(app: Express) {
     passport.authenticate("google", { failureRedirect: "/customer/login" }),
     async (req, res) => {
       try {
-        // Check if user needs to complete profile
         const user = req.user as any;
+        
+        if (!user) {
+          return res.redirect("/customer/login?error=auth_failed");
+        }
+
+        // Generate JWT token for the authenticated user
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-default-secret-key-2024";
+        
+        const token = jwt.sign(
+          { id: user.id, username: user.username, role: user.role },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
+        // Set secure HTTP-only cookie with the JWT token
+        res.cookie('authToken', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          sameSite: 'lax'
+        });
+
+        // Also set a client-readable flag to indicate login success
+        res.cookie('isLoggedIn', 'true', {
+          httpOnly: false,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          sameSite: 'lax'
+        });
+
+        console.log('Google OAuth success - JWT token issued for user:', user.id);
+
+        // Check if user needs to complete profile
         if (user && !user.profileCompleted) {
-          res.redirect("/complete-profile");
+          res.redirect("/complete-profile?google_auth=success");
         } else {
-          res.redirect("/account");
+          res.redirect("/account?google_auth=success");
         }
       } catch (error) {
         console.error("Google OAuth callback error:", error);
@@ -226,13 +259,25 @@ export function setupGoogleAuthRoutes(app: Express) {
 
   // Note: /api/auth/status endpoint is handled in routes.ts to support both JWT and session auth
 
-  // Logout route
+  // Logout route (clears both session and JWT cookies)
   app.post("/api/auth/logout", (req, res) => {
+    // Clear JWT cookie
+    res.clearCookie('authToken');
+    res.clearCookie('isLoggedIn');
+    
+    // Also clear session if it exists
     req.logout((err) => {
       if (err) {
-        return res.status(500).json({ message: "Error logging out" });
+        console.error("Session logout error:", err);
       }
-      res.json({ message: "Logged out successfully" });
+      
+      // Destroy session completely
+      req.session.destroy((sessionErr) => {
+        if (sessionErr) {
+          console.error("Session destruction error:", sessionErr);
+        }
+        res.json({ message: "Logged out successfully" });
+      });
     });
   });
 }

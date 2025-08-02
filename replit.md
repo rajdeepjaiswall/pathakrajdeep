@@ -31,7 +31,7 @@ Supports dual database configurations:
 - **Migrations**: Drizzle Kit
 
 ### Key Features & Implementations
-- **Authentication System**: Multi-role (Customer, Admin, Super Admin) authentication with JWTs and bcrypt hashing, role-based access control, and Google OAuth integration with session management. Fixed authentication flow issues between Google OAuth sessions and profile completion form.
+- **Authentication System**: Session-based authentication with express-session and PostgreSQL storage, multi-role (Customer, Admin, Super Admin) with bcrypt hashing, role-based access control, and Google OAuth integration. Transitioned from JWT tokens to pure server-side sessions with 1-hour expiry and secure cookie configuration.
 - **Product Management**: Hierarchical category system, comprehensive product catalog with images, pricing, inventory, GST integration, and branded image fallback system.
 - **E-commerce Features**: Persistent shopping cart, wishlist, full order management lifecycle, address management, and UPI QR code payment integration.
 - **Admin Dashboard**: Comprehensive order, product, customer, and banner management, with basic sales and inventory reporting.
@@ -62,24 +62,31 @@ Supports dual database configurations:
 - Web Audio API (for audio notifications)
 - OpenAI API (for enhanced search with AI translation - optional)
 
-## Recent Changes & Deployment Fixes (August 2025)
+## Recent Changes & Authentication Migration (August 2025)
 
-### Production Deployment Issues Resolved
-- **OpenAI Package**: Added missing `openai` package that was causing deployment failures
-- **Environment Variables**: Enhanced error handling for missing DATABASE_URL and other critical environment variables
-- **Search Service**: Added graceful fallbacks when OpenAI API key is not configured
-- **Error Messages**: Improved debugging information for deployment troubleshooting
+### JWT to Session-Based Authentication Migration
+- **Complete JWT Removal**: Eliminated all JWT token dependencies (jsonwebtoken, cookie-parser packages)
+- **Session-Only Authentication**: Migrated to pure express-session with PostgreSQL storage
+- **Session Configuration**: 1-hour session expiry, httpOnly and secure cookies in production
+- **Authentication Middleware**: Updated all auth middleware to use req.session.user instead of JWT tokens
+- **Client-Side Updates**: Modified auth functions to use session cookies with credentials: 'include'
+- **Google OAuth Integration**: Updated Google OAuth callback to create sessions instead of JWT tokens
 
 ### Environment Variables Required for Deployment
 - **DATABASE_URL**: PostgreSQL connection string (critical)
-- **JWT_SECRET**: Authentication token signing (critical)  
 - **SESSION_SECRET**: Express session encryption (critical)
 - **OPENAI_API_KEY**: AI search functionality (optional)
 - **NODE_ENV**: Set to 'production' for production deployments
 
+### Authentication Flow Changes
+- Login/Register: Creates server-side session instead of returning JWT token
+- Google OAuth: Creates session on successful authentication callback
+- Client Authentication: Uses session cookies automatically, no Authorization headers
+- Logout: Destroys server session and clears session cookie
+
 ### Deployment Status
 ✅ Application successfully starts and runs
 ✅ Database connectivity working
-✅ Authentication system functional
+✅ Session-based authentication functional
 ✅ Search works with/without OpenAI API
-✅ All core features operational
+✅ All core features operational with sessions

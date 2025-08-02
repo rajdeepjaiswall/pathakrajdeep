@@ -143,7 +143,7 @@ export function initializeGoogleAuth() {
 
 // Setup session middleware
 export function setupSession(app: Express) {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtl = 60 * 60 * 1000; // 1 hour as requested
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -159,8 +159,8 @@ export function setupSession(app: Express) {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Allow over HTTP for development and HTTPS proxy setups
-      maxAge: sessionTtl,
+      secure: process.env.NODE_ENV === 'production', // Only secure in production
+      maxAge: sessionTtl, // 1 hour
       sameSite: 'lax', // Allow cross-site requests for OAuth callbacks
       domain: undefined, // Don't restrict domain for flexibility
     },
@@ -216,33 +216,17 @@ export function setupGoogleAuthRoutes(app: Express) {
           return res.redirect("/customer/login?error=auth_failed");
         }
 
-        // Generate JWT token for the authenticated user
-        const jwt = require('jsonwebtoken');
-        const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-default-secret-key-2024";
-        
-        const token = jwt.sign(
-          { id: user.id, username: user.username, role: user.role },
-          JWT_SECRET,
-          { expiresIn: '24h' }
-        );
+        // Create session for the authenticated user
+        req.session.user = {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        };
 
-        // Set secure HTTP-only cookie with the JWT token
-        res.cookie('authToken', token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 24 * 60 * 60 * 1000, // 24 hours
-          sameSite: 'lax'
-        });
-
-        // Also set a client-readable flag to indicate login success
-        res.cookie('isLoggedIn', 'true', {
-          httpOnly: false,
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 24 * 60 * 60 * 1000, // 24 hours
-          sameSite: 'lax'
-        });
-
-        console.log('Google OAuth success - JWT token issued for user:', user.id);
+        console.log('Google OAuth success - Session created for user:', user.id);
 
         // Check if user needs to complete profile
         if (user && !user.profileCompleted) {
@@ -259,23 +243,28 @@ export function setupGoogleAuthRoutes(app: Express) {
 
   // Note: /api/auth/status endpoint is handled in routes.ts to support both JWT and session auth
 
-  // Logout route (clears both session and JWT cookies)
+  // Logout route (destroys session and clears cookies)
   app.post("/api/auth/logout", (req, res) => {
-    // Clear JWT cookie
-    res.clearCookie('authToken');
-    res.clearCookie('isLoggedIn');
+    // Clear session user data
+    if (req.session) {
+      req.session.user = null;
+    }
     
-    // Also clear session if it exists
+    // Also clear passport session if it exists
     req.logout((err) => {
       if (err) {
-        console.error("Session logout error:", err);
+        console.error("Passport logout error:", err);
       }
       
       // Destroy session completely
       req.session.destroy((sessionErr) => {
         if (sessionErr) {
           console.error("Session destruction error:", sessionErr);
+          return res.status(500).json({ message: "Error logging out" });
         }
+        
+        // Clear session cookie
+        res.clearCookie('pathak.session');
         res.json({ message: "Logged out successfully" });
       });
     });

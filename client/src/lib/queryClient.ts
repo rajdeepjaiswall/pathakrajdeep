@@ -12,34 +12,23 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const token = localStorage.getItem('token');
   const headers: Record<string, string> = {};
   
   if (data) {
     headers["Content-Type"] = "application/json";
-  }
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const res = await fetch(url, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include", // Important for session-based auth
+    credentials: "include", // Use session-based auth only
   });
 
   // Handle 401 errors specifically for cart/authentication issues
   if (res.status === 401 && (url.includes('/cart') || url.includes('/wishlist'))) {
     const errorData = await res.json().catch(() => ({}));
     console.error('Authentication error:', errorData);
-    
-    // For debugging, try to simulate login if it's a development environment
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Development mode: Authentication failed, check Google OAuth setup');
-    }
-    
     throw new Error(`${res.status}: ${errorData.message || 'Authentication required'}`);
   }
 
@@ -53,16 +42,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {};
-    
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
     const res = await fetch(queryKey[0] as string, {
-      headers,
-      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // Use session-based auth only
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

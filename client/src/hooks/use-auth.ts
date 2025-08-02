@@ -26,34 +26,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored JWT authentication first
-    const storedUser = getStoredUser();
-    const storedToken = getStoredToken();
-
-    if (storedUser && storedToken) {
-      setUser(storedUser);
-      setToken(storedToken);
-      setAuthType('jwt');
-      setIsLoading(false);
-      return;
-    }
-
-    // Check for session-based authentication (Google OAuth)
+    // Only check for session-based authentication
     checkSessionAuth();
   }, []);
 
   const checkSessionAuth = async () => {
     try {
-      const response = await fetch('/api/auth/status');
+      const response = await fetch('/api/auth/status', {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.isAuthenticated && data.user) {
           setUser(data.user);
           setAuthType('session');
           
+          // Store in localStorage for UI consistency
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
           // Check if Google OAuth user needs to complete profile
           if (data.user.authProvider === 'google' && !data.user.profileCompleted) {
-            // Don't redirect here, let the routing handle it
             console.log('User needs to complete profile');
           }
         }
@@ -65,33 +57,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = (newUser: User, newToken: string) => {
+  const login = (newUser: User) => {
     setUser(newUser);
-    setToken(newToken);
-    setAuthType('jwt');
+    setToken(null);
+    setAuthType('session');
+    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const loginWithSession = (newUser: User) => {
     setUser(newUser);
+    setToken(null);
     setAuthType('session');
+    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const logout = async () => {
-    if (authType === 'session') {
-      // Session-based logout for Google OAuth
-      try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-      } catch (error) {
-        console.error('Session logout error:', error);
-      }
-    } else {
-      // JWT logout
-      authLogout();
+    // Always use session-based logout
+    try {
+      await fetch('/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include' 
+      });
+    } catch (error) {
+      console.error('Session logout error:', error);
     }
     
     setUser(null);
     setToken(null);
     setAuthType(null);
+    localStorage.removeItem('user');
   };
 
   const updateUser = (updatedUser: User) => {
@@ -104,7 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     token,
     authType,
-    isAuthenticated: !!user && (!!token || authType === 'session'),
+    isAuthenticated: !!user,
     login,
     loginWithSession,
     logout,

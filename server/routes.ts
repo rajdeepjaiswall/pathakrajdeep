@@ -4,13 +4,10 @@ import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { SearchService } from "./search-service";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { OAuth2Client } from 'google-auth-library';
-
-const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-default-secret-key-2024";
 
 // Extend Request interface to include user
 declare global {
@@ -21,88 +18,47 @@ declare global {
   }
 }
 
-// Middleware to verify JWT token
-function authenticateToken(req: any, res: any, next: any) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
-    req.user = user;
-    next();
-  });
-}
-
-// Hybrid authentication middleware (JWT from cookies/headers or Session)
+// Session-based authentication middleware
 async function authenticateUser(req: any, res: any, next: any) {
-  // First, check for JWT token in HTTP-only cookie (Google OAuth users)  
-  const cookieToken = req.cookies?.authToken;
-  if (cookieToken) {
+  // Check if user is authenticated via session
+  if (req.session?.user) {
     try {
-      const decoded = jwt.verify(cookieToken, JWT_SECRET) as any;
-      const user = await storage.getUser(decoded.id);
+      // Get fresh user data from database
+      const user = await storage.getUser(req.session.user.id);
       if (user) {
         req.user = user;
         return next();
       }
     } catch (error) {
-      console.error('Error verifying cookie token:', error);
+      console.error('Error fetching user from session:', error);
     }
   }
 
-  // Check for session-based authentication (Google OAuth fallback)
+  // Check passport session (fallback for existing Google OAuth users)
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
   }
-  
-  // Fall back to JWT authentication from Authorization header
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, async (err: any, decoded: any) => {
-    if (err) return res.status(401).json({ message: 'Authentication required' });
-    
-    // Get full user object instead of just using decoded token
-    try {
-      const user = await storage.getUser(decoded.id);
-      if (user) {
-        req.user = user;
-        next();
-      } else {
-        res.status(401).json({ message: 'User not found' });
-      }
-    } catch (error) {
-      res.status(401).json({ message: 'Authentication failed' });
-    }
-  });
+  return res.status(401).json({ message: 'Authentication required' });
 }
 
 // Optional authentication middleware for cart/wishlist
 async function optionalAuth(req: any, res: any, next: any) {
-  // First, check for JWT token in HTTP-only cookie (Google OAuth users)
-  const cookieToken = req.cookies?.authToken;
-  if (cookieToken) {
+  // Check if user is authenticated via session
+  if (req.session?.user) {
     try {
-      const decoded = jwt.verify(cookieToken, JWT_SECRET) as any;
-      const user = await storage.getUser(decoded.id);
+      // Get fresh user data from database
+      const user = await storage.getUser(req.session.user.id);
       if (user) {
         req.user = user;
         return next();
       }
     } catch (error) {
-      console.error('Error verifying cookie token:', error);
+      console.error('Error fetching user from session:', error);
     }
   }
 
-  // Check for session-based authentication (Google OAuth fallback)
+  // Check passport session (fallback for existing Google OAuth users)
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
   }
@@ -120,27 +76,7 @@ async function optionalAuth(req: any, res: any, next: any) {
     }
   }
   
-  // Check JWT token in Authorization header (regular login users)
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (token) {
-    jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
-      if (!err) {
-        // Store full user object instead of just decoded token
-        storage.getUser(decoded.id).then(user => {
-          if (user) {
-            req.user = user;
-          }
-          next();
-        }).catch(() => next());
-      } else {
-        next();
-      }
-    });
-  } else {
-    next();
-  }
+  next();
 }
 
 // Middleware to verify admin role
@@ -186,13 +122,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: userData.role || 'customer',
       });
 
-      const token = jwt.sign(
-        { id: user.id, username: user.username, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+      // Create session for the new user
+      req.session.user = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role
+      };
 
-      res.json({ token, user: { id: user.id, username: user.username, role: user.role, email: user.email, phone: user.phone } });
+      res.json({ 
+        message: 'Registration successful',
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          role: user.role, 
+          email: user.email, 
+          phone: user.phone 
+        } 
+      });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -215,13 +164,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      const token = jwt.sign(
-        { id: user.id, username: user.username, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+      // Create session for the authenticated user
+      req.session.user = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role
+      };
 
-      res.json({ token, user: { id: user.id, username: user.username, role: user.role, email: user.email, phone: user.phone } });
+      res.json({ 
+        message: 'Login successful',
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          role: user.role, 
+          email: user.email, 
+          phone: user.phone 
+        } 
+      });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -249,13 +211,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const token = jwt.sign(
-        { id: user.id, username: user.username, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+      // Create session for the verified user
+      req.session.user = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role
+      };
 
-      res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
+      res.json({ 
+        message: 'OTP verification successful',
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          role: user.role 
+        } 
+      });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -322,24 +295,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth status route (supports both JWT and session)
+  // Auth status route (session-based authentication only)
   app.get('/api/auth/status', optionalAuth, async (req, res) => {
     try {
       console.log('Auth status check:', {
-        hasIsAuthenticated: typeof req.isAuthenticated === 'function',
-        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-        hasSessionUser: !!req.user,
-        sessionData: req.session ? Object.keys(req.session) : null,
-        sessionId: req.sessionID || 'none',
-        hasCookieToken: !!req.cookies?.authToken
+        hasSessionUser: !!req.session?.user,
+        hasPassportUser: !!req.user,
+        sessionId: req.sessionID || 'none'
       });
 
-      // If we have a user from middleware (JWT or session), return it
+      // If we have a user from middleware (session), return it
       if (req.user) {
         console.log('Authenticated user found:', req.user.id);
         return res.json({
           isAuthenticated: true,
-          authType: req.cookies?.authToken ? 'cookie-jwt' : 'session',
+          authType: 'session',
           user: {
             id: req.user.id,
             username: req.user.username,
@@ -354,48 +324,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check session-based auth first (Google OAuth fallback)
-      if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-        console.log('Session user found:', req.user.id);
-        // Fetch complete user data from database
-        const fullUser = await storage.getUser(req.user.id);
-        if (fullUser) {
-          res.json({ 
-            isAuthenticated: true, 
-            user: fullUser,
-            authType: 'session'
-          });
-          return;
-        }
-      }
-      
-      // Check JWT-based auth
-      if (req.user && !req.isAuthenticated) {
-        console.log('JWT user found:', req.user.id);
-        // Fetch complete user data from database
-        const fullUser = await storage.getUser(req.user.id);
-        if (fullUser) {
-          res.json({ 
-            isAuthenticated: true, 
-            user: fullUser,
-            authType: 'jwt'
-          });
-          return;
-        }
-      }
-      
       console.log('No authentication found');
-      res.json({ 
-        isAuthenticated: false,
-        authType: null
-      });
-    } catch (error: any) {
+      res.json({ isAuthenticated: false, authType: null });
+    } catch (error) {
       console.error('Auth status error:', error);
-      res.json({ 
-        isAuthenticated: false,
-        authType: null,
-        error: error.message
-      });
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
@@ -865,7 +798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/categories", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/categories", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(categoryData);
@@ -876,7 +809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin category management routes
-  app.post("/api/admin/categories", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/admin/categories", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(categoryData);
@@ -886,7 +819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/categories/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/categories/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const categoryData = insertCategorySchema.partial().parse(req.body);
@@ -897,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/categories/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/categories/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteCategory(id);
@@ -1048,7 +981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/products", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
@@ -1058,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/products/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/products/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.updateProduct(parseInt(req.params.id), productData);
@@ -1380,7 +1313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get("/api/admin/orders", authenticateToken, requireAdmin, async (req, res) => {
+  app.get("/api/admin/orders", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { status } = req.query;
       const orders = await storage.getAllOrders(status as string);
@@ -1390,7 +1323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/orders/:id/status", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/status", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       const { status } = req.body;
@@ -1409,7 +1342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/orders/:id/rider", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/rider", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { riderName, riderPhone, riderImage } = req.body;
       const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone, riderImage);
@@ -1420,7 +1353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add estimated delivery time update endpoint
-  app.put("/api/admin/orders/:id/delivery-time", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/delivery-time", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { estimatedDelivery } = req.body;
       const order = await storage.updateOrderDeliveryTime(parseInt(req.params.id), estimatedDelivery);
@@ -1431,7 +1364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update estimated delivery time
-  app.put("/api/admin/orders/:id/delivery-time", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/delivery-time", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { estimatedDelivery } = req.body;
       const order = await storage.updateOrderDeliveryTime(parseInt(req.params.id), estimatedDelivery);
@@ -1441,7 +1374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/customers", authenticateToken, requireAdmin, async (req, res) => {
+  app.get("/api/admin/customers", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const customers = await storage.getCustomers();
       res.json(customers);
@@ -1571,7 +1504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/analytics", authenticateToken, requireAdmin, async (req, res) => {
+  app.get("/api/admin/analytics", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const analytics = await storage.getAnalytics();
       res.json(analytics);
@@ -1591,7 +1524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check if user can review a product
-  app.get("/api/users/:userId/products/:productId/can-review", authenticateToken, async (req, res) => {
+  app.get("/api/users/:userId/products/:productId/can-review", authenticateUser, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const productId = parseInt(req.params.productId);
@@ -1608,7 +1541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products/:id/reviews", authenticateToken, async (req, res) => {
+  app.post("/api/products/:id/reviews", authenticateUser, async (req, res) => {
     try {
       const productId = parseInt(req.params.id);
       const reviewData = insertReviewSchema.parse({
@@ -1662,7 +1595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all reviews for management
-  app.get("/api/admin/reviews", authenticateToken, requireAdmin, async (req, res) => {
+  app.get("/api/admin/reviews", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const reviews = await storage.getAllReviews();
       res.json(reviews);
@@ -1672,7 +1605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Update review feature status
-  app.patch("/api/admin/reviews/:id/feature", authenticateToken, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/reviews/:id/feature", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const reviewId = parseInt(req.params.id);
       const { isFeatured } = req.body;
@@ -1685,7 +1618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Reply to review
-  app.post("/api/admin/reviews/:id/reply", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/admin/reviews/:id/reply", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const reviewId = parseInt(req.params.id);
       const { adminReply } = req.body;
@@ -1755,7 +1688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/super-admin/logo", authenticateToken, (req, res) => {
+  app.post("/api/super-admin/logo", authenticateUser, (req, res) => {
     try {
       // Check if user is super admin
       if (req.user.role !== 'super_admin') {
@@ -1806,7 +1739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/banners", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/banners", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const bannerData = insertBannerSchema.parse(req.body);
       const banner = await storage.createBanner(bannerData);
@@ -1816,7 +1749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const bannerData = insertBannerSchema.partial().parse(req.body);
@@ -1827,7 +1760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.delete("/api/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteBanner(id);
@@ -1838,7 +1771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin banner management routes
-  app.post("/api/admin/banners", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/admin/banners", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const bannerData = insertBannerSchema.parse(req.body);
       const banner = await storage.createBanner(bannerData);
@@ -1848,7 +1781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const bannerData = insertBannerSchema.partial().parse(req.body);
@@ -1859,7 +1792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteBanner(id);

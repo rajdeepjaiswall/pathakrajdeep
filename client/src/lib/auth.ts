@@ -38,7 +38,7 @@ export interface RegisterData {
 }
 
 export interface AuthResponse {
-  token: string;
+  message: string;
   user: User;
 }
 
@@ -48,6 +48,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials: 'include', // Include cookies for session management
     body: JSON.stringify(credentials),
   });
 
@@ -58,8 +59,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
 
   const data = await response.json();
   
-  // Store token in localStorage
-  localStorage.setItem('token', data.token);
+  // Store user data in localStorage for UI state
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;
@@ -71,6 +71,7 @@ export async function register(userData: RegisterData): Promise<AuthResponse> {
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials: 'include', // Include cookies for session management
     body: JSON.stringify(userData),
   });
 
@@ -81,8 +82,7 @@ export async function register(userData: RegisterData): Promise<AuthResponse> {
 
   const data = await response.json();
   
-  // Store token in localStorage
-  localStorage.setItem('token', data.token);
+  // Store user data in localStorage for UI state
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;
@@ -93,11 +93,23 @@ export async function sendOTP(phone: string): Promise<void> {
 }
 
 export async function verifyOTP(phone: string, otp: string): Promise<AuthResponse> {
-  const response = await apiRequest('/api/auth/verify-otp', 'POST', { phone, otp });
+  const response = await fetch('/api/auth/verify-otp', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Include cookies for session management
+    body: JSON.stringify({ phone, otp }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'OTP verification failed' }));
+    throw new Error(error.message || 'OTP verification failed');
+  }
+
   const data = await response.json();
   
-  // Store token in localStorage
-  localStorage.setItem('token', data.token);
+  // Store user data in localStorage for UI state
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;

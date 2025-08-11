@@ -26,37 +26,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Only check for session-based authentication
+    // Check for stored JWT authentication first
+    const storedUser = getStoredUser();
+    const storedToken = getStoredToken();
+
+    if (storedUser && storedToken) {
+      setUser(storedUser);
+      setToken(storedToken);
+      setAuthType('jwt');
+      setIsLoading(false);
+      return;
+    }
+
+    // Check for session-based authentication (Google OAuth)
     checkSessionAuth();
   }, []);
 
   const checkSessionAuth = async () => {
     try {
-      const response = await fetch('/api/auth/status', {
-        credentials: 'include'
-      });
+      const response = await fetch('/api/auth/status');
       if (response.ok) {
         const data = await response.json();
         if (data.isAuthenticated && data.user) {
           setUser(data.user);
           setAuthType('session');
           
-          // Store in localStorage for UI consistency
-          localStorage.setItem('user', JSON.stringify(data.user));
-          
-          // Log continuous session for Google OAuth users
-          if (data.user.authProvider === 'google') {
-            console.log('Google OAuth continuous session active:', {
-              user: data.user.email,
-              loginTime: data.user.loginTime,
-              profileCompleted: data.user.profileCompleted,
-              sessionType: 'persistent'
-            });
-          }
-          
           // Check if Google OAuth user needs to complete profile
           if (data.user.authProvider === 'google' && !data.user.profileCompleted) {
-            console.log('Google user needs to complete profile - maintaining session');
+            // Don't redirect here, let the routing handle it
+            console.log('User needs to complete profile');
           }
         }
       }
@@ -67,53 +65,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = (newUser: User) => {
+  const login = (newUser: User, newToken: string) => {
     setUser(newUser);
-    setToken(null);
-    setAuthType('session');
-    localStorage.setItem('user', JSON.stringify(newUser));
+    setToken(newToken);
+    setAuthType('jwt');
   };
 
   const loginWithSession = (newUser: User) => {
     setUser(newUser);
-    setToken(null);
     setAuthType('session');
-    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const logout = async () => {
-    // Always use session-based logout
-    try {
-      await fetch('/api/auth/logout', { 
-        method: 'POST',
-        credentials: 'include' 
-      });
-    } catch (error) {
-      console.error('Session logout error:', error);
+    if (authType === 'session') {
+      // Session-based logout for Google OAuth
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (error) {
+        console.error('Session logout error:', error);
+      }
+    } else {
+      // JWT logout
+      authLogout();
     }
     
     setUser(null);
     setToken(null);
     setAuthType(null);
-    localStorage.removeItem('user');
   };
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
     // Update stored user data
     localStorage.setItem('user', JSON.stringify(updatedUser));
-    
-    // Log profile completion for Google OAuth users
-    if (updatedUser.authProvider === 'google' && updatedUser.profileCompleted) {
-      console.log('Google OAuth user profile completed - continuous session maintained');
-    }
   };
 
   const value = {
     user,
     token,
     authType,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && (!!token || authType === 'session'),
     login,
     loginWithSession,
     logout,

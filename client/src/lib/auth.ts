@@ -38,7 +38,7 @@ export interface RegisterData {
 }
 
 export interface AuthResponse {
-  message: string;
+  token: string;
   user: User;
 }
 
@@ -48,7 +48,6 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // Include cookies for session management
     body: JSON.stringify(credentials),
   });
 
@@ -59,7 +58,8 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
 
   const data = await response.json();
   
-  // Store user data in localStorage for UI state
+  // Store token in localStorage
+  localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;
@@ -71,7 +71,6 @@ export async function register(userData: RegisterData): Promise<AuthResponse> {
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // Include cookies for session management
     body: JSON.stringify(userData),
   });
 
@@ -82,7 +81,8 @@ export async function register(userData: RegisterData): Promise<AuthResponse> {
 
   const data = await response.json();
   
-  // Store user data in localStorage for UI state
+  // Store token in localStorage
+  localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;
@@ -93,42 +93,19 @@ export async function sendOTP(phone: string): Promise<void> {
 }
 
 export async function verifyOTP(phone: string, otp: string): Promise<AuthResponse> {
-  const response = await fetch('/api/auth/verify-otp', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include', // Include cookies for session management
-    body: JSON.stringify({ phone, otp }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'OTP verification failed' }));
-    throw new Error(error.message || 'OTP verification failed');
-  }
-
+  const response = await apiRequest('/api/auth/verify-otp', 'POST', { phone, otp });
   const data = await response.json();
   
-  // Store user data in localStorage for UI state
+  // Store token in localStorage
+  localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
   
   return data;
 }
 
-export async function logout(): Promise<void> {
-  // Clear localStorage first
+export function logout(): void {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  
-  // Also call server logout to clear cookie and session
-  try {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include', // Include cookies in the request
-    });
-  } catch (error) {
-    console.log('Server logout failed, but localStorage cleared');
-  }
 }
 
 export function getStoredToken(): string | null {
@@ -140,43 +117,8 @@ export function getStoredUser(): User | null {
   return user ? JSON.parse(user) : null;
 }
 
-// Function to get user data from server for cookie-authenticated users (Google OAuth)
-export async function getCurrentUser(): Promise<User | null> {
-  try {
-    const response = await fetch('/api/auth/status', {
-      credentials: 'include', // Include cookies
-    });
-    
-    if (!response.ok) {
-      return null;
-    }
-    
-    const data = await response.json();
-    
-    if (data.isAuthenticated && data.user) {
-      // For Google OAuth users, store user data locally for consistency
-      localStorage.setItem('user', JSON.stringify(data.user));
-      return data.user;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error fetching current user:', error);
-    return null;
-  }
-}
-
 export function isAuthenticated(): boolean {
-  // Check localStorage token first
-  if (getStoredToken()) {
-    return true;
-  }
-  
-  // Check if cookie-based authentication is present (for Google OAuth users)
-  const cookies = document.cookie.split(';');
-  const isLoggedInCookie = cookies.find(cookie => cookie.trim().startsWith('isLoggedIn='));
-  
-  return isLoggedInCookie ? isLoggedInCookie.split('=')[1] === 'true' : false;
+  return !!getStoredToken();
 }
 
 export function hasRole(role: string): boolean {

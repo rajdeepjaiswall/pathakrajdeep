@@ -62,30 +62,11 @@ export default function GoogleOneTap() {
   }, [isGoogleLoaded, isAuthenticated, hasShownPrompt]);
 
   const initializeGoogleOneTap = () => {
-    if (!window.google?.accounts?.id) {
-      console.log('Google One Tap not available - script not loaded');
-      return;
-    }
+    if (!window.google?.accounts?.id) return;
 
     try {
-      // Check if we're in a supported environment (HTTPS, no iframe restrictions)
-      const isHTTPS = window.location.protocol === 'https:';
-      const isInFrame = window !== window.top;
-      
-      if (!isHTTPS && window.location.hostname !== 'localhost') {
-        console.log('Google One Tap requires HTTPS in production');
-        return;
-      }
-      
-      if (isInFrame) {
-        console.log('Google One Tap blocked - running in iframe');
-        return;
-      }
-
-      console.log('Initializing Google One Tap...');
-      
       window.google.accounts.id.initialize({
-        client_id: '1089622312459-92mclsbhh3g05tpm4sflpcjdi8958t80.apps.googleusercontent.com',
+        client_id: '1069780387537-jnkntl3hmbqdt5lndahb58dq83tqo0ek.apps.googleusercontent.com',
         callback: handleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -94,68 +75,48 @@ export default function GoogleOneTap() {
         use_fedcm_for_prompt: true,
       });
 
-      // Show the One Tap prompt with enhanced error handling
+      // Show the One Tap prompt
       window.google.accounts.id.prompt((notification) => {
-        const reason = notification.isNotDisplayed() 
-          ? notification.getNotDisplayedReason() 
-          : notification.isSkippedMoment() 
-          ? notification.getSkippedReason()
-          : notification.isDismissedMoment()
-          ? notification.getDismissedReason()
-          : 'unknown';
-          
-        console.log('Google One Tap notification:', {
-          displayed: !notification.isNotDisplayed(),
-          skipped: notification.isSkippedMoment(),
-          dismissed: notification.isDismissedMoment(),
-          reason: reason
-        });
-        
-        // If One Tap fails, users can still use the manual Google OAuth button
         if (notification.isNotDisplayed()) {
-          console.log('One Tap not displayed, fallback to manual Google OAuth available');
+          console.log('One Tap not displayed:', notification.getNotDisplayedReason());
+        } else if (notification.isSkippedMoment()) {
+          console.log('One Tap skipped:', notification.getSkippedReason());
+        } else if (notification.isDismissedMoment()) {
+          console.log('One Tap dismissed:', notification.getDismissedReason());
         }
       });
 
       setHasShownPrompt(true);
       sessionStorage.setItem('googleOneTapShown', 'true');
-      console.log('Google One Tap initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Google One Tap:', error);
-      console.log('Manual Google OAuth still available as fallback');
     }
   };
 
   const handleCredentialResponse = async (response: any) => {
     try {
-      console.log('Google One Tap credential received, verifying...');
-      
-      // Send the Google token to our backend for verification and session creation
+      // Send the Google token to our backend for verification
       const authResponse = await fetch('/api/auth/google/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Important for session handling
         body: JSON.stringify({
           credential: response.credential,
         }),
       });
 
       if (!authResponse.ok) {
-        const errorData = await authResponse.json().catch(() => ({}));
-        console.error('Google One Tap auth failed:', errorData);
-        throw new Error(errorData.message || 'Authentication failed');
+        throw new Error('Authentication failed');
       }
 
       const data = await authResponse.json();
-      console.log('Google One Tap auth successful:', { userId: data.user?.id, email: data.user?.email });
       
-      // Update auth context with session-based user
-      login(data.user);
+      // Login the user with the returned data
+      login(data.user, data.token);
 
       toast({
-        title: 'Welcome back!',
+        title: 'Welcome back! 👋',
         description: `Signed in as ${data.user.email}`,
         duration: 3000,
       });
@@ -165,18 +126,11 @@ export default function GoogleOneTap() {
         window.google.accounts.id.disableAutoSelect();
       }
 
-      // Redirect based on user profile completion status
-      if (!data.user.profileCompleted) {
-        window.location.href = '/complete-profile?googleAuth=true';
-      } else {
-        window.location.href = '/account?googleAuth=success';
-      }
-
     } catch (error: any) {
       console.error('Google One Tap login failed:', error);
       toast({
         title: 'Sign-in failed',
-        description: 'Unable to sign in with Google. Please try the regular Google sign-in button.',
+        description: 'Unable to sign in with Google. Please try again.',
         variant: 'destructive',
       });
     }

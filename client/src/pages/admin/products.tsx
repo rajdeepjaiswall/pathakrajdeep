@@ -553,14 +553,6 @@ export default function AdminProducts() {
                     src={product.images[0] || '/placeholder-product.jpg'}
                     alt={product.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const fallback = document.createElement('div');
-                      fallback.className = 'w-full h-full bg-gradient-to-br from-almond to-champagne/20 flex items-center justify-center p-2';
-                      fallback.innerHTML = `<img src="/api/logo" alt="Pathak Bhandar Logo" class="max-w-[80%] max-h-[80%] object-contain opacity-90" />`;
-                      target.parentNode?.appendChild(fallback);
-                    }}
                   />
                   <div className="absolute top-2 left-2 flex gap-1">
                     {product.featured && (

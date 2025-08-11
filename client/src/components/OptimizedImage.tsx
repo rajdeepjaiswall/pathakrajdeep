@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { imageCache } from '@/lib/image-cache';
 import { optimizeImageUrl, getConnectionSpeed, getImageQuality, imageMonitor } from '@/lib/performance';
-import pathakLogo from '@assets/project_20250528_0859055-02.png';
 
 interface OptimizedImageProps {
   src: string;
@@ -97,14 +96,13 @@ export default function OptimizedImage({
         <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
       )}
 
-      {/* Error fallback with company logo */}
+      {/* Error fallback */}
       {isError && (
-        <div className="absolute inset-0 bg-gradient-to-br from-almond to-champagne/20 flex items-center justify-center p-2">
-          <img
-            src={pathakLogo}
-            alt="Pathak Bhandar Logo"
-            className="max-w-[80%] max-h-[80%] object-contain opacity-90"
-          />
+        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+          <div className="text-center text-gray-400">
+            <div className="w-8 h-8 mx-auto mb-2 bg-gray-300 rounded"></div>
+            <span className="text-xs">Image unavailable</span>
+          </div>
         </div>
       )}
 

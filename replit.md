@@ -31,15 +31,12 @@ Supports dual database configurations:
 - **Migrations**: Drizzle Kit
 
 ### Key Features & Implementations
-- **Authentication System**: Session-based authentication with express-session and PostgreSQL storage, multi-role (Customer, Admin, Super Admin) with bcrypt hashing, role-based access control, and Google OAuth integration. Transitioned from JWT tokens to pure server-side sessions with 1-hour expiry and secure cookie configuration.
-- **Product Management**: Hierarchical category system, comprehensive product catalog with images, pricing, inventory, GST integration, and branded image fallback system.
+- **Authentication System**: Multi-role (Customer, Admin, Super Admin) authentication with JWTs and bcrypt hashing, and role-based access control.
+- **Product Management**: Hierarchical category system, comprehensive product catalog with images, pricing, inventory, GST integration, and image handling.
 - **E-commerce Features**: Persistent shopping cart, wishlist, full order management lifecycle, address management, and UPI QR code payment integration.
 - **Admin Dashboard**: Comprehensive order, product, customer, and banner management, with basic sales and inventory reporting.
-- **PWA Installation**: Prominent install options in side menu and floating button with persistent red dot indicators, encouraging app installation for better user experience.
-- **Categories Page**: Modern horizontal hero banners with blur effects, scroll-triggered bottom navigation, and clean layout following PDF specifications with large logo, intro text, and stacked category banners.
-- **Feedback System**: Complete review system with order-based validation (only delivered product buyers can review), 160-word limit, 5-star rating system, admin management with replies and featured review selection, homepage carousel showcase with smooth animations.
 - **Data Flow**: JWT-based user authentication, category-based product display, user-specific shopping carts, and order processing with inventory updates.
-- **UI/UX Decisions**: Focus on a custom design system with Tailwind CSS and Radix UI for a consistent and premium look, with branded fallbacks for failed images.
+- **UI/UX Decisions**: Focus on a custom design system with Tailwind CSS and Radix UI for a consistent and premium look.
 
 ## External Dependencies
 
@@ -60,46 +57,3 @@ Supports dual database configurations:
 - Google Maps API (for address management)
 - Postal API (for PIN code auto-population)
 - Web Audio API (for audio notifications)
-- OpenAI API (for enhanced search with AI translation - optional)
-
-## Recent Changes & Authentication Migration (August 2025)
-
-### JWT to Session-Based Authentication Migration
-- **Complete JWT Removal**: Eliminated all JWT token dependencies (jsonwebtoken, cookie-parser packages)
-- **Session-Only Authentication**: Migrated to pure express-session with PostgreSQL storage
-- **Enhanced Session Configuration**: 1-hour session expiry, httpOnly and secure cookies, sameSite settings for OAuth
-- **Authentication Middleware**: Updated all auth middleware to use req.session.user instead of JWT tokens
-- **Client-Side Updates**: Modified auth functions to use session cookies with credentials: 'include'
-- **Google OAuth Integration**: Updated Google OAuth callback to create sessions instead of JWT tokens
-
-### Google One Tap Implementation (August 2025)
-- **Enhanced Google One Tap**: Added comprehensive environment checks (HTTPS, iframe detection)
-- **Automatic Fallback Handling**: Graceful degradation when One Tap is blocked or unavailable
-- **Verification Endpoint**: New /api/auth/google/verify endpoint for One Tap credential handling
-- **Session Integration**: Google One Tap creates proper sessions with full user data
-- **Debugging & Logging**: Extensive console logging for OAuth flows and session management
-- **Security Improvements**: Better error handling and user feedback for failed authentications
-
-### Environment Variables Required for Deployment
-- **DATABASE_URL**: PostgreSQL connection string (critical)
-- **SESSION_SECRET**: Express session encryption (critical)
-- **GOOGLE_CLIENT_ID**: Google OAuth client ID (required for Google authentication)
-- **GOOGLE_CLIENT_SECRET**: Google OAuth client secret (required for Google authentication)
-- **OPENAI_API_KEY**: AI search functionality (optional)
-- **NODE_ENV**: Set to 'production' for production deployments
-
-### Authentication Flow Changes
-- Login/Register: Creates server-side session instead of returning JWT token
-- Google OAuth: Creates session on successful authentication callback with enhanced debugging
-- Google One Tap: Direct credential verification with automatic session creation
-- Client Authentication: Uses session cookies automatically, no Authorization headers
-- Logout: Destroys server session and clears session cookie
-
-### Deployment Status
-✅ Application successfully starts and runs
-✅ Database connectivity working
-✅ Session-based authentication functional with enhanced security
-✅ Google One Tap implemented with fallback handling
-✅ Comprehensive debugging for OAuth flows
-✅ Search works with/without OpenAI API
-✅ All core features operational with sessions

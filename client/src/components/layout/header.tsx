@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,8 +27,7 @@ export default function Header() {
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Products', href: '/products' },
-    { name: 'Categories', href: '/categories' },
-    { name: 'Search', href: '/search' },
+    { name: 'Categories', href: '/products?category=all' },
     { name: 'About', href: '/#about' },
     { name: 'Contact', href: '/#contact' },
   ];
@@ -65,16 +64,6 @@ export default function Header() {
 
           {/* Profile & Actions */}
           <div className="flex items-center space-x-4">
-            {/* Wishlist Heart Button with Beat Animation */}
-            <Link href="/wishlist">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-navy hover:bg-almond/30 rounded-xl p-3 transition-all duration-300"
-              >
-                <Heart className="h-5 w-5 animate-heartbeat text-red-500" />
-              </Button>
-            </Link>
             {/* Desktop Hamburger Menu */}
             {isAuthenticated ? (
               <div className="hidden md:flex items-center">
@@ -154,16 +143,10 @@ export default function Header() {
                   >
                     <div className="relative">
                       {(user as any)?.profileImageUrl ? (
-                        <Avatar className="h-8 w-8 ring-2 ring-champagne">
-                          <AvatarImage 
-                            src={(user as any)?.profileImageUrl} 
-                            alt={(user as any)?.firstName || user?.username || 'Profile'} 
-                            className="object-cover"
-                            onError={(e) => console.log('Avatar image failed to load:', (user as any)?.profileImageUrl)}
-                            onLoad={() => console.log('Avatar image loaded successfully:', (user as any)?.profileImageUrl)}
-                          />
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user.username || 'Profile'} />
                           <AvatarFallback className="bg-champagne text-navy text-sm font-semibold">
-                            {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                            {((user as any).firstName || user.username || 'U').charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       ) : (
@@ -178,13 +161,6 @@ export default function Header() {
                       )}
                     </div>
                     <span className="text-navy font-medium">Namaste, {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() : user?.username}</span>
-                    {/* Debug user data */}
-                    {console.log('Header user data:', {
-                      id: (user as any)?.id,
-                      firstName: (user as any)?.firstName,
-                      profileImageUrl: (user as any)?.profileImageUrl,
-                      authProvider: (user as any)?.authProvider
-                    })}
                   </div>
                 </Link>
 
@@ -219,7 +195,7 @@ export default function Header() {
                   <span className="text-navy font-medium">Cart ({summary.itemCount})</span>
                 </div>
 
-                <Link href="/wishlist">
+                <Link href="/customer/wishlist">
                   <div 
                     className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -250,15 +226,11 @@ export default function Header() {
                 </Link>
 
                 <div 
-                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer relative"
+                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
                   onClick={handleInstallApp}
                 >
-                  <div className="relative">
-                    <Download className="h-5 w-5 text-navy" />
-                    <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
-                  </div>
+                  <Download className="h-5 w-5 text-navy" />
                   <span className="text-navy font-medium">Install App</span>
-                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
                 </div>
 
                 <Button
@@ -275,18 +247,6 @@ export default function Header() {
               </div>
             ) : (
               <div className="pt-4 border-t border-almond space-y-2">
-                <div 
-                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer relative mb-3"
-                  onClick={handleInstallApp}
-                >
-                  <div className="relative">
-                    <Download className="h-5 w-5 text-navy" />
-                    <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
-                  </div>
-                  <span className="text-navy font-medium">Install App</span>
-                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
-                </div>
-                
                 <Link href="/customer/register">
                   <Button 
                     variant="outline"
@@ -354,16 +314,10 @@ export default function Header() {
                     onClick={() => setIsDesktopMenuOpen(false)}
                   >
                     {(user as any)?.profileImageUrl ? (
-                      <Avatar className="h-10 w-10 ring-2 ring-champagne">
-                        <AvatarImage 
-                          src={(user as any)?.profileImageUrl} 
-                          alt={(user as any)?.firstName || user?.username || 'Profile'} 
-                          className="object-cover"
-                          onError={(e) => console.log('Desktop avatar image failed to load:', (user as any)?.profileImageUrl)}
-                          onLoad={() => console.log('Desktop avatar image loaded successfully:', (user as any)?.profileImageUrl)}
-                        />
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user.username || 'Profile'} />
                         <AvatarFallback className="bg-champagne text-navy font-semibold">
-                          {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                          {((user as any).firstName || user.username || 'U').charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     ) : (
@@ -423,7 +377,7 @@ export default function Header() {
                 </div>
 
                 {/* Wishlist */}
-                <Link href="/wishlist">
+                <Link href="/customer/wishlist">
                   <div 
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors"
                     onClick={() => setIsDesktopMenuOpen(false)}

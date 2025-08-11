@@ -7,19 +7,52 @@ export default function CategoryShowcase() {
     queryKey: ["/api/categories"],
   });
 
-  // Use active categories from database and create multiple copies for seamless infinite scroll
-  const activeCategories = (categories || []).filter(cat => cat.isActive);
+  const foodCategories = [
+    {
+      id: 1,
+      name: "Biscuits",
+      image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+      link: "/products?category=1"
+    },
+    {
+      id: 2,
+      name: "Snacks",
+      image: "https://images.unsplash.com/photo-1599490659213-e2b9527bd087?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+      link: "/products?category=2"
+    },
+    {
+      id: 3,
+      name: "Cookies",
+      image: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+      link: "/products?category=3"
+    },
+    {
+      id: 4,
+      name: "Pastries",
+      image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+      link: "/products?category=4"
+    },
+    {
+      id: 5,
+      name: "Cake",
+      image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+      link: "/products?category=5"
+    },
+    {
+      id: 6,
+      name: "Rolls",
+      image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+      link: "/products?category=6"
+    }
+  ];
+
+  // Create multiple copies for seamless infinite scroll
   const infiniteCategories = [
-    ...activeCategories,
-    ...activeCategories,
-    ...activeCategories,
-    ...activeCategories
-  ].map((category, index) => ({
-    id: category.id,
-    name: category.name,
-    image: category.imageUrl || 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=200&h=200&fit=crop',
-    link: `/categories`,
-  }));
+    ...foodCategories,
+    ...foodCategories,
+    ...foodCategories,
+    ...foodCategories
+  ];
 
   if (isLoading) {
     return (

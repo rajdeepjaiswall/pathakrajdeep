@@ -3,11 +3,12 @@ import { createServer, type Server } from "http";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
-import { SearchService } from "./search-service";
+import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
-import { OAuth2Client } from 'google-auth-library';
+
+const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
 
 // Extend Request interface to include user
 declare global {
@@ -18,91 +19,64 @@ declare global {
   }
 }
 
-// Enhanced session-based authentication middleware
-async function authenticateUser(req: any, res: any, next: any) {
-  // Check if user is authenticated via session
-  if ((req.session as any)?.user) {
-    try {
-      // Get fresh user data from database to ensure current state
-      const user = await storage.getUser((req.session as any).user.id);
-      if (user) {
-        req.user = user;
-        
-        // Extend session on each authenticated request for Google OAuth users
-        if (user.authProvider === 'google') {
-          req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // Keep 24-hour sessions for Google users
-        }
-        
-        // Update last activity timestamp
-        (req.session as any).user.lastActivity = new Date().toISOString();
-        
-        return next();
-      }
-    } catch (error) {
-      console.error('Error fetching user from session:', error);
-    }
+// Middleware to verify JWT token
+function authenticateToken(req: any, res: any, next: any) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access token required' });
   }
 
-  // Check passport session (fallback for existing Google OAuth users)
-  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-    return next();
-  }
-
-  return res.status(401).json({ message: 'Authentication required' });
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = user;
+    next();
+  });
 }
 
-// Enhanced optional authentication middleware for cart/wishlist
-async function optionalAuth(req: any, res: any, next: any) {
-  // Check if user is authenticated via session
-  if ((req.session as any)?.user) {
-    try {
-      // Get fresh user data from database
-      const user = await storage.getUser((req.session as any).user.id);
-      if (user) {
-        req.user = user;
-        
-        // Extend session on each request for Google OAuth users
-        if (user.authProvider === 'google') {
-          req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // Keep 24-hour sessions
-        }
-        
-        // Update last activity timestamp
-        (req.session as any).user.lastActivity = new Date().toISOString();
-        
-        return next();
-      }
-    } catch (error) {
-      console.error('Error fetching user from session:', error);
-    }
-  }
-
-  // Check passport session (fallback for existing Google OAuth users)
+// Hybrid authentication middleware (JWT or Session)
+function authenticateUser(req: any, res: any, next: any) {
+  // Check for session-based authentication first (Google OAuth)
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-    // Extend session for authenticated passport users too
-    if ((req.user as any).authProvider === 'google') {
-      req.session.cookie.maxAge = 24 * 60 * 60 * 1000;
-    }
     return next();
   }
   
-  // Special handling for Google OAuth users - try to fetch from session manually
-  if ((req.session as any)?.passport?.user) {
-    try {
-      const user = await storage.getUser((req.session as any).passport.user);
-      if (user) {
-        req.user = user;
-        // Extend session for Google users
-        if (user.authProvider === 'google') {
-          req.session.cookie.maxAge = 24 * 60 * 60 * 1000;
-        }
-        return next();
-      }
-    } catch (error) {
-      console.error('Error fetching user from session:', error);
-    }
+  // Fall back to JWT authentication
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.status(401).json({ message: 'Authentication required' });
+    req.user = user;
+    next();
+  });
+}
+
+// Optional authentication middleware for cart/wishlist
+function optionalAuth(req: any, res: any, next: any) {
+  // Check for session-based authentication first (Google OAuth)
+  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+    return next();
   }
   
-  next();
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token) {
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+      if (!err) {
+        req.user = user;
+      }
+      next();
+    });
+  } else {
+    next();
+  }
 }
 
 // Middleware to verify admin role
@@ -148,26 +122,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: userData.role || 'customer',
       });
 
-      // Create session for the new user
-      req.session.user = {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role
-      };
+      const token = jwt.sign(
+        { id: user.id, username: user.username, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
 
-      res.json({ 
-        message: 'Registration successful',
-        user: { 
-          id: user.id, 
-          username: user.username, 
-          role: user.role, 
-          email: user.email, 
-          phone: user.phone 
-        } 
-      });
+      res.json({ token, user: { id: user.id, username: user.username, role: user.role, email: user.email, phone: user.phone } });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -190,34 +151,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      // Create session for the authenticated user
-      (req.session as any).user = {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        profileCompleted: user.profileCompleted
-      };
+      const token = jwt.sign(
+        { id: user.id, username: user.username, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
 
-      console.log('Login successful - Session created for user:', user.id);
-
-      res.json({ 
-        message: 'Login successful',
-        user: { 
-          id: user.id, 
-          username: user.username, 
-          role: user.role, 
-          email: user.email, 
-          firstName: user.firstName,
-          lastName: user.lastName,
-          profileImageUrl: user.profileImageUrl,
-          authProvider: user.authProvider,
-          isVerified: user.isVerified,
-          profileCompleted: user.profileCompleted,
-        } 
-      });
+      res.json({ token, user: { id: user.id, username: user.username, role: user.role, email: user.email, phone: user.phone } });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -245,24 +185,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create session for the verified user
-      req.session.user = {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role
-      };
+      const token = jwt.sign(
+        { id: user.id, username: user.username, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
 
-      res.json({ 
-        message: 'OTP verification successful',
-        user: { 
-          id: user.id, 
-          username: user.username, 
-          role: user.role 
-        } 
-      });
+      res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -280,147 +209,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Debug session route
-  app.get('/api/debug/session', (req, res) => {
-    res.json({
-      sessionID: req.sessionID,
-      session: req.session,
-      user: req.user,
-      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-      passport: req.session?.passport
-    });
-  });
-
-  // Test Google login simulation for debugging
-  app.post('/api/debug/simulate-google-login', async (req, res) => {
-    try {
-      // Find a Google user or create a test one
-      let user = await storage.getUserByEmail('test@example.com');
-      if (!user) {
-        user = await storage.createUser({
-          username: 'test@example.com',
-          email: 'test@example.com',
-          firstName: 'Test',
-          lastName: 'User',
-          password: await bcrypt.hash('password', 10),
-          role: 'customer',
-          isVerified: true,
-          authProvider: 'google',
-          profileCompleted: true,
-          googleId: 'test123'
-        });
-      }
-
-      // Manually log in the user via session
-      req.login(user, (err) => {
-        if (err) {
-          console.error('Login error:', err);
-          return res.status(500).json({ message: 'Login failed' });
-        }
-        console.log('Test user logged in:', user.id);
-        res.json({ 
-          message: 'Simulated login successful', 
-          user: { id: user.id, email: user.email, firstName: user.firstName } 
-        });
-      });
-    } catch (error: any) {
-      console.error('Simulate login error:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Auth status route (session-based authentication only)
+  // Auth status route (supports both JWT and session)
   app.get('/api/auth/status', optionalAuth, async (req, res) => {
     try {
       console.log('Auth status check:', {
-        hasSessionUser: !!((req.session as any)?.user),
-        hasPassportUser: !!req.user,
+        hasIsAuthenticated: typeof req.isAuthenticated === 'function',
+        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+        hasSessionUser: !!req.user,
+        sessionData: req.session ? Object.keys(req.session) : null,
         sessionId: req.sessionID || 'none'
       });
 
-      // If we have a user from middleware (session), return it
-      if (req.user) {
-        console.log('Authenticated user found:', (req.user as any).id);
-        return res.json({
-          isAuthenticated: true,
-          authType: 'session',
-          user: {
-            id: (req.user as any).id,
-            username: (req.user as any).username,
-            email: (req.user as any).email,
-            firstName: (req.user as any).firstName,
-            lastName: (req.user as any).lastName,
-            role: (req.user as any).role,
-            profileImageUrl: (req.user as any).profileImageUrl,
-            authProvider: (req.user as any).authProvider,
-            isVerified: (req.user as any).isVerified,
-            profileCompleted: (req.user as any).profileCompleted,
-          }
-        });
+      // Check session-based auth first (Google OAuth)
+      if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+        console.log('Session user found:', req.user.id);
+        // Fetch complete user data from database
+        const fullUser = await storage.getUser(req.user.id);
+        if (fullUser) {
+          res.json({ 
+            isAuthenticated: true, 
+            user: fullUser,
+            authType: 'session'
+          });
+          return;
+        }
       }
-
+      
+      // Check JWT-based auth
+      if (req.user && !req.isAuthenticated) {
+        console.log('JWT user found:', req.user.id);
+        // Fetch complete user data from database
+        const fullUser = await storage.getUser(req.user.id);
+        if (fullUser) {
+          res.json({ 
+            isAuthenticated: true, 
+            user: fullUser,
+            authType: 'jwt'
+          });
+          return;
+        }
+      }
+      
       console.log('No authentication found');
-      res.json({ isAuthenticated: false, authType: null });
-    } catch (error) {
+      res.json({ 
+        isAuthenticated: false,
+        authType: null
+      });
+    } catch (error: any) {
       console.error('Auth status error:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      res.json({ 
+        isAuthenticated: false,
+        authType: null,
+        error: error.message
+      });
     }
   });
 
   // Enhanced authentication middleware that works with both JWT and sessions
-  async function authenticateUser(req: any, res: any, next: any) {
-    console.log('Auth middleware check:', {
-      hasIsAuthenticated: typeof req.isAuthenticated === 'function',
-      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-      hasUser: !!req.user,
-      sessionID: req.sessionID,
-      sessionPassport: req.session?.passport,
-      userAgent: req.get('User-Agent')?.substring(0, 50)
-    });
-
+  function authenticateUser(req: any, res: any, next: any) {
     // Check for session-based auth first (Google OAuth)
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      console.log('Session auth successful for user:', req.user.id);
+      // Session user is already set by passport, just continue
       return next();
-    }
-    
-    // Special handling for Google OAuth users - try to fetch from session manually
-    if (req.session?.passport?.user) {
-      console.log('Found passport user in session:', req.session.passport.user);
-      try {
-        const user = await storage.getUser(req.session.passport.user);
-        if (user) {
-          req.user = user;
-          console.log('Manually set user from session:', user.id);
-          return next();
-        } else {
-          console.log('User not found in database:', req.session.passport.user);
-        }
-      } catch (error) {
-        console.error('Error fetching user from session:', error);
-      }
     }
     
     // Fallback to JWT auth
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (token) {
-      try {
-        const user = jwt.verify(token, JWT_SECRET) as any;
-        req.user = user;
-        console.log('JWT auth successful for user:', user.id);
-        return next();
-      } catch (err: any) {
-        console.log('JWT verification failed:', err.message);
-      }
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication required' });
     }
 
-    console.log('No valid authentication found');
-    return res.status(401).json({ 
-      message: 'Please login to continue',
-      debug: 'Try using Google OAuth or JWT token authentication',
-      simulateLogin: 'POST /api/debug/simulate-google-login for testing'
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+      if (err) return res.status(403).json({ message: 'Invalid token' });
+      req.user = user;
+      next();
     });
   }
 
@@ -581,13 +445,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { phone, password, address } = req.body;
       
-      // Get user ID - req.user should already be the full user object from middleware
-      const userId = req.user?.id;
-      console.log('Complete profile user:', { 
-        userId, 
-        userObject: req.user, 
-        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false 
-      });
+      // Get user ID from session (Google OAuth) or JWT
+      let userId;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        // Session-based authentication (Google OAuth)
+        const sessionUser = req.user as any;
+        userId = sessionUser.claims?.sub || sessionUser.id;
+        console.log('Google OAuth user ID:', userId, 'Full user:', sessionUser);
+      } else {
+        // JWT-based authentication
+        userId = (req.user as any)?.id || (req.user as any)?.userId;
+      }
       
       if (!userId) {
         return res.status(401).json({ message: 'User not authenticated properly' });
@@ -730,12 +598,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Address management routes
-  app.get("/api/addresses", optionalAuth, async (req, res) => {
+  app.get("/api/addresses", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.json([]);
-      }
-      
       const userId = req.user.id;
       const addresses = await storage.getAddresses(userId);
       res.json(addresses);
@@ -744,16 +608,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/addresses", optionalAuth, async (req, res) => {
+  app.post("/api/addresses", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to add addresses',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
       const addressData = insertAddressSchema.parse({
         ...req.body,
         userId: req.user.id,
@@ -765,16 +621,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/addresses/:id", optionalAuth, async (req, res) => {
+  app.put("/api/addresses/:id", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to update addresses',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
       const id = parseInt(req.params.id);
       const addressData = insertAddressSchema.partial().parse(req.body);
       const address = await storage.updateAddress(id, addressData);
@@ -784,16 +632,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/addresses/:id", optionalAuth, async (req, res) => {
+  app.delete("/api/addresses/:id", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to delete addresses',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
       const id = parseInt(req.params.id);
       // Add security check to ensure user owns this address
       const address = await storage.getAddress(id);
@@ -809,12 +649,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User order history
-  app.get("/api/orders/user", optionalAuth, async (req, res) => {
+  app.get("/api/orders/user", authenticateUser, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.json([]);
-      }
-      
       const userId = req.user.id;
       const orders = await storage.getOrders(userId);
       res.json(orders);
@@ -833,7 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/categories", authenticateUser, requireAdmin, async (req, res) => {
+  app.post("/api/categories", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(categoryData);
@@ -844,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin category management routes
-  app.post("/api/admin/categories", authenticateUser, requireAdmin, async (req, res) => {
+  app.post("/api/admin/categories", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(categoryData);
@@ -854,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/categories/:id", authenticateUser, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/categories/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const categoryData = insertCategorySchema.partial().parse(req.body);
@@ -865,112 +701,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/categories/:id", authenticateUser, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/categories/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteCategory(id);
       res.json({ message: "Category deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Enhanced Search Routes
-  app.get("/api/search", async (req, res) => {
-    try {
-      const { q, limit = 20 } = req.query;
-      
-      if (!q || typeof q !== 'string') {
-        return res.status(400).json({ message: 'Search query is required' });
-      }
-
-      console.log(`Search query received: "${q}"`);
-      
-      // Get all products with category names
-      const products = await storage.getProducts();
-      const categories = await storage.getCategories();
-      
-      // Map products with category names
-      const productsWithCategories = products.map(product => ({
-        ...product,
-        categoryName: categories.find(cat => cat.id === product.category_id)?.name || 'Unknown'
-      }));
-
-      // Perform instant search first
-      const instantResults = SearchService.performInstantSearch(q, productsWithCategories);
-      
-      res.json({
-        query: q,
-        results: instantResults,
-        total: instantResults.length,
-        timestamp: new Date().toISOString(),
-        searchType: 'instant'
-      });
-
-    } catch (error: any) {
-      console.error('Search error:', error);
-      res.status(500).json({ message: 'Search service error', error: error.message });
-    }
-  });
-
-  // AI-powered search endpoint
-  app.post("/api/search/ai", async (req, res) => {
-    try {
-      const { query } = req.body;
-      
-      if (!query || typeof query !== 'string') {
-        return res.status(400).json({ message: 'Search query is required' });
-      }
-
-      console.log(`AI search query received: "${query}"`);
-      
-      // Get all products with category names
-      const products = await storage.getProducts();
-      const categories = await storage.getCategories();
-      
-      // Map products with category names
-      const productsWithCategories = products.map(product => ({
-        ...product,
-        categoryName: categories.find(cat => cat.id === product.category_id)?.name || 'Unknown'
-      }));
-
-      // Perform AI search
-      const aiResults = await SearchService.performAISearch(query, productsWithCategories);
-      
-      res.json({
-        query: query,
-        results: aiResults.results,
-        total: aiResults.results.length,
-        timestamp: new Date().toISOString(),
-        searchType: 'ai',
-        translation: aiResults.translation
-      });
-      
-    } catch (error: any) {
-      console.error('AI search error:', error);
-      res.status(500).json({ message: 'AI search service error', error: error.message });
-    }
-  });
-
-  app.get("/api/search/suggestions", async (req, res) => {
-    try {
-      const { q } = req.query;
-      
-      if (!q || typeof q !== 'string') {
-        return res.json({ suggestions: [] });
-      }
-
-      // Get simple suggestions from product names
-      const products = await storage.getProducts();
-      const suggestions = products
-        .filter(product => product.name.toLowerCase().includes(q.toLowerCase()))
-        .slice(0, 5)
-        .map(product => product.name);
-      
-      res.json({ suggestions });
-    } catch (error: any) {
-      console.error('Search suggestions error:', error);
-      res.status(500).json({ message: 'Search suggestions error', error: error.message });
     }
   });
 
@@ -984,21 +721,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search: search as string,
       });
 
-      res.json(products);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get trending products (top 10 most popular)
-  app.get("/api/products/trending", async (req, res) => {
-    try {
-      const products = await storage.getProducts();
-      // Simulate trending by shuffling and taking first 10 products
-      // In real app, this would be based on actual purchase/view data
-      const shuffled = [...products].sort(() => Math.random() - 0.5);
-      const trending = shuffled.slice(0, 10);
-      res.json(trending);
+      // Optimize image URLs for faster loading
+      const optimizedProducts = products.map(product => ({
+        ...product,
+        images: product.images?.map(img => {
+          if (typeof img === 'string' && img.includes('unsplash.com')) {
+            // Add Unsplash optimization parameters
+            const url = new URL(img);
+            url.searchParams.set('auto', 'format');
+            url.searchParams.set('fit', 'crop');
+            url.searchParams.set('w', '400');
+            url.searchParams.set('q', '80');
+            return url.toString();
+          }
+          return img;
+        }) || []
+      }));
+      
+      // Add aggressive caching for products
+      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800'); // Cache for 10 minutes, stale for 30 minutes
+      res.setHeader('ETag', `"products-${products.length}-${search || 'all'}"`);
+      
+      res.json(optimizedProducts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1016,7 +760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", authenticateUser, requireAdmin, async (req, res) => {
+  app.post("/api/products", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
@@ -1026,7 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/products/:id", authenticateUser, requireAdmin, async (req, res) => {
+  app.put("/api/products/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.updateProduct(parseInt(req.params.id), productData);
@@ -1036,15 +780,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cart routes - Use optional auth to prevent 401 errors
+  // Cart routes
   app.get("/api/cart", optionalAuth, async (req, res) => {
     try {
-      // If no user is authenticated, return empty cart
-      if (!req.user) {
+      // Check session auth first
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
         return res.json([]);
       }
       
-      const userId = req.user.id;
       const cartItems = await storage.getCartItems(userId);
       res.json(cartItems);
     } catch (error: any) {
@@ -1129,68 +879,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cart", optionalAuth, async (req, res) => {
     try {
-      // If no user is authenticated, provide helpful message instead of 401
       if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to add items to cart',
-          requiresAuth: true,
-          action: 'login'
-        });
+        return res.status(401).json({ message: 'Please login to add items to cart' });
       }
-      
-      const userId = req.user.id;
-      console.log('Adding to cart for user:', userId);
-      
       const cartItemData = insertCartItemSchema.parse({
         ...req.body,
-        user_id: userId,
+        user_id: req.user.id,
       });
       const cartItem = await storage.addToCart(cartItemData);
       res.json(cartItem);
     } catch (error: any) {
-      console.error('Add to cart error:', error);
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.put("/api/cart/:id", optionalAuth, async (req, res) => {
+  app.put("/api/cart/:id", authenticateToken, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to update cart',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
-      const userId = req.user.id;
       const { quantity } = req.body;
-      const cartItem = await storage.updateCartItem(parseInt(req.params.id), quantity, userId);
+      const cartItem = await storage.updateCartItem(parseInt(req.params.id), quantity, req.user.id);
       res.json(cartItem);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.delete("/api/cart/:id", optionalAuth, async (req, res) => {
+  app.delete("/api/cart/:id", authenticateToken, async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(200).json({ 
-          message: 'Please log in to remove cart items',
-          requiresAuth: true,
-          action: 'login'
-        });
-      }
-      
-      const userId = req.user.id;      
-      await storage.removeFromCart(parseInt(req.params.id), userId);
+      await storage.removeFromCart(parseInt(req.params.id), req.user.id);
       res.json({ message: 'Item removed from cart' });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
 
+  // Address routes
+  app.get("/api/addresses", authenticateToken, async (req, res) => {
+    try {
+      const addresses = await storage.getAddresses(req.user.id);
+      res.json(addresses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
+  app.post("/api/addresses", authenticateToken, async (req, res) => {
+    try {
+      const addressData = insertAddressSchema.parse({
+        ...req.body,
+        user_id: req.user.id,
+      });
+      const address = await storage.createAddress(addressData);
+      res.json(address);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
 
   // Order routes
   app.get("/api/orders", optionalAuth, async (req, res) => {
@@ -1348,7 +1091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get("/api/admin/orders", authenticateUser, requireAdmin, async (req, res) => {
+  app.get("/api/admin/orders", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const { status } = req.query;
       const orders = await storage.getAllOrders(status as string);
@@ -1358,7 +1101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/orders/:id/status", authenticateUser, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/status", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       const { status } = req.body;
@@ -1377,7 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/orders/:id/rider", authenticateUser, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/rider", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const { riderName, riderPhone, riderImage } = req.body;
       const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone, riderImage);
@@ -1388,7 +1131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add estimated delivery time update endpoint
-  app.put("/api/admin/orders/:id/delivery-time", authenticateUser, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/delivery-time", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const { estimatedDelivery } = req.body;
       const order = await storage.updateOrderDeliveryTime(parseInt(req.params.id), estimatedDelivery);
@@ -1399,7 +1142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update estimated delivery time
-  app.put("/api/admin/orders/:id/delivery-time", authenticateUser, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/delivery-time", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const { estimatedDelivery } = req.body;
       const order = await storage.updateOrderDeliveryTime(parseInt(req.params.id), estimatedDelivery);
@@ -1409,7 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/customers", authenticateUser, requireAdmin, async (req, res) => {
+  app.get("/api/admin/customers", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const customers = await storage.getCustomers();
       res.json(customers);
@@ -1439,78 +1182,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No credential provided' });
       }
 
-      // Verify the Google JWT token
-      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-      let payload;
-      
-      try {
-        const ticket = await client.verifyIdToken({
-          idToken: credential,
-          audience: process.env.GOOGLE_CLIENT_ID,
-        });
-        payload = ticket.getPayload();
-      } catch (verifyError) {
-        console.error('Google token verification failed:', verifyError);
-        return res.status(400).json({ message: 'Invalid Google credential' });
+      // Decode the JWT token from Google
+      const decoded = jwt.decode(credential, { complete: true });
+      if (!decoded || !decoded.payload) {
+        return res.status(400).json({ message: 'Invalid credential' });
       }
 
-      if (!payload) {
-        return res.status(400).json({ message: 'Invalid credential payload' });
-      }
+      const payload = decoded.payload as any;
       const email = payload.email;
       const name = payload.name;
       const googleId = payload.sub;
-      const profilePicture = payload.picture; // Extract profile picture URL
-      const firstName = payload.given_name;
-      const lastName = payload.family_name;
 
       // Check if user exists
       let user = await storage.getUserByEmail(email);
       
       if (!user) {
-        // Create new user with Google account including profile picture
+        // Create new user with Google account
         const newUser = {
           username: email,
           email: email,
-          firstName: firstName || name?.split(' ')[0] || null,
-          lastName: lastName || name?.split(' ').slice(1).join(' ') || null,
           password: '', // Empty password for Google users
           role: 'customer' as const,
           googleId: googleId,
-          profileImageUrl: profilePicture || null, // Save Google profile picture
-          authProvider: 'google',
-          isVerified: true, // Google accounts are verified
         };
         
         user = await storage.createUser(newUser);
       } else if (!user.googleId) {
-        // Link existing account with Google and update profile picture
+        // Link existing account with Google
         await storage.updateUserGoogleId(user.id, googleId);
-        
-        // Update profile picture if user doesn't have one or if it's from Google
-        if (!user.profileImageUrl || user.authProvider === 'google') {
-          await storage.updateUserProfile(user.id, {
-            profileImageUrl: profilePicture || null,
-            firstName: firstName || user.firstName,
-            lastName: lastName || user.lastName,
-            authProvider: 'google',
-            isVerified: true,
-          });
-        }
-      } else if (user.googleId === googleId) {
-        // Update existing Google user's profile picture if changed
-        if (profilePicture && user.profileImageUrl !== profilePicture) {
-          await storage.updateUserProfile(user.id, {
-            profileImageUrl: profilePicture,
-            firstName: firstName || user.firstName,
-            lastName: lastName || user.lastName,
-          });
-        }
       }
 
-      // Fetch updated user data to include profile picture
-      const updatedUser = await storage.getUser(user.id);
-      
       // Generate JWT token
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role },
@@ -1521,15 +1222,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         token,
         user: {
-          id: updatedUser?.id || user.id,
-          username: updatedUser?.username || user.username,
-          email: updatedUser?.email || user.email,
-          firstName: updatedUser?.firstName,
-          lastName: updatedUser?.lastName,
-          profileImageUrl: updatedUser?.profileImageUrl,
-          role: updatedUser?.role || user.role,
-          authProvider: updatedUser?.authProvider,
-          isVerified: updatedUser?.isVerified,
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
         },
       });
 
@@ -1539,7 +1235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/analytics", authenticateUser, requireAdmin, async (req, res) => {
+  app.get("/api/admin/analytics", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const analytics = await storage.getAnalytics();
       res.json(analytics);
@@ -1548,7 +1244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Review/Feedback routes
+  // Review routes
   app.get("/api/products/:id/reviews", async (req, res) => {
     try {
       const reviews = await storage.getProductReviews(parseInt(req.params.id));
@@ -1558,114 +1254,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check if user can review a product
-  app.get("/api/users/:userId/products/:productId/can-review", authenticateUser, async (req, res) => {
+  app.post("/api/products/:id/reviews", authenticateToken, async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
-      const productId = parseInt(req.params.productId);
-      
-      // Only allow users to check their own review eligibility
-      if (req.user.id !== userId) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-      
-      const canReview = await storage.canUserReviewProduct(userId, productId);
-      res.json({ canReview });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/products/:id/reviews", authenticateUser, async (req, res) => {
-    try {
-      const productId = parseInt(req.params.id);
       const reviewData = insertReviewSchema.parse({
         ...req.body,
         user_id: req.user.id,
-        product_id: productId,
+        product_id: parseInt(req.params.id),
       });
-      
-      // Verify user can review this product
-      const canReview = await storage.canUserReviewProduct(req.user.id, productId);
-      if (!canReview) {
-        return res.status(400).json({ message: "You can only review products you have ordered and received" });
-      }
-      
       const review = await storage.createReview(reviewData);
       res.json(review);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
-    }
-  });
-
-  // Get featured reviews for homepage
-  app.get("/api/reviews/featured", async (req, res) => {
-    try {
-      const featuredReviews = await storage.getFeaturedReviews();
-      res.json(featuredReviews);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get product ratings (average rating and review count)
-  app.get("/api/products/:id/rating", async (req, res) => {
-    try {
-      const productId = parseInt(req.params.id);
-      const rating = await storage.getProductRating(productId);
-      res.json(rating);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get all product ratings at once for better performance
-  app.get("/api/products/ratings", async (req, res) => {
-    try {
-      const ratings = await storage.getAllProductRatings();
-      res.json(ratings);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Admin: Get all reviews for management
-  app.get("/api/admin/reviews", authenticateUser, requireAdmin, async (req, res) => {
-    try {
-      const reviews = await storage.getAllReviews();
-      res.json(reviews);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Admin: Update review feature status
-  app.patch("/api/admin/reviews/:id/feature", authenticateUser, requireAdmin, async (req, res) => {
-    try {
-      const reviewId = parseInt(req.params.id);
-      const { isFeatured } = req.body;
-      
-      const updatedReview = await storage.updateReviewFeatureStatus(reviewId, isFeatured);
-      res.json(updatedReview);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Admin: Reply to review
-  app.post("/api/admin/reviews/:id/reply", authenticateUser, requireAdmin, async (req, res) => {
-    try {
-      const reviewId = parseInt(req.params.id);
-      const { adminReply } = req.body;
-      
-      if (!adminReply || adminReply.trim().length === 0) {
-        return res.status(400).json({ message: "Admin reply cannot be empty" });
-      }
-      
-      const updatedReview = await storage.replyToReview(reviewId, adminReply.trim());
-      res.json(updatedReview);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
     }
   });
 
@@ -1723,7 +1322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/super-admin/logo", authenticateUser, (req, res) => {
+  app.post("/api/super-admin/logo", authenticateToken, (req, res) => {
     try {
       // Check if user is super admin
       if (req.user.role !== 'super_admin') {
@@ -1774,7 +1373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/banners", authenticateUser, requireAdmin, async (req, res) => {
+  app.post("/api/banners", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const bannerData = insertBannerSchema.parse(req.body);
       const banner = await storage.createBanner(bannerData);
@@ -1784,7 +1383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
+  app.put("/api/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const bannerData = insertBannerSchema.partial().parse(req.body);
@@ -1795,7 +1394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
+  app.delete("/api/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteBanner(id);
@@ -1806,7 +1405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin banner management routes
-  app.post("/api/admin/banners", authenticateUser, requireAdmin, async (req, res) => {
+  app.post("/api/admin/banners", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const bannerData = insertBannerSchema.parse(req.body);
       const banner = await storage.createBanner(bannerData);
@@ -1816,7 +1415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const bannerData = insertBannerSchema.partial().parse(req.body);
@@ -1827,7 +1426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteBanner(id);
@@ -1839,45 +1438,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);
-
-  // Session refresh endpoint for continuous Google OAuth experience
-  app.post("/api/auth/refresh-session", async (req, res) => {
-    try {
-      // Check if user has active session
-      if ((req.session as any)?.user) {
-        const sessionUser = (req.session as any).user;
-        
-        // Get fresh user data from database
-        const user = await storage.getUser(sessionUser.id);
-        if (user) {
-          // Extend session for Google OAuth users
-          if (user.authProvider === 'google') {
-            req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
-            (req.session as any).user.lastActivity = new Date().toISOString();
-            
-            console.log('Google OAuth session refreshed:', {
-              user: user.email,
-              newExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-            });
-          } else {
-            // Regular session refresh (1 hour)
-            req.session.cookie.maxAge = 60 * 60 * 1000;
-          }
-          
-          return res.json({
-            refreshed: true,
-            user: user,
-            sessionDuration: user.authProvider === 'google' ? '24 hours' : '1 hour'
-          });
-        }
-      }
-      
-      res.status(401).json({ message: 'No active session to refresh' });
-    } catch (error) {
-      console.error('Session refresh error:', error);
-      res.status(500).json({ message: 'Session refresh failed' });
-    }
-  });
 
   const httpServer = createServer(app);
   return httpServer;

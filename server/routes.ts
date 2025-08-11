@@ -18,15 +18,24 @@ declare global {
   }
 }
 
-// Session-based authentication middleware
+// Enhanced session-based authentication middleware
 async function authenticateUser(req: any, res: any, next: any) {
   // Check if user is authenticated via session
   if ((req.session as any)?.user) {
     try {
-      // Get fresh user data from database
+      // Get fresh user data from database to ensure current state
       const user = await storage.getUser((req.session as any).user.id);
       if (user) {
         req.user = user;
+        
+        // Extend session on each authenticated request for Google OAuth users
+        if (user.authProvider === 'google') {
+          req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // Keep 24-hour sessions for Google users
+        }
+        
+        // Update last activity timestamp
+        (req.session as any).user.lastActivity = new Date().toISOString();
+        
         return next();
       }
     } catch (error) {
@@ -42,7 +51,7 @@ async function authenticateUser(req: any, res: any, next: any) {
   return res.status(401).json({ message: 'Authentication required' });
 }
 
-// Optional authentication middleware for cart/wishlist
+// Enhanced optional authentication middleware for cart/wishlist
 async function optionalAuth(req: any, res: any, next: any) {
   // Check if user is authenticated via session
   if ((req.session as any)?.user) {
@@ -51,6 +60,15 @@ async function optionalAuth(req: any, res: any, next: any) {
       const user = await storage.getUser((req.session as any).user.id);
       if (user) {
         req.user = user;
+        
+        // Extend session on each request for Google OAuth users
+        if (user.authProvider === 'google') {
+          req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // Keep 24-hour sessions
+        }
+        
+        // Update last activity timestamp
+        (req.session as any).user.lastActivity = new Date().toISOString();
+        
         return next();
       }
     } catch (error) {
@@ -60,6 +78,10 @@ async function optionalAuth(req: any, res: any, next: any) {
 
   // Check passport session (fallback for existing Google OAuth users)
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+    // Extend session for authenticated passport users too
+    if ((req.user as any).authProvider === 'google') {
+      req.session.cookie.maxAge = 24 * 60 * 60 * 1000;
+    }
     return next();
   }
   
@@ -69,6 +91,10 @@ async function optionalAuth(req: any, res: any, next: any) {
       const user = await storage.getUser((req.session as any).passport.user);
       if (user) {
         req.user = user;
+        // Extend session for Google users
+        if (user.authProvider === 'google') {
+          req.session.cookie.maxAge = 24 * 60 * 60 * 1000;
+        }
         return next();
       }
     } catch (error) {
@@ -1813,6 +1839,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);
+
+  // Session refresh endpoint for continuous Google OAuth experience
+  app.post("/api/auth/refresh-session", async (req, res) => {
+    try {
+      // Check if user has active session
+      if ((req.session as any)?.user) {
+        const sessionUser = (req.session as any).user;
+        
+        // Get fresh user data from database
+        const user = await storage.getUser(sessionUser.id);
+        if (user) {
+          // Extend session for Google OAuth users
+          if (user.authProvider === 'google') {
+            req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
+            (req.session as any).user.lastActivity = new Date().toISOString();
+            
+            console.log('Google OAuth session refreshed:', {
+              user: user.email,
+              newExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            });
+          } else {
+            // Regular session refresh (1 hour)
+            req.session.cookie.maxAge = 60 * 60 * 1000;
+          }
+          
+          return res.json({
+            refreshed: true,
+            user: user,
+            sessionDuration: user.authProvider === 'google' ? '24 hours' : '1 hour'
+          });
+        }
+      }
+      
+      res.status(401).json({ message: 'No active session to refresh' });
+    } catch (error) {
+      console.error('Session refresh error:', error);
+      res.status(500).json({ message: 'Session refresh failed' });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

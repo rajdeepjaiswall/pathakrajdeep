@@ -44,9 +44,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Store in localStorage for UI consistency
           localStorage.setItem('user', JSON.stringify(data.user));
           
+          // Log continuous session for Google OAuth users
+          if (data.user.authProvider === 'google') {
+            console.log('Google OAuth continuous session active:', {
+              user: data.user.email,
+              loginTime: data.user.loginTime,
+              profileCompleted: data.user.profileCompleted,
+              sessionType: 'persistent'
+            });
+          }
+          
           // Check if Google OAuth user needs to complete profile
           if (data.user.authProvider === 'google' && !data.user.profileCompleted) {
-            console.log('User needs to complete profile');
+            console.log('Google user needs to complete profile - maintaining session');
           }
         }
       }
@@ -92,6 +102,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(updatedUser);
     // Update stored user data
     localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    // Log profile completion for Google OAuth users
+    if (updatedUser.authProvider === 'google' && updatedUser.profileCompleted) {
+      console.log('Google OAuth user profile completed - continuous session maintained');
+    }
   };
 
   const value = {

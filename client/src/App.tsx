@@ -94,12 +94,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <WishlistProvider>
-            <CartProvider>
+          <CartProvider>
+            <WishlistProvider>
               <Toaster />
               <AppContent />
-            </CartProvider>
-          </WishlistProvider>
+            </WishlistProvider>
+          </CartProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

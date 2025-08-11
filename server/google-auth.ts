@@ -158,8 +158,10 @@ export function setupSession(app: Express) {
     environment: process.env.NODE_ENV,
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: '1 hour',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    defaultMaxAge: '1 hour',
+    googleAuthMaxAge: '24 hours',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sessionSecret: 'configured from Replit Secrets'
   });
 
   app.use(session({
@@ -226,17 +228,28 @@ export function setupGoogleAuthRoutes(app: Express) {
           return res.redirect("/customer/login?error=auth_failed");
         }
 
-        // Create session for the authenticated user
+        // Create persistent session for the authenticated user
         (req.session as any).user = {
           id: user.id,
           username: user.username,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role
+          role: user.role,
+          profileCompleted: user.profileCompleted,
+          authProvider: user.authProvider,
+          profileImageUrl: user.profileImageUrl,
+          loginTime: new Date().toISOString()
         };
 
-        console.log('Google OAuth success - Session created for user:', user.id);
+        // Extend session for Google OAuth users to ensure continuous experience
+        req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours for Google OAuth
+        
+        console.log('Google OAuth success - Persistent session created for user:', {
+          id: user.id,
+          email: user.email,
+          sessionDuration: '24 hours'
+        });
 
         // Check if user needs to complete profile
         if (user && !user.profileCompleted) {
@@ -314,7 +327,7 @@ export function setupGoogleAuthRoutes(app: Express) {
         console.log('Created new user from Google One Tap:', user.id);
       }
 
-      // Create session for the authenticated user
+      // Create persistent session for the authenticated user
       (req.session as any).user = {
         id: user.id,
         username: user.username,
@@ -322,10 +335,20 @@ export function setupGoogleAuthRoutes(app: Express) {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        profileCompleted: user.profileCompleted
+        profileCompleted: user.profileCompleted,
+        authProvider: user.authProvider,
+        profileImageUrl: user.profileImageUrl,
+        loginTime: new Date().toISOString()
       };
 
-      console.log('Google One Tap session created for user:', user.id);
+      // Extend session for Google One Tap users to ensure continuous experience
+      req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours for Google One Tap
+      
+      console.log('Google One Tap session created for user:', {
+        id: user.id,
+        email: user.email,
+        sessionDuration: '24 hours'
+      });
 
       res.json({
         user: {

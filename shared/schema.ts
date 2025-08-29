@@ -196,21 +196,7 @@ export const otps = pgTable("otps", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Showcase Posters table
-export const showcasePosters = pgTable("showcase_posters", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  imageUrl: text("image_url").notNull(),
-  productUrl: text("product_url"),
-  productId: integer("product_id").references(() => products.id),
-  caption: text("caption"),
-  displayOrder: integer("display_order").default(0),
-  isVisible: boolean("is_visible").default(true),
-  startAt: timestamp("start_at"),
-  endAt: timestamp("end_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -373,11 +359,7 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({
   createdAt: true,
 });
 
-export const insertShowcasePosterSchema = createInsertSchema(showcasePosters).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+
 
 export const insertBannerSchema = createInsertSchema(banners).omit({
   id: true,
@@ -397,7 +379,7 @@ export type WishlistItem = typeof wishlistItems.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type Banner = typeof banners.$inferSelect;
-export type ShowcasePoster = typeof showcasePosters.$inferSelect;
+
 export type Otp = typeof otps.$inferSelect;
 
 // Insert types
@@ -412,5 +394,5 @@ export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type InsertBanner = z.infer<typeof insertBannerSchema>;
-export type InsertShowcasePoster = z.infer<typeof insertShowcasePosterSchema>;
+
 export type InsertOtp = z.infer<typeof insertOtpSchema>;

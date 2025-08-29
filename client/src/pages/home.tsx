@@ -10,7 +10,7 @@ import ProductCard from '@/components/product/product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
 import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
-import ShowcaseCarousel from '@/components/showcase-carousel';
+
 
 import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
@@ -142,8 +142,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Showcase Carousel - A4 Posters with Full-Screen View */}
-      <ShowcaseCarousel />
+
 
       {/* Mini Banner Slideshow */}
       <div className="pt-2 pb-3 bg-background">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User, ArrowLeft, Home, PhoneCall } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,59 @@ import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/cart';
 import { apiRequest } from '@/lib/queryClient';
 import { Link } from 'wouter';
+
+// ETA Countdown Component
+function ETACountdown({ estimatedDelivery }: { estimatedDelivery: string }) {
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const deliveryTime = new Date(estimatedDelivery).getTime();
+      const difference = deliveryTime - now;
+
+      if (difference <= 0) {
+        setTimeLeft('Delivery time passed');
+        setIsExpired(true);
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      let timeString = '';
+      if (days > 0) {
+        timeString = `${days}d ${hours}h ${minutes}m`;
+      } else if (hours > 0) {
+        timeString = `${hours}h ${minutes}m ${seconds}s`;
+      } else if (minutes > 0) {
+        timeString = `${minutes}m ${seconds}s`;
+      } else {
+        timeString = `${seconds}s`;
+      }
+
+      setTimeLeft(timeString);
+      setIsExpired(false);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [estimatedDelivery]);
+
+  return (
+    <div className={`flex items-center gap-1 text-sm font-medium ${
+      isExpired ? 'text-red-600' : 'text-blue-600'
+    }`}>
+      <Clock className="h-3 w-3" />
+      <span>{timeLeft || 'Calculating...'}</span>
+    </div>
+  );
+}
 
 export default function CustomerOrders() {
   const { user } = useAuth();
@@ -263,9 +316,15 @@ export default function CustomerOrders() {
                           </div>
                         </div>
                         {order.estimatedDelivery && (
-                          <div className="mt-2 text-sm text-gray-600">
-                            <Clock className="h-3 w-3 inline mr-1" />
-                            Estimated delivery: {new Date(order.estimatedDelivery).toLocaleString()}
+                          <div className="mt-2 space-y-1">
+                            <div className="text-sm text-gray-600">
+                              <Clock className="h-3 w-3 inline mr-1" />
+                              Estimated: {new Date(order.estimatedDelivery).toLocaleString()}
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-gray-600">ETA: </span>
+                              <ETACountdown estimatedDelivery={order.estimatedDelivery} />
+                            </div>
                           </div>
                         )}
                       </div>

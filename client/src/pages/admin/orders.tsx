@@ -386,10 +386,10 @@ export default function AdminOrders() {
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="getting_ready">Getting Ready</SelectItem>
-                                        <SelectItem value="packed">Packed</SelectItem>
+                                        <SelectItem value="order_received">Order Received</SelectItem>
+                                        <SelectItem value="preparing">Preparing</SelectItem>
                                         <SelectItem value="dispatched">Dispatched</SelectItem>
-                                        <SelectItem value="shipped">Shipped</SelectItem>
+                                        <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
                                         <SelectItem value="delivered">Delivered</SelectItem>
                                         <SelectItem value="cancelled">Cancelled</SelectItem>
                                       </SelectContent>

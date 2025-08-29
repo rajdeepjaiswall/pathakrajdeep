@@ -77,6 +77,9 @@ export interface IStorage {
     totalRevenue: number;
     totalCustomers: number;
     totalProducts: number;
+    ordersReceivedToday: number;
+    ordersDeliveredToday: number;
+    ordersCancelledToday: number;
     recentOrders: Order[];
     topProducts: (Product & { orderCount: number })[];
   }>;
@@ -562,6 +565,9 @@ export class DatabaseStorage implements IStorage {
     totalRevenue: number;
     totalCustomers: number;
     totalProducts: number;
+    ordersReceivedToday: number;
+    ordersDeliveredToday: number;
+    ordersCancelledToday: number;
     recentOrders: Order[];
     topProducts: (Product & { orderCount: number })[];
   }> {
@@ -585,6 +591,32 @@ export class DatabaseStorage implements IStorage {
       })
       .from(products)
       .where(eq(products.isActive, true));
+
+    // Today's order statistics
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    const [todayStats] = await db
+      .select({
+        ordersReceivedToday: sql<number>`count(*)::int`
+      })
+      .from(orders)
+      .where(sql`${orders.orderDate} >= ${startOfDay} AND ${orders.orderDate} < ${endOfDay}`);
+
+    const [deliveredTodayStats] = await db
+      .select({
+        ordersDeliveredToday: sql<number>`count(*)::int`
+      })
+      .from(orders)
+      .where(sql`${orders.orderDate} >= ${startOfDay} AND ${orders.orderDate} < ${endOfDay} AND ${orders.status} = 'delivered'`);
+
+    const [cancelledTodayStats] = await db
+      .select({
+        ordersCancelledToday: sql<number>`count(*)::int`
+      })
+      .from(orders)
+      .where(sql`${orders.orderDate} >= ${startOfDay} AND ${orders.orderDate} < ${endOfDay} AND ${orders.status} = 'cancelled'`);
 
     const recentOrders = await db
       .select()
@@ -621,6 +653,9 @@ export class DatabaseStorage implements IStorage {
       totalRevenue: orderStats?.totalRevenue || 0,
       totalCustomers: customerStats?.totalCustomers || 0,
       totalProducts: productStats?.totalProducts || 0,
+      ordersReceivedToday: todayStats?.ordersReceivedToday || 0,
+      ordersDeliveredToday: deliveredTodayStats?.ordersDeliveredToday || 0,
+      ordersCancelledToday: cancelledTodayStats?.ordersCancelledToday || 0,
       recentOrders,
       topProducts
     };

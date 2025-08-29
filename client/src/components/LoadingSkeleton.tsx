@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 interface LoadingSkeletonProps {
   className?: string;
   count?: number;
-  type?: 'product' | 'banner' | 'category' | 'text';
+  type?: 'product' | 'banner' | 'category' | 'text' | 'showcase';
 }
 
 export default function LoadingSkeleton({ 
@@ -46,6 +46,20 @@ export default function LoadingSkeleton({
           <div className="space-y-2">
             <div className="bg-gray-200 h-4 rounded animate-pulse"></div>
             <div className="bg-gray-200 h-4 rounded w-3/4 animate-pulse"></div>
+          </div>
+        );
+        
+      case 'showcase':
+        return (
+          <div className="flex gap-4 overflow-hidden">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="flex-shrink-0 w-64 md:w-72">
+                <div 
+                  className="bg-gray-200 rounded-lg animate-pulse"
+                  style={{ aspectRatio: '1 / 1.414' }}
+                />
+              </div>
+            ))}
           </div>
         );
         

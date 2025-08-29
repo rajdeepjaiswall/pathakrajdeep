@@ -1436,6 +1436,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Showcase Posters routes (with authentic bakery images)
+  app.get("/api/showcase-posters", async (req, res) => {
+    try {
+      // Using actual bakery-themed images for showcase posters
+      const showcasePosters = [
+        {
+          id: 1,
+          title: "Diwali Special Sweets",
+          imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          productUrl: "/products",
+          productId: 6,
+          caption: "Celebrate Diwali with our authentic traditional sweets and delicacies",
+          displayOrder: 1,
+          isVisible: true,
+          startAt: null,
+          endAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          title: "Fresh Bakery Items",
+          imageUrl: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          productUrl: "/products",
+          productId: null,
+          caption: "Daily fresh baked cookies, biscuits and more from our traditional oven",
+          displayOrder: 2,
+          isVisible: true,
+          startAt: null,
+          endAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 3,
+          title: "Premium Collection",
+          imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          productUrl: "/products",
+          productId: null,
+          caption: "Explore our premium range of handcrafted sweets and snacks",
+          displayOrder: 3,
+          isVisible: true,
+          startAt: null,
+          endAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+      
+      // Add caching headers
+      res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
+      res.setHeader('ETag', `"showcase-posters-${showcasePosters.length}-${Date.now()}"`);
+      
+      res.json(showcasePosters);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);
 

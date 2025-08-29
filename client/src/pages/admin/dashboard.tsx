@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   ShoppingCart, 
   Users, 
@@ -12,7 +12,9 @@ import {
   Radio,
   Calendar,
   Truck,
-  XCircle
+  XCircle,
+  Volume2,
+  Bell
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +44,117 @@ export default function AdminDashboard() {
   // Live visitor counter state
   const [liveVisitors, setLiveVisitors] = useState(Math.floor(Math.random() * 5) + 1);
   const [isOnline, setIsOnline] = useState(true);
+  const [liveOrders, setLiveOrders] = useState<any[]>([]);
+  const [newOrderAlert, setNewOrderAlert] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio for notifications
+  useEffect(() => {
+    // Create audio element for order notifications
+    audioRef.current = new Audio();
+    audioRef.current.preload = 'auto';
+    
+    // Generate notification sound programmatically
+    const generateNotificationSound = () => {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.3);
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.6);
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.9);
+      
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 1);
+    };
+
+    const playNotification = () => {
+      try {
+        generateNotificationSound();
+      } catch (error) {
+        console.warn('Audio notification failed:', error);
+      }
+    };
+
+    if (audioRef.current) {
+      audioRef.current.addEventListener('canplay', playNotification);
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.removeEventListener('canplay', playNotification);
+      }
+    };
+  }, []);
+
+  // Simulate live order updates (in production, this would be WebSocket)
+  useEffect(() => {
+    const checkForNewOrders = async () => {
+      try {
+        const response = await fetch('/api/admin/orders');
+        if (response.ok) {
+          const orders = await response.json();
+          const recentOrders = orders.slice(0, 5);
+          
+          if (liveOrders.length > 0 && recentOrders.length > liveOrders.length) {
+            // New order detected
+            setNewOrderAlert(true);
+            
+            // Play notification sound for 5 seconds
+            const playSound = () => {
+              try {
+                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Create ringing sound pattern
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                
+                let currentTime = audioContext.currentTime;
+                for (let i = 0; i < 10; i++) { // 10 rings over 5 seconds
+                  oscillator.frequency.setValueAtTime(800, currentTime);
+                  oscillator.frequency.setValueAtTime(600, currentTime + 0.2);
+                  oscillator.frequency.setValueAtTime(800, currentTime + 0.4);
+                  currentTime += 0.5;
+                }
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 5);
+                
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 5);
+              } catch (error) {
+                console.warn('Audio notification failed:', error);
+              }
+            };
+            
+            playSound();
+            
+            setTimeout(() => setNewOrderAlert(false), 5000);
+          }
+          
+          setLiveOrders(recentOrders);
+        }
+      } catch (error) {
+        console.warn('Failed to check for new orders:', error);
+      }
+    };
+
+    // Check every 10 seconds
+    const interval = setInterval(checkForNewOrders, 10000);
+    checkForNewOrders(); // Initial check
+
+    return () => clearInterval(interval);
+  }, [liveOrders.length]);
 
   // Update live visitors periodically
   useEffect(() => {
@@ -168,8 +281,9 @@ export default function AdminDashboard() {
             </Button>
           </div>
 
-          {/* Analytics Cards */}
+          {/* Analytics Cards - 4x2 Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Row 1 */}
             {/* Live Visitors */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -223,7 +337,104 @@ export default function AdminDashboard() {
                 <p className="text-xs text-muted-foreground">Cancelled orders</p>
               </CardContent>
             </Card>
+
+            {/* Row 2 */}
+            {/* Total Orders */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-navy">{analytics?.totalOrders || 0}</div>
+                <p className="text-xs text-muted-foreground">All time orders</p>
+              </CardContent>
+            </Card>
+
+            {/* Total Revenue */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-navy">{formatPrice(analytics?.totalRevenue || 0)}</div>
+                <p className="text-xs text-muted-foreground">All time revenue</p>
+              </CardContent>
+            </Card>
+
+            {/* Total Products */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-navy">{analytics?.totalProducts || 0}</div>
+                <p className="text-xs text-muted-foreground">Active products</p>
+              </CardContent>
+            </Card>
+
+            {/* Total Customers */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-navy">{analytics?.totalCustomers || 0}</div>
+                <p className="text-xs text-muted-foreground">Registered customers</p>
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Live Orders Section */}
+          {liveOrders.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="text-xl font-semibold text-navy">Live Orders</h3>
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
+                  newOrderAlert ? 'bg-red-100 text-red-800 animate-pulse' : 'bg-green-100 text-green-800'
+                }`}>
+                  {newOrderAlert ? (
+                    <>
+                      <Bell className="h-3 w-3 animate-bounce" />
+                      <Volume2 className="h-3 w-3" />
+                      NEW ORDER!
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      LIVE
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {liveOrders.map((order: any) => (
+                  <Card key={order.id} className={`transition-all duration-300 ${
+                    newOrderAlert ? 'ring-2 ring-red-500 shadow-lg' : 'hover:shadow-md'
+                  }`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-navy">#{order.orderNumber}</span>
+                        <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                          {getStatusIcon(order.status)}
+                          <span className="ml-1">{order.status}</span>
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <p><span className="font-medium">Customer:</span> {order.deliveryAddress?.name}</p>
+                        <p><span className="font-medium">Total:</span> {formatPrice(parseFloat(order.total))}</p>
+                        <p><span className="font-medium">Time:</span> {new Date(order.orderDate).toLocaleTimeString()}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Recent Orders */}

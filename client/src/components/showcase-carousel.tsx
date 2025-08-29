@@ -1,12 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, X, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, ExternalLink, Eye, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Link } from 'wouter';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import LoadingSkeleton from './LoadingSkeleton';
 import OptimizedImage from './OptimizedImage';
-import type { ShowcasePoster } from '@shared/schema';
+
+interface ShowcasePoster {
+  id: number;
+  title: string;
+  imageUrl: string;
+  productUrl?: string;
+  productId?: number | null;
+  caption?: string;
+  displayOrder?: number;
+  isVisible: boolean;
+  startAt?: string | null;
+  endAt?: string | null;
+}
 
 interface ShowcaseCarouselProps {
   className?: string;
@@ -14,15 +25,17 @@ interface ShowcaseCarouselProps {
 
 export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [selectedPoster, setSelectedPoster] = useState<ShowcasePoster | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const carouselRef = useRef<HTMLDivElement>(null);
+  const [showOverlay, setShowOverlay] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [modalImageLoaded, setModalImageLoaded] = useState(false);
+  const [fullScreenIndex, setFullScreenIndex] = useState(0);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
-  const modalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  
   // Fetch showcase posters
-  const { data: allPosters = [], isLoading } = useQuery({
+  const { data: allPosters = [], isLoading: postersLoading } = useQuery({
     queryKey: ['/api/showcase-posters'],
   });
 
@@ -37,46 +50,59 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
     return true;
   }).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
-  // Auto-play functionality
+  // Auto-scroll every 5 seconds (left-to-right)
   useEffect(() => {
-    if (!isAutoPlaying || activePosters.length <= 1) return;
+    if (activePosters.length <= 1) return;
 
     autoPlayRef.current = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % activePosters.length);
-    }, 10000); // 10 seconds
+    }, 5000); // 5 seconds
 
     return () => {
       if (autoPlayRef.current) {
         clearInterval(autoPlayRef.current);
       }
     };
-  }, [isAutoPlaying, activePosters.length]);
+  }, [activePosters.length]);
 
-  // Pause auto-play on interaction
-  const pauseAutoPlay = () => {
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 30000); // Resume after 30 seconds
-  };
-
-  // Handle poster click (single click for full-screen)
-  const handlePosterClick = (poster: ShowcasePoster) => {
-    setSelectedPoster(poster);
-    setIsModalOpen(true);
-    pauseAutoPlay();
-
-    // Auto-close modal after 10 seconds
-    modalTimeoutRef.current = setTimeout(() => {
-      setIsModalOpen(false);
-    }, 10000);
-  };
-
-  // Handle poster double-click (navigate to product)
-  const handlePosterDoubleClick = (poster: ShowcasePoster) => {
-    if (modalTimeoutRef.current) {
-      clearTimeout(modalTimeoutRef.current);
-    }
-    setIsModalOpen(false);
+  // Detect orientation
+  useEffect(() => {
+    const updateOrientation = () => {
+      setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
+    };
     
+    updateOrientation();
+    window.addEventListener('resize', updateOrientation);
+    window.addEventListener('orientationchange', updateOrientation);
+    
+    return () => {
+      window.removeEventListener('resize', updateOrientation);
+      window.removeEventListener('orientationchange', updateOrientation);
+    };
+  }, []);
+
+  // Handle poster tap (single tap shows overlay)
+  const handlePosterTap = (poster: ShowcasePoster, index: number) => {
+    setShowOverlay(index);
+    setTimeout(() => setShowOverlay(null), 3000); // Hide overlay after 3 seconds
+  };
+
+  // Open full screen with loading
+  const handleViewFullScreen = (poster: ShowcasePoster, index: number) => {
+    setSelectedPoster(poster);
+    setFullScreenIndex(index);
+    setIsLoading(true);
+    setModalImageLoaded(false);
+    setIsModalOpen(true);
+    
+    // Simulate loading time for orientation detection
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  // Navigate to product
+  const handleViewProduct = (poster: ShowcasePoster) => {
     if (poster.productUrl) {
       window.location.href = poster.productUrl;
     } else if (poster.productId) {
@@ -84,41 +110,35 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
     }
   };
 
-  // Navigation functions
-  const nextSlide = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % activePosters.length);
-    pauseAutoPlay();
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + activePosters.length) % activePosters.length);
-    pauseAutoPlay();
+  // Instagram-style navigation in full screen
+  const navigateFullScreen = (direction: 'prev' | 'next') => {
+    const newIndex = direction === 'next' 
+      ? (fullScreenIndex + 1) % activePosters.length
+      : (fullScreenIndex - 1 + activePosters.length) % activePosters.length;
+    
+    setFullScreenIndex(newIndex);
+    setSelectedPoster(activePosters[newIndex]);
+    setModalImageLoaded(false);
   };
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isModalOpen) {
+      if (isModalOpen && !isLoading) {
         switch (event.key) {
           case 'Escape':
             setIsModalOpen(false);
-            if (modalTimeoutRef.current) {
-              clearTimeout(modalTimeoutRef.current);
-            }
+            break;
+          case 'ArrowLeft':
+            navigateFullScreen('prev');
+            break;
+          case 'ArrowRight':
+            navigateFullScreen('next');
             break;
           case 'Enter':
             if (selectedPoster) {
-              handlePosterDoubleClick(selectedPoster);
+              handleViewProduct(selectedPoster);
             }
-            break;
-        }
-      } else {
-        switch (event.key) {
-          case 'ArrowLeft':
-            prevSlide();
-            break;
-          case 'ArrowRight':
-            nextSlide();
             break;
         }
       }
@@ -126,19 +146,33 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, selectedPoster]);
+  }, [isModalOpen, isLoading, selectedPoster, fullScreenIndex]);
 
-  // Clean up timeouts
-  useEffect(() => {
-    return () => {
-      if (autoPlayRef.current) clearInterval(autoPlayRef.current);
-      if (modalTimeoutRef.current) clearTimeout(modalTimeoutRef.current);
-    };
-  }, []);
+  // Get visible cards (center focus with size variations)
+  const getVisibleCards = () => {
+    const cards = [];
+    const centerIndex = currentIndex;
+    
+    // Show 3 cards: previous, current (center), next
+    for (let i = -1; i <= 1; i++) {
+      const index = (centerIndex + i + activePosters.length) % activePosters.length;
+      const poster = activePosters[index];
+      const isCenterCard = i === 0;
+      
+      cards.push({
+        poster,
+        index,
+        isCenterCard,
+        position: i
+      });
+    }
+    
+    return cards;
+  };
 
-  if (isLoading) {
+  if (postersLoading) {
     return (
-      <div className={`py-8 ${className}`}>
+      <div className={`py-8 bg-background ${className}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl md:text-3xl font-bold text-navy mb-6">Showcase</h2>
           <LoadingSkeleton type="showcase" className="h-64" />
@@ -148,8 +182,10 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
   }
 
   if (activePosters.length === 0) {
-    return null; // Don't show section if no active posters
+    return null;
   }
+
+  const visibleCards = getVisibleCards();
 
   return (
     <div className={`py-8 bg-background ${className}`}>
@@ -157,22 +193,20 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
         <h2 className="text-2xl md:text-3xl font-bold text-navy mb-6">Showcase</h2>
         
         <div className="relative">
-          {/* Carousel Container */}
-          <div 
-            ref={carouselRef}
-            className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 scroll-smooth"
-            style={{ scrollSnapType: 'x mandatory' }}
-          >
-            {activePosters.map((poster, index) => (
+          {/* Carousel Container with Center Focus */}
+          <div className="flex justify-center items-center gap-4 h-80 overflow-hidden">
+            {visibleCards.map(({ poster, index, isCenterCard, position }) => (
               <div
                 key={poster.id}
-                className="flex-shrink-0 w-64 md:w-72 cursor-pointer group"
-                style={{ scrollSnapAlign: 'start' }}
-                onClick={() => handlePosterClick(poster)}
-                onDoubleClick={() => handlePosterDoubleClick(poster)}
+                className={`relative cursor-pointer transition-all duration-500 ${
+                  isCenterCard 
+                    ? 'w-64 md:w-80 scale-125 z-10' // Center card 25% bigger
+                    : 'w-48 md:w-60 scale-75 opacity-75' // Side cards 25% smaller
+                }`}
+                onClick={() => handlePosterTap(poster, index)}
               >
                 {/* A4 Poster Card */}
-                <div className="relative bg-gray-900 rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 hover:shadow-xl">
+                <div className="relative bg-gray-900 rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:shadow-xl">
                   <div 
                     className="relative"
                     style={{ aspectRatio: '1 / 1.414' }} // A4 aspect ratio
@@ -181,53 +215,55 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
                       src={poster.imageUrl}
                       alt={poster.title}
                       className="w-full h-full object-cover"
-                      width={300}
-                      height={424}
-                      priority={index < 3}
+                      width={320}
+                      height={452}
+                      priority={isCenterCard}
                     />
                     
-                    {/* Dark overlay on hover */}
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    
-                    {/* Hover overlay with title */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute bottom-4 left-4 right-4 text-white">
-                        <h3 className="font-semibold text-lg mb-1">{poster.title}</h3>
-                        {poster.caption && (
-                          <p className="text-sm text-gray-200 line-clamp-2">{poster.caption}</p>
-                        )}
-                        <div className="flex items-center mt-2 text-xs text-gray-300">
-                          <span>Click to view • Double-click for product</span>
+                    {/* Tap Overlay */}
+                    {showOverlay === index && (
+                      <div className="absolute inset-0 bg-black/70 flex flex-col justify-center items-center text-white animate-in fade-in duration-300">
+                        <div className="text-center space-y-4">
+                          <h3 className="font-bold text-lg">{poster.title}</h3>
+                          {poster.caption && (
+                            <p className="text-sm text-gray-200 px-4">{poster.caption}</p>
+                          )}
+                          <div className="flex flex-col space-y-2">
+                            {(poster.productUrl || poster.productId) && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewProduct(poster);
+                                }}
+                                className="bg-white/90 text-black hover:bg-white"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View Product
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewFullScreen(poster, index);
+                              }}
+                              className="border-white text-white hover:bg-white hover:text-black"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Full Screen
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Navigation Arrows */}
-          {activePosters.length > 1 && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 bg-white/90 hover:bg-white shadow-md"
-                onClick={prevSlide}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 bg-white/90 hover:bg-white shadow-md"
-                onClick={nextSlide}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </>
-          )}
 
           {/* Progress Indicators */}
           {activePosters.length > 1 && (
@@ -238,10 +274,7 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
                   className={`w-2 h-2 rounded-full transition-colors ${
                     index === currentIndex ? 'bg-navy' : 'bg-gray-300'
                   }`}
-                  onClick={() => {
-                    setCurrentIndex(index);
-                    pauseAutoPlay();
-                  }}
+                  onClick={() => setCurrentIndex(index)}
                 />
               ))}
             </div>
@@ -249,45 +282,72 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
         </div>
       </div>
 
-      {/* Full-Screen Modal */}
+      {/* Instagram-Style Full-Screen Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] p-0 bg-black/95">
+        <DialogContent className="max-w-none w-full h-screen p-0 bg-black border-0">
           {selectedPoster && (
-            <div className="relative w-full h-full flex items-center justify-center">
+            <div className="relative w-full h-full">
+              {/* Loading Screen */}
+              {isLoading && (
+                <div className="absolute inset-0 bg-black flex items-center justify-center z-50">
+                  <div className="text-center text-white">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                    <p className="text-sm">Loading...</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Detecting {orientation} orientation
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Close Button */}
               <button
-                className="absolute top-4 right-4 z-10 text-white hover:text-gray-300 transition-colors"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  if (modalTimeoutRef.current) {
-                    clearTimeout(modalTimeoutRef.current);
-                  }
-                }}
+                className="absolute top-4 right-4 z-30 text-white hover:text-gray-300 transition-colors bg-black/50 rounded-full p-2"
+                onClick={() => setIsModalOpen(false)}
               >
-                <X className="h-8 w-8" />
+                <X className="h-6 w-6" />
               </button>
 
-              {/* Full-screen poster */}
-              <div className="max-w-full max-h-full p-8">
+              {/* Navigation Areas (Instagram style) */}
+              <button
+                className="absolute left-0 top-0 w-1/3 h-full z-20 flex items-center justify-start pl-4"
+                onClick={() => navigateFullScreen('prev')}
+              >
+                <ChevronLeft className="h-8 w-8 text-white/70 hover:text-white transition-colors" />
+              </button>
+
+              <button
+                className="absolute right-0 top-0 w-1/3 h-full z-20 flex items-center justify-end pr-4"
+                onClick={() => navigateFullScreen('next')}
+              >
+                <ChevronRight className="h-8 w-8 text-white/70 hover:text-white transition-colors" />
+              </button>
+
+              {/* Full-screen Image */}
+              <div className="w-full h-full flex items-center justify-center p-4">
                 <OptimizedImage
                   src={selectedPoster.imageUrl}
                   alt={selectedPoster.title}
-                  className="max-w-full max-h-full object-contain"
-                  width={800}
-                  height={1131}
+                  className={`max-w-full max-h-full object-contain ${
+                    modalImageLoaded ? 'opacity-100' : 'opacity-0'
+                  } transition-opacity duration-300`}
+                  width={orientation === 'landscape' ? 1200 : 800}
+                  height={orientation === 'landscape' ? 849 : 1131}
+                  onLoad={() => setModalImageLoaded(true)}
                 />
               </div>
 
-              {/* Toolbar */}
+              {/* Bottom Toolbar */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6">
                 <div className="text-center text-white">
-                  <h3 className="text-xl font-bold mb-2">{selectedPoster.title}</h3>
+                  <h3 className="text-lg font-bold mb-2">{selectedPoster.title}</h3>
                   {selectedPoster.caption && (
-                    <p className="text-gray-200 mb-4">{selectedPoster.caption}</p>
+                    <p className="text-sm text-gray-200 mb-4">{selectedPoster.caption}</p>
                   )}
                   {(selectedPoster.productUrl || selectedPoster.productId) && (
                     <Button
                       variant="secondary"
-                      onClick={() => handlePosterDoubleClick(selectedPoster)}
+                      onClick={() => handleViewProduct(selectedPoster)}
                       className="bg-white/90 text-black hover:bg-white"
                     >
                       <ExternalLink className="h-4 w-4 mr-2" />
@@ -295,6 +355,20 @@ export default function ShowcaseCarousel({ className }: ShowcaseCarouselProps) {
                     </Button>
                   )}
                 </div>
+              </div>
+
+              {/* Progress Indicators (Instagram style) */}
+              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex gap-1 z-30">
+                {activePosters.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`h-1 rounded-full transition-all duration-300 ${
+                      index === fullScreenIndex 
+                        ? 'bg-white w-8' 
+                        : 'bg-white/40 w-4'
+                    }`}
+                  />
+                ))}
               </div>
             </div>
           )}

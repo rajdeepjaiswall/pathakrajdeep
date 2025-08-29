@@ -29,8 +29,9 @@ export default function Home() {
 
   // Preload critical images when products load
   useEffect(() => {
-    if (allProducts && allProducts.length > 0) {
-      const imagesToPreload = allProducts
+    const products = allProducts as any[];
+    if (products && products.length > 0) {
+      const imagesToPreload = products
         .slice(0, 8) // First 8 products
         .flatMap((product: any) => product.images || [])
         .filter((img: string) => img && !img.startsWith('data:'));
@@ -58,7 +59,7 @@ export default function Home() {
   });
 
   // Show loading spinner for mobile on initial load
-  if (productsLoading && allProducts.length === 0) {
+  if (productsLoading && (allProducts as any[]).length === 0) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -96,9 +97,6 @@ export default function Home() {
 
       {/* Category Showcase - Automatic Moving Carousel */}
       <CategoryShowcase />
-
-      {/* Showcase Carousel - A4 Posters with Full-Screen View */}
-      <ShowcaseCarousel />
 
       {/* Featured Products - Product Catalogue */}
       <section className="pt-2 pb-16 bg-background">
@@ -143,6 +141,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Showcase Carousel - A4 Posters with Full-Screen View */}
+      <ShowcaseCarousel />
 
       {/* Mini Banner Slideshow */}
       <div className="pt-2 pb-3 bg-background">

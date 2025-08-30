@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Save, X, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Upload, Video, Image, VolumeX, Volume2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
+import { ObjectUploader } from '@/components/ObjectUploader';
 
 interface Banner {
   id: number;
   title: string;
   description: string;
   imageUrl: string;
+  videoUrl?: string;
   linkUrl?: string;
   isActive: boolean;
   displayOrder: number;
@@ -35,10 +38,12 @@ export default function AdminBanners() {
     title: '',
     description: '',
     imageUrl: '',
+    videoUrl: '',
     linkUrl: '',
     isActive: true,
     displayOrder: 1
   });
+  const [bannerType, setBannerType] = useState<'image' | 'video'>('image');
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -63,6 +68,7 @@ export default function AdminBanners() {
         title: '',
         description: '',
         imageUrl: '',
+        videoUrl: '',
         linkUrl: '',
         isActive: true,
         displayOrder: 1
@@ -124,21 +130,37 @@ export default function AdminBanners() {
     },
   });
 
-  const handleImageUpload = (file: File, isNew = false) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const imageUrl = event.target?.result as string;
-      if (isNew) {
-        setNewBanner(prev => ({ ...prev, imageUrl }));
-      } else if (editingBanner) {
-        setEditingBanner(prev => prev ? { ...prev, imageUrl } : null);
+  const handleMediaUpload = async (uploadedUrls: string[], mediaType: 'image' | 'video', isNew = false) => {
+    if (uploadedUrls.length === 0) return;
+    
+    const mediaUrl = uploadedUrls[0];
+    if (isNew) {
+      if (mediaType === 'image') {
+        setNewBanner(prev => ({ ...prev, imageUrl: mediaUrl, videoUrl: '' }));
+      } else {
+        setNewBanner(prev => ({ ...prev, videoUrl: mediaUrl, imageUrl: '' }));
       }
-      toast({
-        title: "Image uploaded",
-        description: "Banner image has been uploaded successfully",
-      });
+    } else if (editingBanner) {
+      if (mediaType === 'image') {
+        setEditingBanner(prev => prev ? { ...prev, imageUrl: mediaUrl, videoUrl: '' } : null);
+      } else {
+        setEditingBanner(prev => prev ? { ...prev, videoUrl: mediaUrl, imageUrl: '' } : null);
+      }
+    }
+    
+    toast({
+      title: `${mediaType === 'image' ? 'Image' : 'Video'} uploaded`,
+      description: `Banner ${mediaType} has been uploaded successfully`,
+    });
+  };
+
+  const getUploadParameters = async () => {
+    const response = await apiRequest('/api/objects/upload', 'POST');
+    const data = await response.json();
+    return {
+      method: 'PUT' as const,
+      url: data.uploadURL,
     };
-    reader.readAsDataURL(file);
   };
 
   const handleCreateBanner = () => {
@@ -234,41 +256,90 @@ export default function AdminBanners() {
                 />
               </div>
               <div>
-                <Label>Banner Image</Label>
-                <div className="mt-2">
-                  {newBanner.imageUrl ? (
-                    <div className="relative">
-                      <img
-                        src={newBanner.imageUrl}
-                        alt="Banner preview"
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-2 right-2 bg-white"
-                        onClick={() => setNewBanner(prev => ({ ...prev, imageUrl: '' }))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                <Label>Banner Media</Label>
+                <div className="mt-2 space-y-4">
+                  <RadioGroup value={bannerType} onValueChange={(value: 'image' | 'video') => setBannerType(value)}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="image" id="image" />
+                      <Label htmlFor="image" className="flex items-center gap-2">
+                        <Image className="h-4 w-4" />
+                        Image Banner
+                      </Label>
                     </div>
-                  ) : (
-                    <label htmlFor="new-image-upload" className="cursor-pointer">
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-champagne">
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <span className="text-sm text-gray-600">Click to upload banner image</span>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="video" id="video" />
+                      <Label htmlFor="video" className="flex items-center gap-2">
+                        <Video className="h-4 w-4" />
+                        Video Banner
+                      </Label>
+                    </div>
+                  </RadioGroup>
+
+                  {bannerType === 'image' ? (
+                    newBanner.imageUrl ? (
+                      <div className="relative">
+                        <img
+                          src={newBanner.imageUrl}
+                          alt="Banner preview"
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute top-2 right-2 bg-white"
+                          onClick={() => setNewBanner(prev => ({ ...prev, imageUrl: '' }))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Input
-                        id="new-image-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload(file, true);
-                        }}
-                      />
-                    </label>
+                    ) : (
+                      <ObjectUploader
+                        maxNumberOfFiles={1}
+                        uploadType="image"
+                        onGetUploadParameters={getUploadParameters}
+                        onComplete={(urls) => handleMediaUpload(urls, 'image', true)}
+                        buttonClassName="w-full h-32 border-2 border-dashed border-gray-300 hover:border-champagne"
+                      >
+                        <div className="flex flex-col items-center">
+                          <Upload className="h-8 w-8 mb-2 text-gray-400" />
+                          <span className="text-sm text-gray-600">Upload Banner Image</span>
+                        </div>
+                      </ObjectUploader>
+                    )
+                  ) : (
+                    newBanner.videoUrl ? (
+                      <div className="relative">
+                        <video
+                          src={newBanner.videoUrl}
+                          className="w-full h-48 object-cover rounded-lg"
+                          autoPlay
+                          muted
+                          loop
+                          controls
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute top-2 right-2 bg-white"
+                          onClick={() => setNewBanner(prev => ({ ...prev, videoUrl: '' }))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <ObjectUploader
+                        maxNumberOfFiles={1}
+                        uploadType="video"
+                        onGetUploadParameters={getUploadParameters}
+                        onComplete={(urls) => handleMediaUpload(urls, 'video', true)}
+                        buttonClassName="w-full h-32 border-2 border-dashed border-gray-300 hover:border-champagne"
+                      >
+                        <div className="flex flex-col items-center">
+                          <Video className="h-8 w-8 mb-2 text-gray-400" />
+                          <span className="text-sm text-gray-600">Upload Banner Video</span>
+                        </div>
+                      </ObjectUploader>
+                    )
                   )}
                 </div>
               </div>
@@ -349,7 +420,7 @@ export default function AdminBanners() {
                       />
                     </div>
                     <div>
-                      <Label>Banner Image</Label>
+                      <Label>Banner Media</Label>
                       <div className="mt-2">
                         {editingBanner.imageUrl ? (
                           <div className="relative">
@@ -367,23 +438,52 @@ export default function AdminBanners() {
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
-                        ) : (
-                          <label htmlFor={`image-${banner.id}`} className="cursor-pointer">
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-champagne">
-                              <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                              <span className="text-sm text-gray-600">Click to upload new image</span>
-                            </div>
-                            <Input
-                              id={`image-${banner.id}`}
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleImageUpload(file, false);
-                              }}
+                        ) : editingBanner.videoUrl ? (
+                          <div className="relative">
+                            <video
+                              src={editingBanner.videoUrl}
+                              className="w-full h-48 object-cover rounded-lg"
+                              autoPlay
+                              muted
+                              loop
+                              controls
                             />
-                          </label>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="absolute top-2 right-2 bg-white"
+                              onClick={() => setEditingBanner(prev => prev ? { ...prev, videoUrl: '' } : null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <ObjectUploader
+                              maxNumberOfFiles={1}
+                              uploadType="image"
+                              onGetUploadParameters={getUploadParameters}
+                              onComplete={(urls) => handleMediaUpload(urls, 'image', false)}
+                              buttonClassName="w-full h-16 border-2 border-dashed border-gray-300 hover:border-champagne"
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                <Image className="h-4 w-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">Upload Image</span>
+                              </div>
+                            </ObjectUploader>
+                            <ObjectUploader
+                              maxNumberOfFiles={1}
+                              uploadType="video"
+                              onGetUploadParameters={getUploadParameters}
+                              onComplete={(urls) => handleMediaUpload(urls, 'video', false)}
+                              buttonClassName="w-full h-16 border-2 border-dashed border-gray-300 hover:border-champagne"
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                <Video className="h-4 w-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">Upload Video</span>
+                              </div>
+                            </ObjectUploader>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -433,6 +533,15 @@ export default function AdminBanners() {
                         src={banner.imageUrl}
                         alt={banner.title}
                         className="w-48 h-32 object-cover rounded-lg"
+                      />
+                    )}
+                    {banner.videoUrl && (
+                      <video
+                        src={banner.videoUrl}
+                        className="w-48 h-32 object-cover rounded-lg"
+                        autoPlay
+                        muted
+                        loop
                       />
                     )}
                     <div className="flex-1">

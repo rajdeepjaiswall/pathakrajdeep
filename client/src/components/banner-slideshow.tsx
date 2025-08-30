@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import OptimizedImage from '@/components/OptimizedImage';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
+import { VideoBanner } from './VideoBanner';
 
 interface Banner {
   id: number;
@@ -68,6 +69,23 @@ export default function BannerSlideshow() {
   };
 
   const BannerContent = ({ banner }: { banner: Banner }) => {
+    // Video banner
+    if (banner.videoUrl) {
+      return (
+        <VideoBanner
+          videoUrl={banner.videoUrl}
+          title={banner.title}
+          description={banner.description || undefined}
+          linkUrl={banner.linkUrl || undefined}
+          autoPlay={true}
+          muted={true}
+          loop={true}
+          className="h-[200px] md:h-[250px]"
+        />
+      );
+    }
+
+    // Image banner
     const content = (
       <div className="relative h-[200px] md:h-[250px] overflow-hidden rounded-lg">
         {banner.imageUrl ? (
@@ -82,8 +100,8 @@ export default function BannerSlideshow() {
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-almond to-cream flex items-center justify-center">
             <div className="text-center text-navy/60">
-              <div className="text-lg font-medium">Banner Image</div>
-              <div className="text-sm">Click to upload</div>
+              <div className="text-lg font-medium">Banner Media</div>
+              <div className="text-sm">Upload image or video</div>
             </div>
           </div>
         )}

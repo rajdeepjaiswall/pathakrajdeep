@@ -48,16 +48,20 @@ export function VideoUploader({
     console.log('Starting video upload:', file.name, file.type, file.size);
 
     try {
-      // Get upload URL
+      // Get upload URL with authentication
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/objects/upload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get upload URL');
+        const errorText = await response.text();
+        console.error('Upload URL request failed:', response.status, errorText);
+        throw new Error(`Failed to get upload URL: ${response.status} ${errorText}`);
       }
 
       const { uploadURL } = await response.json();
@@ -72,7 +76,11 @@ export function VideoUploader({
         },
       });
 
+      console.log('Upload response status:', uploadResponse.status);
+      
       if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('Upload failed:', uploadResponse.status, errorText);
         throw new Error(`Upload failed: ${uploadResponse.status}`);
       }
 

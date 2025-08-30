@@ -1,27 +1,23 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Save, X, Upload, Video, Image, VolumeX, Volume2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
-import { ObjectUploader } from '@/components/ObjectUploader';
-import { VideoUploader } from '@/components/VideoUploader';
 
 interface Banner {
   id: number;
   title: string;
   description: string;
   imageUrl: string;
-  videoUrl?: string;
   linkUrl?: string;
   isActive: boolean;
   displayOrder: number;
@@ -39,12 +35,10 @@ export default function AdminBanners() {
     title: '',
     description: '',
     imageUrl: '',
-    videoUrl: '',
     linkUrl: '',
     isActive: true,
     displayOrder: 1
   });
-  const [bannerType, setBannerType] = useState<'image' | 'video' | 'drive'>('image');
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -60,8 +54,7 @@ export default function AdminBanners() {
   // Create banner mutation
   const createBannerMutation = useMutation({
     mutationFn: async (bannerData: any) => {
-      const response = await apiRequest('/api/admin/banners', 'POST', bannerData);
-      return await response.json();
+      return await apiRequest('/api/admin/banners', 'POST', bannerData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
@@ -70,7 +63,6 @@ export default function AdminBanners() {
         title: '',
         description: '',
         imageUrl: '',
-        videoUrl: '',
         linkUrl: '',
         isActive: true,
         displayOrder: 1
@@ -92,8 +84,7 @@ export default function AdminBanners() {
   // Update banner mutation
   const updateBannerMutation = useMutation({
     mutationFn: async ({ id, ...bannerData }: any) => {
-      const response = await apiRequest(`/api/admin/banners/${id}`, 'PATCH', bannerData);
-      return await response.json();
+      return await apiRequest(`/api/admin/banners/${id}`, 'PATCH', bannerData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
@@ -115,8 +106,7 @@ export default function AdminBanners() {
   // Delete banner mutation
   const deleteBannerMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest(`/api/admin/banners/${id}`, 'DELETE');
-      return await response.json();
+      return await apiRequest(`/api/admin/banners/${id}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
@@ -134,84 +124,21 @@ export default function AdminBanners() {
     },
   });
 
-  const handleMediaUpload = async (uploadedUrls: string[], mediaType: 'image' | 'video', isNew = false) => {
-    console.log('Media upload completed:', { uploadedUrls, mediaType, isNew });
-    
-    if (uploadedUrls.length === 0) {
+  const handleImageUpload = (file: File, isNew = false) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string;
+      if (isNew) {
+        setNewBanner(prev => ({ ...prev, imageUrl }));
+      } else if (editingBanner) {
+        setEditingBanner(prev => prev ? { ...prev, imageUrl } : null);
+      }
       toast({
-        title: "Upload Error",
-        description: "No file was uploaded successfully. Please try again.",
-        variant: "destructive",
+        title: "Image uploaded",
+        description: "Banner image has been uploaded successfully",
       });
-      return;
-    }
-    
-    let mediaUrl = uploadedUrls[0];
-    
-    // For object storage, we need to convert the GCS URL to our object endpoint
-    if (mediaUrl.includes('storage.googleapis.com')) {
-      // Extract the bucket and object path
-      const url = new URL(mediaUrl);
-      const pathParts = url.pathname.split('/');
-      const bucketName = pathParts[1];
-      const objectPath = pathParts.slice(2).join('/');
-      
-      // Convert to our object endpoint format
-      mediaUrl = `/objects/uploads/${objectPath.split('/').pop()}`;
-      console.log('Converted URL to object endpoint:', mediaUrl);
-    }
-    
-    if (isNew) {
-      if (mediaType === 'image') {
-        setNewBanner(prev => ({ ...prev, imageUrl: mediaUrl, videoUrl: '' }));
-      } else {
-        setNewBanner(prev => ({ ...prev, videoUrl: mediaUrl, imageUrl: '' }));
-      }
-    } else if (editingBanner) {
-      if (mediaType === 'image') {
-        setEditingBanner(prev => prev ? { ...prev, imageUrl: mediaUrl, videoUrl: '' } : null);
-      } else {
-        setEditingBanner(prev => prev ? { ...prev, videoUrl: mediaUrl, imageUrl: '' } : null);
-      }
-    }
-    
-    toast({
-      title: `${mediaType === 'image' ? 'Image' : 'Video'} uploaded`,
-      description: `Banner ${mediaType} has been uploaded successfully. URL: ${mediaUrl}`,
-    });
-  };
-
-  const getUploadParameters = async () => {
-    try {
-      console.log('Requesting upload URL...');
-      const response = await apiRequest('/api/objects/upload', 'POST');
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Upload URL request failed:', response.status, errorData);
-        throw new Error(`Failed to get upload URL: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Upload URL response:', data);
-      
-      if (!data.uploadURL) {
-        throw new Error('No upload URL in response');
-      }
-      
-      return {
-        method: 'PUT' as const,
-        url: data.uploadURL,
-      };
-    } catch (error) {
-      console.error('Error getting upload parameters:', error);
-      toast({
-        title: "Upload Error",
-        description: "Failed to get upload URL. Please try again.",
-        variant: "destructive",
-      });
-      throw error;
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleCreateBanner = () => {
@@ -307,129 +234,41 @@ export default function AdminBanners() {
                 />
               </div>
               <div>
-                <Label>Banner Media</Label>
-                <div className="mt-2 space-y-4">
-                  <RadioGroup value={bannerType} onValueChange={(value: 'image' | 'video' | 'drive') => setBannerType(value)}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="image" id="image" />
-                      <Label htmlFor="image" className="flex items-center gap-2">
-                        <Image className="h-4 w-4" />
-                        Image Banner
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="video" id="video" />
-                      <Label htmlFor="video" className="flex items-center gap-2">
-                        <Video className="h-4 w-4" />
-                        Video Banner (Upload)
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="drive" id="drive" />
-                      <Label htmlFor="drive" className="flex items-center gap-2">
-                        <Video className="h-4 w-4" />
-                        Google Drive Video
-                      </Label>
-                    </div>
-                  </RadioGroup>
-
-                  {bannerType === 'image' ? (
-                    newBanner.imageUrl ? (
-                      <div className="relative">
-                        <img
-                          src={newBanner.imageUrl}
-                          alt="Banner preview"
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="absolute top-2 right-2 bg-white"
-                          onClick={() => setNewBanner(prev => ({ ...prev, imageUrl: '' }))}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <ObjectUploader
-                        maxNumberOfFiles={1}
-                        uploadType="image"
-                        onGetUploadParameters={getUploadParameters}
-                        onComplete={(urls) => handleMediaUpload(urls, 'image', true)}
-                        buttonClassName="w-full h-32 border-2 border-dashed border-gray-300 hover:border-champagne"
+                <Label>Banner Image</Label>
+                <div className="mt-2">
+                  {newBanner.imageUrl ? (
+                    <div className="relative">
+                      <img
+                        src={newBanner.imageUrl}
+                        alt="Banner preview"
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute top-2 right-2 bg-white"
+                        onClick={() => setNewBanner(prev => ({ ...prev, imageUrl: '' }))}
                       >
-                        <div className="flex flex-col items-center">
-                          <Upload className="h-8 w-8 mb-2 text-gray-400" />
-                          <span className="text-sm text-gray-600">Upload Banner Image</span>
-                        </div>
-                      </ObjectUploader>
-                    )
-                  ) : bannerType === 'drive' ? (
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="drive-url">Google Drive Video Link</Label>
-                        <Input
-                          id="drive-url"
-                          value={newBanner.videoUrl}
-                          onChange={(e) => setNewBanner(prev => ({ ...prev, videoUrl: e.target.value }))}
-                          placeholder="https://drive.google.com/file/d/YOUR_FILE_ID/view"
-                          className="mt-1"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Paste your Google Drive video share link. Make sure the video is set to "Anyone with the link can view"
-                        </p>
-                      </div>
-                      {newBanner.videoUrl && (
-                        <div className="relative">
-                          <iframe
-                            src={newBanner.videoUrl.replace('/view', '/preview')}
-                            className="w-full h-48 rounded-lg"
-                            allowFullScreen
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="absolute top-2 right-2 bg-white"
-                            onClick={() => setNewBanner(prev => ({ ...prev, videoUrl: '' }))}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   ) : (
-                    newBanner.videoUrl ? (
-                      <div className="relative">
-                        <video
-                          src={newBanner.videoUrl}
-                          className="w-full h-48 object-cover rounded-lg"
-                          autoPlay
-                          muted
-                          loop
-                          controls
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="absolute top-2 right-2 bg-white"
-                          onClick={() => setNewBanner(prev => ({ ...prev, videoUrl: '' }))}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                    <label htmlFor="new-image-upload" className="cursor-pointer">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-champagne">
+                        <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <span className="text-sm text-gray-600">Click to upload banner image</span>
                       </div>
-                    ) : (
-                      <VideoUploader
-                        onUploadComplete={(videoUrl) => handleMediaUpload([videoUrl], 'video', true)}
-                        maxFileSize={100 * 1024 * 1024} // 100MB for videos
-                        buttonClassName="w-full h-32 border-2 border-dashed border-gray-300 hover:border-champagne"
-                      >
-                        <div className="flex flex-col items-center">
-                          <Video className="h-8 w-8 mb-2 text-gray-400" />
-                          <span className="text-sm text-gray-600">Upload Banner Video</span>
-                          <span className="text-xs text-gray-500">MP4, WebM, MOV, etc.</span>
-                        </div>
-                      </VideoUploader>
-                    )
+                      <Input
+                        id="new-image-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, true);
+                        }}
+                      />
+                    </label>
                   )}
                 </div>
               </div>
@@ -510,7 +349,7 @@ export default function AdminBanners() {
                       />
                     </div>
                     <div>
-                      <Label>Banner Media</Label>
+                      <Label>Banner Image</Label>
                       <div className="mt-2">
                         {editingBanner.imageUrl ? (
                           <div className="relative">
@@ -528,50 +367,23 @@ export default function AdminBanners() {
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
-                        ) : editingBanner.videoUrl ? (
-                          <div className="relative">
-                            <video
-                              src={editingBanner.videoUrl}
-                              className="w-full h-48 object-cover rounded-lg"
-                              autoPlay
-                              muted
-                              loop
-                              controls
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="absolute top-2 right-2 bg-white"
-                              onClick={() => setEditingBanner(prev => prev ? { ...prev, videoUrl: '' } : null)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
                         ) : (
-                          <div className="space-y-2">
-                            <ObjectUploader
-                              maxNumberOfFiles={1}
-                              uploadType="image"
-                              onGetUploadParameters={getUploadParameters}
-                              onComplete={(urls) => handleMediaUpload(urls, 'image', false)}
-                              buttonClassName="w-full h-16 border-2 border-dashed border-gray-300 hover:border-champagne"
-                            >
-                              <div className="flex items-center justify-center gap-2">
-                                <Image className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm text-gray-600">Upload Image</span>
-                              </div>
-                            </ObjectUploader>
-                            <VideoUploader
-                              onUploadComplete={(videoUrl) => handleMediaUpload([videoUrl], 'video', false)}
-                              maxFileSize={100 * 1024 * 1024} // 100MB for videos
-                              buttonClassName="w-full h-16 border-2 border-dashed border-gray-300 hover:border-champagne"
-                            >
-                              <div className="flex items-center justify-center gap-2">
-                                <Video className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm text-gray-600">Upload Video</span>
-                              </div>
-                            </VideoUploader>
-                          </div>
+                          <label htmlFor={`image-${banner.id}`} className="cursor-pointer">
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-champagne">
+                              <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                              <span className="text-sm text-gray-600">Click to upload new image</span>
+                            </div>
+                            <Input
+                              id={`image-${banner.id}`}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleImageUpload(file, false);
+                              }}
+                            />
+                          </label>
                         )}
                       </div>
                     </div>
@@ -621,15 +433,6 @@ export default function AdminBanners() {
                         src={banner.imageUrl}
                         alt={banner.title}
                         className="w-48 h-32 object-cover rounded-lg"
-                      />
-                    )}
-                    {banner.videoUrl && (
-                      <video
-                        src={banner.videoUrl}
-                        className="w-48 h-32 object-cover rounded-lg"
-                        autoPlay
-                        muted
-                        loop
                       />
                     )}
                     <div className="flex-1">

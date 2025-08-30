@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import OptimizedImage from '@/components/OptimizedImage';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
-import { VideoBanner } from './VideoBanner';
 
 interface Banner {
   id: number;
@@ -24,7 +23,6 @@ interface Banner {
 
 export default function BannerSlideshow() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [slideInterval, setSlideInterval] = useState<NodeJS.Timeout | null>(null);
 
   const { data: banners = [], isLoading } = useQuery({
     queryKey: ['/api/banners'],
@@ -34,32 +32,13 @@ export default function BannerSlideshow() {
 
   useEffect(() => {
     if (activeBanners.length > 1) {
-      // Clear existing interval
-      if (slideInterval) {
-        clearInterval(slideInterval);
-      }
-
-      // Get current banner to determine timing
-      const currentBanner = activeBanners[currentSlide];
-      let timing = 6000; // Default 6 seconds
-
-      // If current banner is a video, we'll handle timing differently
-      if (currentBanner?.videoUrl) {
-        // For videos, use a longer default time (videos are typically longer)
-        timing = 10000; // 10 seconds for videos
-      }
-
       const interval = setInterval(() => {
         setCurrentSlide((prev) => (prev + 1) % activeBanners.length);
-      }, timing);
+      }, 6000);
 
-      setSlideInterval(interval);
-
-      return () => {
-        if (interval) clearInterval(interval);
-      };
+      return () => clearInterval(interval);
     }
-  }, [activeBanners.length, currentSlide]);
+  }, [activeBanners.length]);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % activeBanners.length);
@@ -89,23 +68,6 @@ export default function BannerSlideshow() {
   };
 
   const BannerContent = ({ banner }: { banner: Banner }) => {
-    // Video banner
-    if (banner.videoUrl) {
-      return (
-        <VideoBanner
-          videoUrl={banner.videoUrl}
-          title={banner.title}
-          description={banner.description || undefined}
-          linkUrl={banner.linkUrl || undefined}
-          autoPlay={true}
-          muted={true}
-          loop={false} // Don't loop in slideshow
-          className="h-[200px] md:h-[250px]"
-        />
-      );
-    }
-
-    // Image banner
     const content = (
       <div className="relative h-[200px] md:h-[250px] overflow-hidden rounded-lg">
         {banner.imageUrl ? (
@@ -120,8 +82,8 @@ export default function BannerSlideshow() {
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-almond to-cream flex items-center justify-center">
             <div className="text-center text-navy/60">
-              <div className="text-lg font-medium">Banner Media</div>
-              <div className="text-sm">Upload image or video</div>
+              <div className="text-lg font-medium">Banner Image</div>
+              <div className="text-sm">Click to upload</div>
             </div>
           </div>
         )}

@@ -6,10 +6,6 @@ import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
-import {
-  ObjectStorageService,
-  ObjectNotFoundError,
-} from "./objectStorage";
 import otpRoutes from "./otp-routes";
 
 const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
@@ -1420,74 +1416,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-
-  // Object storage routes for file uploads
-  app.get("/public-objects/:filePath(*)", async (req, res) => {
-    const filePath = req.params.filePath;
-    const objectStorageService = new ObjectStorageService();
-    try {
-      const file = await objectStorageService.searchPublicObject(filePath);
-      if (!file) {
-        return res.status(404).json({ error: "File not found" });
-      }
-      objectStorageService.downloadObject(file, res);
-    } catch (error) {
-      console.error("Error searching for public object:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  // Object storage upload endpoint
-  app.post("/api/objects/upload", async (req, res) => {
-    console.log('Upload URL request received');
-    const objectStorageService = new ObjectStorageService();
-    try {
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      console.log('Generated upload URL:', uploadURL);
-      res.json({ uploadURL });
-    } catch (error) {
-      console.error("Error generating upload URL:", error);
-      res.status(500).json({ error: "Internal server error", details: error.message });
-    }
-  });
-
-  app.get("/objects/:objectPath(*)", async (req, res) => {
-    const objectStorageService = new ObjectStorageService();
-    try {
-      const objectFile = await objectStorageService.getObjectEntityFile(
-        req.path,
-      );
-      objectStorageService.downloadObject(objectFile, res);
-    } catch (error) {
-      console.error("Error checking object access:", error);
-      if (error instanceof ObjectNotFoundError) {
-        return res.sendStatus(404);
-      }
-      return res.sendStatus(500);
-    }
-  });
-
-
-
-  app.put("/api/banner-videos", authenticateUser, requireAdmin, async (req, res) => {
-    if (!req.body.videoURL) {
-      return res.status(400).json({ error: "videoURL is required" });
-    }
-
-    try {
-      const objectStorageService = new ObjectStorageService();
-      const objectPath = objectStorageService.normalizeObjectEntityPath(
-        req.body.videoURL,
-      );
-
-      res.status(200).json({
-        objectPath: objectPath,
-      });
-    } catch (error) {
-      console.error("Error setting banner video:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
 
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);

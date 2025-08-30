@@ -265,28 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced authentication middleware that works with both JWT and sessions
-  function authenticateUser(req: any, res: any, next: any) {
-    // Check for session-based auth first (Google OAuth)
-    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      // Session user is already set by passport, just continue
-      return next();
-    }
-    
-    // Fallback to JWT auth
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-      if (err) return res.status(403).json({ message: 'Invalid token' });
-      req.user = user;
-      next();
-    });
-  }
+  // Enhanced authentication middleware that works with both JWT and sessions (removing duplicate)
 
   // Phone verification routes
   app.post("/api/auth/send-phone-otp", authenticateUser, async (req, res) => {
@@ -893,7 +872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/cart/:id", authenticateToken, async (req, res) => {
+  app.put("/api/cart/:id", authenticateUser, async (req, res) => {
     try {
       const { quantity } = req.body;
       const cartItem = await storage.updateCartItem(parseInt(req.params.id), quantity, req.user.id);
@@ -903,7 +882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/cart/:id", authenticateToken, async (req, res) => {
+  app.delete("/api/cart/:id", authenticateUser, async (req, res) => {
     try {
       await storage.removeFromCart(parseInt(req.params.id), req.user.id);
       res.json({ message: 'Item removed from cart' });
@@ -913,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Address routes
-  app.get("/api/addresses", authenticateToken, async (req, res) => {
+  app.get("/api/addresses", authenticateUser, async (req, res) => {
     try {
       const addresses = await storage.getAddresses(req.user.id);
       res.json(addresses);
@@ -922,7 +901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/addresses", authenticateToken, async (req, res) => {
+  app.post("/api/addresses", authenticateUser, async (req, res) => {
     try {
       const addressData = insertAddressSchema.parse({
         ...req.body,

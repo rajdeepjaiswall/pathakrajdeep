@@ -52,18 +52,32 @@ export function ObjectUploader({
       case 'image':
         return ['image/*'];
       case 'video':
-        return ['video/*', '.mp4', '.webm', '.ogg', '.mov', '.avi'];
+        // Use specific MIME types for better compatibility
+        return [
+          'video/*',
+          'video/mp4',
+          'video/mpeg',
+          'video/quicktime',
+          'video/x-msvideo', // .avi
+          'video/webm',
+          'video/ogg',
+          'video/3gpp',
+          'video/x-ms-wmv'
+        ];
       default:
         return undefined;
     }
   };
 
   const [uppy] = useState(() => {
+    const fileTypes = getFileTypes();
+    console.log('Setting up Uppy with file types:', fileTypes, 'for upload type:', uploadType);
+    
     const uppyInstance = new Uppy({
       restrictions: {
         maxNumberOfFiles,
         maxFileSize,
-        allowedFileTypes: getFileTypes(),
+        allowedFileTypes: fileTypes,
       },
       autoProceed: false,
       debug: true,
@@ -137,6 +151,7 @@ export function ObjectUploader({
         open={showModal}
         onRequestClose={() => setShowModal(false)}
         proudlyDisplayPoweredByUppy={false}
+        note={uploadType === 'video' ? 'Select video files (MP4, WebM, MOV, etc.)' : uploadType === 'image' ? 'Select image files' : 'Select files'}
       />
     </div>
   );

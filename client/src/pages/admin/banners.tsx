@@ -14,6 +14,7 @@ import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
+import { VideoUploader } from '@/components/VideoUploader';
 
 interface Banner {
   id: number;
@@ -374,19 +375,17 @@ export default function AdminBanners() {
                         </Button>
                       </div>
                     ) : (
-                      <ObjectUploader
-                        maxNumberOfFiles={1}
+                      <VideoUploader
+                        onUploadComplete={(videoUrl) => handleMediaUpload([videoUrl], 'video', true)}
                         maxFileSize={100 * 1024 * 1024} // 100MB for videos
-                        uploadType="video"
-                        onGetUploadParameters={getUploadParameters}
-                        onComplete={(urls) => handleMediaUpload(urls, 'video', true)}
                         buttonClassName="w-full h-32 border-2 border-dashed border-gray-300 hover:border-champagne"
                       >
                         <div className="flex flex-col items-center">
                           <Video className="h-8 w-8 mb-2 text-gray-400" />
                           <span className="text-sm text-gray-600">Upload Banner Video</span>
+                          <span className="text-xs text-gray-500">MP4, WebM, MOV, etc.</span>
                         </div>
-                      </ObjectUploader>
+                      </VideoUploader>
                     )
                   )}
                 </div>
@@ -519,19 +518,16 @@ export default function AdminBanners() {
                                 <span className="text-sm text-gray-600">Upload Image</span>
                               </div>
                             </ObjectUploader>
-                            <ObjectUploader
-                              maxNumberOfFiles={1}
+                            <VideoUploader
+                              onUploadComplete={(videoUrl) => handleMediaUpload([videoUrl], 'video', false)}
                               maxFileSize={100 * 1024 * 1024} // 100MB for videos
-                              uploadType="video"
-                              onGetUploadParameters={getUploadParameters}
-                              onComplete={(urls) => handleMediaUpload(urls, 'video', false)}
                               buttonClassName="w-full h-16 border-2 border-dashed border-gray-300 hover:border-champagne"
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <Video className="h-4 w-4 text-gray-400" />
                                 <span className="text-sm text-gray-600">Upload Video</span>
                               </div>
-                            </ObjectUploader>
+                            </VideoUploader>
                           </div>
                         )}
                       </div>

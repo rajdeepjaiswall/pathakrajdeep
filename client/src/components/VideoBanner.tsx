@@ -37,20 +37,29 @@ export function VideoBanner({
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleLoadedMetadata = () => {
-      console.log('Video metadata loaded:', video.duration);
+      console.log('Video metadata loaded:', video.duration, 'src:', video.src);
       setVideoDuration(video.duration);
-      if (autoPlay) {
-        video.play().catch(console.error);
-      }
+      // Force play after metadata is loaded
+      setTimeout(() => {
+        video.play().catch(err => {
+          console.error('Video play failed:', err);
+          // Try again with user interaction simulation
+          video.muted = true;
+          video.play().catch(console.error);
+        });
+      }, 100);
     };
     const handleCanPlay = () => {
-      console.log('Video can play');
-      if (autoPlay) {
+      console.log('Video can play, attempting autoplay');
+      video.play().catch(err => {
+        console.error('Autoplay failed:', err);
+        video.muted = true;
         video.play().catch(console.error);
-      }
+      });
     };
-    const handleError = (e) => {
+    const handleError = (e: any) => {
       console.error('Video error:', e, video.error);
+      console.error('Video src:', video.src);
       setVideoError(true);
     };
     const handleLoadStart = () => {
@@ -110,27 +119,30 @@ export function VideoBanner({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClick}
+      style={{ backgroundColor: '#f0f0f0' }}
     >
       {/* Video */}
       {videoError ? (
-        <div className="absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center">
-          <div className="text-center text-gray-600">
+        <div className="absolute inset-0 w-full h-full bg-red-100 flex items-center justify-center">
+          <div className="text-center text-red-600">
             <div className="text-lg font-medium">Video Error</div>
-            <div className="text-sm">Failed to load video: {videoUrl}</div>
+            <div className="text-sm">Failed to load: {videoUrl}</div>
+            <div className="text-xs mt-2">Check console for details</div>
           </div>
         </div>
       ) : (
         <video
           ref={videoRef}
           src={videoUrl}
-          autoPlay={false} // Let JavaScript handle autoplay for better control
-          muted={isMuted}
+          autoPlay={true}
+          muted={true}
           loop={loop}
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectFit: 'cover' }}
+          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
           playsInline
-          preload="metadata"
+          preload="auto"
           controls={false}
+          crossOrigin="anonymous"
         />
       )}
 

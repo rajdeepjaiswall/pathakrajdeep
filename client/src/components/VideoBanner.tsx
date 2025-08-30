@@ -25,8 +25,10 @@ export function VideoBanner({
 }: VideoBannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(muted);
-  const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -34,15 +36,44 @@ export function VideoBanner({
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+    const handleLoadedMetadata = () => {
+      console.log('Video metadata loaded:', video.duration);
+      setVideoDuration(video.duration);
+      if (autoPlay) {
+        video.play().catch(console.error);
+      }
+    };
+    const handleCanPlay = () => {
+      console.log('Video can play');
+      if (autoPlay) {
+        video.play().catch(console.error);
+      }
+    };
+    const handleError = (e) => {
+      console.error('Video error:', e, video.error);
+      setVideoError(true);
+    };
+    const handleLoadStart = () => {
+      console.log('Video load started');
+      setVideoError(false);
+    };
 
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('error', handleError);
+    video.addEventListener('loadstart', handleLoadStart);
 
     return () => {
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('error', handleError);
+      video.removeEventListener('loadstart', handleLoadStart);
     };
-  }, []);
+  }, [autoPlay]);
 
   const toggleMute = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -81,17 +112,27 @@ export function VideoBanner({
       onClick={handleClick}
     >
       {/* Video */}
-      <video
-        ref={videoRef}
-        src={videoUrl}
-        autoPlay={autoPlay}
-        muted={isMuted}
-        loop={loop}
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ objectFit: 'cover' }}
-        playsInline
-        preload="metadata"
-      />
+      {videoError ? (
+        <div className="absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center">
+          <div className="text-center text-gray-600">
+            <div className="text-lg font-medium">Video Error</div>
+            <div className="text-sm">Failed to load video: {videoUrl}</div>
+          </div>
+        </div>
+      ) : (
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          autoPlay={false} // Let JavaScript handle autoplay for better control
+          muted={isMuted}
+          loop={loop}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectFit: 'cover' }}
+          playsInline
+          preload="metadata"
+          controls={false}
+        />
+      )}
 
       {/* Dark overlay for better text readability */}
       <div className="absolute inset-0 bg-black bg-opacity-30" />

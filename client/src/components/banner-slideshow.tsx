@@ -24,6 +24,7 @@ interface Banner {
 
 export default function BannerSlideshow() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [slideInterval, setSlideInterval] = useState<NodeJS.Timeout | null>(null);
 
   const { data: banners = [], isLoading } = useQuery({
     queryKey: ['/api/banners'],
@@ -33,13 +34,32 @@ export default function BannerSlideshow() {
 
   useEffect(() => {
     if (activeBanners.length > 1) {
+      // Clear existing interval
+      if (slideInterval) {
+        clearInterval(slideInterval);
+      }
+
+      // Get current banner to determine timing
+      const currentBanner = activeBanners[currentSlide];
+      let timing = 6000; // Default 6 seconds
+
+      // If current banner is a video, we'll handle timing differently
+      if (currentBanner?.videoUrl) {
+        // For videos, use a longer default time (videos are typically longer)
+        timing = 10000; // 10 seconds for videos
+      }
+
       const interval = setInterval(() => {
         setCurrentSlide((prev) => (prev + 1) % activeBanners.length);
-      }, 6000);
+      }, timing);
 
-      return () => clearInterval(interval);
+      setSlideInterval(interval);
+
+      return () => {
+        if (interval) clearInterval(interval);
+      };
     }
-  }, [activeBanners.length]);
+  }, [activeBanners.length, currentSlide]);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % activeBanners.length);
@@ -79,7 +99,7 @@ export default function BannerSlideshow() {
           linkUrl={banner.linkUrl || undefined}
           autoPlay={true}
           muted={true}
-          loop={true}
+          loop={false} // Don't loop in slideshow
           className="h-[200px] md:h-[250px]"
         />
       );

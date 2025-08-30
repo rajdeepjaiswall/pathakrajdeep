@@ -130,6 +130,14 @@ export function VideoBanner({
             <div className="text-xs mt-2">Check console for details</div>
           </div>
         </div>
+      ) : videoUrl.includes('drive.google.com') ? (
+        <iframe
+          src={videoUrl.replace('/view', '/preview')}
+          className="absolute inset-0 w-full h-full"
+          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+          allowFullScreen
+          title={title}
+        />
       ) : (
         <video
           ref={videoRef}

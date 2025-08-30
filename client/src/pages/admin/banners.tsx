@@ -44,7 +44,7 @@ export default function AdminBanners() {
     isActive: true,
     displayOrder: 1
   });
-  const [bannerType, setBannerType] = useState<'image' | 'video'>('image');
+  const [bannerType, setBannerType] = useState<'image' | 'video' | 'drive'>('image');
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -309,7 +309,7 @@ export default function AdminBanners() {
               <div>
                 <Label>Banner Media</Label>
                 <div className="mt-2 space-y-4">
-                  <RadioGroup value={bannerType} onValueChange={(value: 'image' | 'video') => setBannerType(value)}>
+                  <RadioGroup value={bannerType} onValueChange={(value: 'image' | 'video' | 'drive') => setBannerType(value)}>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="image" id="image" />
                       <Label htmlFor="image" className="flex items-center gap-2">
@@ -321,7 +321,14 @@ export default function AdminBanners() {
                       <RadioGroupItem value="video" id="video" />
                       <Label htmlFor="video" className="flex items-center gap-2">
                         <Video className="h-4 w-4" />
-                        Video Banner
+                        Video Banner (Upload)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="drive" id="drive" />
+                      <Label htmlFor="drive" className="flex items-center gap-2">
+                        <Video className="h-4 w-4" />
+                        Google Drive Video
                       </Label>
                     </div>
                   </RadioGroup>
@@ -357,6 +364,39 @@ export default function AdminBanners() {
                         </div>
                       </ObjectUploader>
                     )
+                  ) : bannerType === 'drive' ? (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="drive-url">Google Drive Video Link</Label>
+                        <Input
+                          id="drive-url"
+                          value={newBanner.videoUrl}
+                          onChange={(e) => setNewBanner(prev => ({ ...prev, videoUrl: e.target.value }))}
+                          placeholder="https://drive.google.com/file/d/YOUR_FILE_ID/view"
+                          className="mt-1"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Paste your Google Drive video share link. Make sure the video is set to "Anyone with the link can view"
+                        </p>
+                      </div>
+                      {newBanner.videoUrl && (
+                        <div className="relative">
+                          <iframe
+                            src={newBanner.videoUrl.replace('/view', '/preview')}
+                            className="w-full h-48 rounded-lg"
+                            allowFullScreen
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="absolute top-2 right-2 bg-white"
+                            onClick={() => setNewBanner(prev => ({ ...prev, videoUrl: '' }))}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     newBanner.videoUrl ? (
                       <div className="relative">

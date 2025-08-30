@@ -131,9 +131,32 @@ export default function AdminBanners() {
   });
 
   const handleMediaUpload = async (uploadedUrls: string[], mediaType: 'image' | 'video', isNew = false) => {
-    if (uploadedUrls.length === 0) return;
+    console.log('Media upload completed:', { uploadedUrls, mediaType, isNew });
     
-    const mediaUrl = uploadedUrls[0];
+    if (uploadedUrls.length === 0) {
+      toast({
+        title: "Upload Error",
+        description: "No file was uploaded successfully. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    let mediaUrl = uploadedUrls[0];
+    
+    // For object storage, we need to convert the GCS URL to our object endpoint
+    if (mediaUrl.includes('storage.googleapis.com')) {
+      // Extract the bucket and object path
+      const url = new URL(mediaUrl);
+      const pathParts = url.pathname.split('/');
+      const bucketName = pathParts[1];
+      const objectPath = pathParts.slice(2).join('/');
+      
+      // Convert to our object endpoint format
+      mediaUrl = `/objects/uploads/${objectPath.split('/').pop()}`;
+      console.log('Converted URL to object endpoint:', mediaUrl);
+    }
+    
     if (isNew) {
       if (mediaType === 'image') {
         setNewBanner(prev => ({ ...prev, imageUrl: mediaUrl, videoUrl: '' }));
@@ -150,17 +173,41 @@ export default function AdminBanners() {
     
     toast({
       title: `${mediaType === 'image' ? 'Image' : 'Video'} uploaded`,
-      description: `Banner ${mediaType} has been uploaded successfully`,
+      description: `Banner ${mediaType} has been uploaded successfully. URL: ${mediaUrl}`,
     });
   };
 
   const getUploadParameters = async () => {
-    const response = await apiRequest('/api/objects/upload', 'POST');
-    const data = await response.json();
-    return {
-      method: 'PUT' as const,
-      url: data.uploadURL,
-    };
+    try {
+      console.log('Requesting upload URL...');
+      const response = await apiRequest('/api/objects/upload', 'POST');
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Upload URL request failed:', response.status, errorData);
+        throw new Error(`Failed to get upload URL: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Upload URL response:', data);
+      
+      if (!data.uploadURL) {
+        throw new Error('No upload URL in response');
+      }
+      
+      return {
+        method: 'PUT' as const,
+        url: data.uploadURL,
+      };
+    } catch (error) {
+      console.error('Error getting upload parameters:', error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to get upload URL. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const handleCreateBanner = () => {
@@ -329,6 +376,7 @@ export default function AdminBanners() {
                     ) : (
                       <ObjectUploader
                         maxNumberOfFiles={1}
+                        maxFileSize={100 * 1024 * 1024} // 100MB for videos
                         uploadType="video"
                         onGetUploadParameters={getUploadParameters}
                         onComplete={(urls) => handleMediaUpload(urls, 'video', true)}
@@ -473,6 +521,7 @@ export default function AdminBanners() {
                             </ObjectUploader>
                             <ObjectUploader
                               maxNumberOfFiles={1}
+                              maxFileSize={100 * 1024 * 1024} // 100MB for videos
                               uploadType="video"
                               onGetUploadParameters={getUploadParameters}
                               onComplete={(urls) => handleMediaUpload(urls, 'video', false)}

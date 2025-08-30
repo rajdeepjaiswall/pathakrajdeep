@@ -1,9 +1,9 @@
+/* Uppy Styles */
+@import 'https://releases.transloadit.com/uppy/v3.25.5/uppy.min.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Uppy Styles */
-@import 'https://releases.transloadit.com/uppy/v3.25.5/uppy.min.css';
 
 :root {
   --background: 33 25% 91%; /* #E6C7A6 - Toasted Almond */

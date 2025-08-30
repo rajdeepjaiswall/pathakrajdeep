@@ -52,34 +52,79 @@ export function ObjectUploader({
       case 'image':
         return ['image/*'];
       case 'video':
-        return ['video/*'];
+        return ['video/*', '.mp4', '.webm', '.ogg', '.mov', '.avi'];
       default:
         return undefined;
     }
   };
 
-  const [uppy] = useState(() =>
-    new Uppy({
+  const [uppy] = useState(() => {
+    const uppyInstance = new Uppy({
       restrictions: {
         maxNumberOfFiles,
         maxFileSize,
         allowedFileTypes: getFileTypes(),
       },
       autoProceed: false,
+      debug: true,
     })
       .use(AwsS3, {
         shouldUseMultipart: false,
-        getUploadParameters: onGetUploadParameters,
+        getUploadParameters: async (file) => {
+          try {
+            console.log('Getting upload parameters for file:', file.name, file.type, file.size);
+            const params = await onGetUploadParameters();
+            console.log('Upload parameters received:', params);
+            return {
+              method: params.method,
+              url: params.url,
+              headers: {
+                'Content-Type': file.type || 'application/octet-stream',
+              }
+            };
+          } catch (error) {
+            console.error('Error getting upload parameters:', error);
+            throw error;
+          }
+        },
       })
       .on("complete", (result) => {
+        console.log('Upload complete:', result);
         if (result.successful && result.successful.length > 0) {
-          // Extract uploaded URLs
-          const uploadedUrls = result.successful.map(file => file.uploadURL || '').filter(Boolean);
+          // Extract uploaded URLs from the upload response
+          const uploadedUrls = result.successful.map(file => {
+            console.log('Processing uploaded file:', file);
+            
+            // For Google Cloud Storage signed URLs, we need to construct the public URL
+            if (file.uploadURL) {
+              // Remove query parameters from the signed URL to get the base object URL
+              const baseUrl = file.uploadURL.split('?')[0];
+              console.log('Base URL extracted:', baseUrl);
+              return baseUrl;
+            }
+            
+            // Fallback: try to extract from response
+            if (file.response && file.response.uploadURL) {
+              return file.response.uploadURL.split('?')[0];
+            }
+            
+            console.warn('Could not extract URL from file:', file);
+            return '';
+          }).filter(Boolean);
+          console.log('Extracted URLs:', uploadedUrls);
           onComplete?.(uploadedUrls);
         }
         setShowModal(false);
       })
-  );
+      .on("upload-error", (file, error) => {
+        console.error('Upload error for file:', file?.name, error);
+      })
+      .on("restriction-failed", (file, error) => {
+        console.error('Restriction failed for file:', file?.name, error);
+      });
+
+    return uppyInstance;
+  });
 
   return (
     <div>

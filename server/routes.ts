@@ -648,7 +648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/categories", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/categories", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(categoryData);
@@ -659,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin category management routes
-  app.post("/api/admin/categories", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/admin/categories", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(categoryData);
@@ -669,7 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/categories/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/categories/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const categoryData = insertCategorySchema.partial().parse(req.body);
@@ -680,13 +680,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/categories/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/categories/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteCategory(id);
       res.json({ message: "Category deleted successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      res.status(400).json({ message: error.message });
     }
   });
 
@@ -739,7 +739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/products", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
@@ -749,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/products/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/products/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.updateProduct(parseInt(req.params.id), productData);
@@ -1070,7 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get("/api/admin/orders", authenticateToken, requireAdmin, async (req, res) => {
+  app.get("/api/admin/orders", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { status } = req.query;
       const orders = await storage.getAllOrders(status as string);
@@ -1080,7 +1080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/orders/:id/status", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/status", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       const { status } = req.body;
@@ -1099,7 +1099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/orders/:id/rider", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/rider", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { riderName, riderPhone, riderImage } = req.body;
       const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone, riderImage);
@@ -1109,19 +1109,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add estimated delivery time update endpoint
-  app.put("/api/admin/orders/:id/delivery-time", authenticateToken, requireAdmin, async (req, res) => {
-    try {
-      const { estimatedDelivery } = req.body;
-      const order = await storage.updateOrderDeliveryTime(parseInt(req.params.id), estimatedDelivery);
-      res.json(order);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-
   // Update estimated delivery time
-  app.put("/api/admin/orders/:id/delivery-time", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/admin/orders/:id/delivery-time", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { estimatedDelivery } = req.body;
       const order = await storage.updateOrderDeliveryTime(parseInt(req.params.id), estimatedDelivery);
@@ -1131,7 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/customers", authenticateToken, requireAdmin, async (req, res) => {
+  app.get("/api/admin/customers", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const customers = await storage.getCustomers();
       res.json(customers);
@@ -1214,7 +1203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/analytics", authenticateToken, requireAdmin, async (req, res) => {
+  app.get("/api/admin/analytics", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const analytics = await storage.getAnalytics();
       res.json(analytics);
@@ -1301,13 +1290,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/super-admin/logo", authenticateToken, (req, res) => {
+  app.post("/api/super-admin/logo", authenticateUser, requireSuperAdmin, (req, res) => {
     try {
-      // Check if user is super admin
-      if (req.user.role !== 'super_admin') {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
       const { imageData } = req.body;
       if (!imageData) {
         return res.status(400).json({ message: "No image data provided" });
@@ -1352,7 +1336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/banners", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/banners", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const bannerData = insertBannerSchema.parse(req.body);
       const banner = await storage.createBanner(bannerData);
@@ -1362,7 +1346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.put("/api/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const bannerData = insertBannerSchema.partial().parse(req.body);
@@ -1373,7 +1357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.delete("/api/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteBanner(id);
@@ -1384,7 +1368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin banner management routes
-  app.post("/api/admin/banners", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/admin/banners", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const bannerData = insertBannerSchema.parse(req.body);
       const banner = await storage.createBanner(bannerData);
@@ -1394,7 +1378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const bannerData = insertBannerSchema.partial().parse(req.body);
@@ -1405,7 +1389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/banners/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteBanner(id);

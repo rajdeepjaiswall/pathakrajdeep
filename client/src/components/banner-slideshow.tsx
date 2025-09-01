@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import OptimizedImage from '@/components/OptimizedImage';
+import VideoBanner from '@/components/VideoBanner';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 
 interface Banner {
@@ -23,6 +24,9 @@ interface Banner {
 
 export default function BannerSlideshow() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [videoEndTimer, setVideoEndTimer] = useState<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: banners = [], isLoading } = useQuery({
     queryKey: ['/api/banners'],
@@ -30,15 +34,55 @@ export default function BannerSlideshow() {
 
   const activeBanners = (banners as Banner[]).filter((banner: Banner) => banner.isActive);
 
-  useEffect(() => {
-    if (activeBanners.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % activeBanners.length);
-      }, 6000);
-
-      return () => clearInterval(interval);
+  // Clear existing interval when setting up new one
+  const clearAutoSlide = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
-  }, [activeBanners.length]);
+    if (videoEndTimer) {
+      clearTimeout(videoEndTimer);
+      setVideoEndTimer(null);
+    }
+  };
+
+  // Setup auto-slide for image banners or after video ends
+  const setupAutoSlide = (delay = 6000) => {
+    clearAutoSlide();
+    if (activeBanners.length > 1) {
+      intervalRef.current = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % activeBanners.length);
+      }, delay);
+    }
+  };
+
+  // Handle video events
+  const handleVideoPlay = () => {
+    setIsVideoPlaying(true);
+    clearAutoSlide(); // Stop auto-slide while video is playing
+  };
+
+  const handleVideoEnd = () => {
+    setIsVideoPlaying(false);
+    // Start 30-second timer after video ends before next slide
+    const timer = setTimeout(() => {
+      setCurrentSlide((prev) => (prev + 1) % activeBanners.length);
+    }, 30000);
+    setVideoEndTimer(timer);
+  };
+
+  useEffect(() => {
+    const currentBanner = activeBanners[currentSlide];
+    if (currentBanner?.videoUrl) {
+      // This is a video banner, don't start auto-slide
+      clearAutoSlide();
+    } else {
+      // This is an image banner, start normal auto-slide
+      setupAutoSlide();
+    }
+
+    return () => clearAutoSlide();
+  }, [activeBanners.length, currentSlide]);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % activeBanners.length);
@@ -70,7 +114,18 @@ export default function BannerSlideshow() {
   const BannerContent = ({ banner }: { banner: Banner }) => {
     const content = (
       <div className="relative h-[200px] md:h-[250px] overflow-hidden rounded-lg">
-        {banner.imageUrl ? (
+        {banner.videoUrl ? (
+          <VideoBanner
+            videoUrl={banner.videoUrl}
+            title={banner.title}
+            description={banner.description || undefined}
+            onVideoPlay={handleVideoPlay}
+            onVideoEnd={handleVideoEnd}
+            className="w-full h-full"
+            autoPlay={true}
+            muted={true}
+          />
+        ) : banner.imageUrl ? (
           <OptimizedImage
             src={banner.imageUrl}
             alt={banner.title}
@@ -82,8 +137,8 @@ export default function BannerSlideshow() {
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-almond to-cream flex items-center justify-center">
             <div className="text-center text-navy/60">
-              <div className="text-lg font-medium">Banner Image</div>
-              <div className="text-sm">Click to upload</div>
+              <div className="text-lg font-medium">Banner Content</div>
+              <div className="text-sm">No content available</div>
             </div>
           </div>
         )}

@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Save, X, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Upload, Video, Image } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
+import VideoUploader from '@/components/VideoUploader';
 
 interface Banner {
   id: number;
   title: string;
   description: string;
-  imageUrl: string;
+  imageUrl?: string;
+  videoUrl?: string;
   linkUrl?: string;
   isActive: boolean;
   displayOrder: number;
@@ -35,10 +38,12 @@ export default function AdminBanners() {
     title: '',
     description: '',
     imageUrl: '',
+    videoUrl: '',
     linkUrl: '',
     isActive: true,
     displayOrder: 1
   });
+  const [bannerType, setBannerType] = useState<'image' | 'video'>('image');
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -63,10 +68,12 @@ export default function AdminBanners() {
         title: '',
         description: '',
         imageUrl: '',
+        videoUrl: '',
         linkUrl: '',
         isActive: true,
         displayOrder: 1
       });
+      setBannerType('image');
       toast({
         title: "Banner created",
         description: "The new banner has been created successfully",
@@ -150,6 +157,16 @@ export default function AdminBanners() {
       });
       return;
     }
+    
+    if (!newBanner.imageUrl && !newBanner.videoUrl) {
+      toast({
+        title: "Missing content",
+        description: "Please add either an image or video for the banner",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     createBannerMutation.mutate(newBanner);
   };
 
@@ -233,44 +250,72 @@ export default function AdminBanners() {
                   rows={3}
                 />
               </div>
-              <div>
-                <Label>Banner Image</Label>
-                <div className="mt-2">
-                  {newBanner.imageUrl ? (
-                    <div className="relative">
-                      <img
-                        src={newBanner.imageUrl}
-                        alt="Banner preview"
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-2 right-2 bg-white"
-                        onClick={() => setNewBanner(prev => ({ ...prev, imageUrl: '' }))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label htmlFor="new-image-upload" className="cursor-pointer">
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-champagne">
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <span className="text-sm text-gray-600">Click to upload banner image</span>
+              {/* Banner Type Selection */}
+              <div className="space-y-3">
+                <Label>Banner Content</Label>
+                <Tabs value={bannerType} onValueChange={(value) => setBannerType(value as 'image' | 'video')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="image" className="flex items-center gap-2">
+                      <Image className="h-4 w-4" />
+                      Image Banner
+                    </TabsTrigger>
+                    <TabsTrigger value="video" className="flex items-center gap-2">
+                      <Video className="h-4 w-4" />
+                      Video Banner
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="image" className="mt-4">
+                    <div className="space-y-3">
+                      <div>
+                        {newBanner.imageUrl ? (
+                          <div className="relative">
+                            <img
+                              src={newBanner.imageUrl}
+                              alt="Banner preview"
+                              className="w-full h-48 object-cover rounded-lg"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="absolute top-2 right-2 bg-white"
+                              onClick={() => setNewBanner(prev => ({ ...prev, imageUrl: '' }))}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <label htmlFor="new-image-upload" className="cursor-pointer">
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-champagne">
+                              <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                              <span className="text-sm text-gray-600">Click to upload banner image</span>
+                            </div>
+                            <Input
+                              id="new-image-upload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleImageUpload(file, true);
+                              }}
+                            />
+                          </label>
+                        )}
                       </div>
-                      <Input
-                        id="new-image-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload(file, true);
-                        }}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="video" className="mt-4">
+                    <div className="space-y-3">
+                      <VideoUploader
+                        value={newBanner.videoUrl}
+                        onChange={(url) => setNewBanner(prev => ({ ...prev, videoUrl: url, imageUrl: '' }))}
+                        onRemove={() => setNewBanner(prev => ({ ...prev, videoUrl: '' }))}
                       />
-                    </label>
-                  )}
-                </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center space-x-2">

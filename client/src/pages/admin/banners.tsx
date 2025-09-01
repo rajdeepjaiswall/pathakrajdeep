@@ -363,6 +363,22 @@ export default function AdminBanners() {
 
         {/* Banners List */}
         <div className="space-y-6">
+          {banners.length === 0 && !isCreating && (
+            <Card className="p-12 text-center">
+              <div className="text-gray-500">
+                <Upload className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium mb-2">No banners yet</h3>
+                <p className="text-sm mb-4">Create your first banner to get started</p>
+                <Button 
+                  onClick={() => setIsCreating(true)}
+                  className="bg-champagne text-navy hover:bg-champagne/80"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Banner
+                </Button>
+              </div>
+            </Card>
+          )}
           {banners.map((banner: Banner) => (
             <Card key={banner.id}>
               <CardContent className="p-6">
@@ -483,6 +499,16 @@ export default function AdminBanners() {
                         className="w-48 h-32 object-cover rounded-lg"
                       />
                     )}
+                    {banner.videoUrl && (
+                      <div className="w-48 h-32 rounded-lg overflow-hidden">
+                        <video
+                          src={banner.videoUrl}
+                          className="w-full h-full object-cover"
+                          controls
+                          preload="metadata"
+                        />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="text-xl font-bold text-navy">{banner.title}</h3>
@@ -520,22 +546,6 @@ export default function AdminBanners() {
               </CardContent>
             </Card>
           ))}
-          
-          {banners.length === 0 && (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <h3 className="text-lg font-medium text-gray-500 mb-2">No banners yet</h3>
-                <p className="text-gray-400 mb-4">Create your first banner to get started</p>
-                <Button 
-                  onClick={() => setIsCreating(true)}
-                  className="bg-champagne text-navy hover:bg-champagne/80"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Banner
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>

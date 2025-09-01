@@ -59,7 +59,8 @@ export default function AdminBanners() {
   // Create banner mutation
   const createBannerMutation = useMutation({
     mutationFn: async (bannerData: any) => {
-      return await apiRequest('/api/admin/banners', 'POST', bannerData);
+      const response = await apiRequest('POST', '/api/admin/banners', bannerData);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
@@ -91,7 +92,8 @@ export default function AdminBanners() {
   // Update banner mutation
   const updateBannerMutation = useMutation({
     mutationFn: async ({ id, ...bannerData }: any) => {
-      return await apiRequest(`/api/admin/banners/${id}`, 'PATCH', bannerData);
+      const response = await apiRequest('PATCH', `/api/admin/banners/${id}`, bannerData);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
@@ -113,7 +115,8 @@ export default function AdminBanners() {
   // Delete banner mutation
   const deleteBannerMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/admin/banners/${id}`, 'DELETE');
+      const response = await apiRequest('DELETE', `/api/admin/banners/${id}`);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/banners'] });

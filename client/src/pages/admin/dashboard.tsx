@@ -97,7 +97,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkForNewOrders = async () => {
       try {
-        const response = await fetch('/api/admin/orders');
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const response = await fetch('/api/admin/orders', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         if (response.ok) {
           const orders = await response.json();
           const recentOrders = orders.slice(0, 5);
@@ -181,11 +189,14 @@ export default function AdminDashboard() {
     topProducts: any[];
   }>({
     queryKey: ['/api/admin/analytics'],
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
   });
 
   // Fetch recent orders
-  const { data: recentOrders = [] } = useQuery<any[]>({
+  const { data: recentOrders = [], isLoading: ordersLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/orders'],
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   const getStatusColor = (status: string) => {
@@ -211,7 +222,7 @@ export default function AdminDashboard() {
     }
   };
 
-  if (authLoading || analyticsLoading) {
+  if (authLoading || analyticsLoading || ordersLoading) {
     return (
       <div className="min-h-screen bg-cream">
         <AdminSidebar />
@@ -440,7 +451,12 @@ export default function AdminDashboard() {
             {/* Recent Orders */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Recent Orders</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Recent Orders 
+                  <Badge variant="secondary" className="text-xs">
+                    {recentOrders.length} found
+                  </Badge>
+                </CardTitle>
                 <Link href="/admin/orders">
                   <Button variant="ghost" size="sm" className="text-champagne hover:text-navy">
                     <Eye className="h-4 w-4 mr-1" />
@@ -450,28 +466,33 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentOrders.slice(0, 5).map((order: any) => (
-                    <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-navy">#{order.orderNumber}</span>
-                          <Badge className={`text-xs ${getStatusColor(order.status)}`}>
-                            {getStatusIcon(order.status)}
-                            <span className="ml-1">{ORDER_STATUSES[order.status as keyof typeof ORDER_STATUSES] || order.status}</span>
-                          </Badge>
+                  {recentOrders && recentOrders.length > 0 ? (
+                    recentOrders.slice(0, 5).map((order: any) => (
+                      <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-navy">#{order.orderNumber}</span>
+                            <Badge className={`text-xs ${getStatusColor(order.status)}`}>
+                              {getStatusIcon(order.status)}
+                              <span className="ml-1">{ORDER_STATUSES[order.status as keyof typeof ORDER_STATUSES] || order.status}</span>
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {new Date(order.orderDate).toLocaleDateString()}
+                          </p>
                         </div>
-                        <p className="text-sm text-gray-600">
-                          {new Date(order.orderDate).toLocaleDateString()}
-                        </p>
+                        <div className="text-right">
+                          <p className="font-semibold text-navy">{formatPrice(parseFloat(order.total))}</p>
+                          <p className="text-xs text-gray-500">{order.paymentMethod?.toUpperCase() || 'N/A'}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-navy">{formatPrice(parseFloat(order.total))}</p>
-                        <p className="text-xs text-gray-500">{order.paymentMethod.toUpperCase()}</p>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <ShoppingCart className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                      <p className="text-gray-500 text-lg font-medium mb-2">No orders yet</p>
+                      <p className="text-gray-400 text-sm">Orders will appear here once customers start placing them</p>
                     </div>
-                  ))}
-                  {recentOrders.length === 0 && (
-                    <p className="text-gray-500 text-center py-8">No orders yet</p>
                   )}
                 </div>
               </CardContent>

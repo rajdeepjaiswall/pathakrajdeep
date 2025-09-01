@@ -31,10 +31,11 @@ Supports dual database configurations:
 - **Migrations**: Drizzle Kit
 
 ### Key Features & Implementations
-- **Authentication System**: Multi-role (Customer, Admin, Super Admin) authentication with JWTs and bcrypt hashing, and role-based access control.
+- **Authentication System**: Multi-role (Customer, Admin, Super Admin) authentication with JWTs and bcrypt hashing, hybrid authentication middleware supporting both JWT and session-based auth for Google OAuth compatibility.
 - **Product Management**: Hierarchical category system, comprehensive product catalog with images, pricing, inventory, GST integration, and image handling.
 - **E-commerce Features**: Persistent shopping cart, wishlist, full order management lifecycle, address management, and UPI QR code payment integration.
 - **Admin Dashboard**: Comprehensive order, product, customer, and banner management, with basic sales and inventory reporting.
+- **Video Banner System**: Enhanced banner management with video upload capabilities, auto-play functionality, smart carousel timing (30-second delay after video ends), progress tracking, and file optimization.
 - **Data Flow**: JWT-based user authentication, category-based product display, user-specific shopping carts, and order processing with inventory updates.
 - **UI/UX Decisions**: Focus on a custom design system with Tailwind CSS and Radix UI for a consistent and premium look.
 

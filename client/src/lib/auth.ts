@@ -89,11 +89,11 @@ export async function register(userData: RegisterData): Promise<AuthResponse> {
 }
 
 export async function sendOTP(phone: string): Promise<void> {
-  await apiRequest('/api/auth/send-otp', 'POST', { phone });
+  await apiRequest('POST', '/api/auth/send-otp', { phone });
 }
 
 export async function verifyOTP(phone: string, otp: string): Promise<AuthResponse> {
-  const response = await apiRequest('/api/auth/verify-otp', 'POST', { phone, otp });
+  const response = await apiRequest('POST', '/api/auth/verify-otp', { phone, otp });
   const data = await response.json();
   
   // Store token in localStorage

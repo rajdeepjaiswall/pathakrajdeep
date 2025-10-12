@@ -5,6 +5,7 @@ import path from "path";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { OAuth2Client } from "google-auth-library";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 
@@ -1150,16 +1151,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No credential provided' });
       }
 
-      // Decode the JWT token from Google
-      const decoded = jwt.decode(credential, { complete: true });
-      if (!decoded || !decoded.payload) {
+      // Assert GOOGLE_CLIENT_ID is configured
+      const googleClientId = process.env.GOOGLE_CLIENT_ID;
+      if (!googleClientId) {
+        console.error('GOOGLE_CLIENT_ID is not configured');
+        return res.status(500).json({ message: 'Google authentication not configured' });
+      }
+
+      // Verify the Google ID token properly using OAuth2Client
+      const client = new OAuth2Client(googleClientId);
+      
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: googleClientId,
+      });
+
+      const payload = ticket.getPayload();
+      
+      if (!payload) {
         return res.status(400).json({ message: 'Invalid credential' });
       }
 
-      const payload = decoded.payload as any;
+      // Verify email is confirmed by Google
+      if (!payload.email_verified) {
+        return res.status(400).json({ message: 'Email not verified by Google' });
+      }
+
       const email = payload.email;
       const name = payload.name;
       const googleId = payload.sub;
+      const firstName = payload.given_name;
+      const lastName = payload.family_name;
+      const profileImageUrl = payload.picture;
+
+      if (!email || !googleId) {
+        return res.status(400).json({ message: 'Invalid credential payload' });
+      }
 
       // Check if user exists
       let user = await storage.getUserByEmail(email);
@@ -1169,9 +1196,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newUser = {
           username: email,
           email: email,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          profileImageUrl: profileImageUrl || null,
           password: '', // Empty password for Google users
           role: 'customer' as const,
           googleId: googleId,
+          authProvider: 'google',
+          isVerified: true,
+          profileCompleted: false,
         };
         
         user = await storage.createUser(newUser);
@@ -1193,7 +1226,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: user.id,
           username: user.username,
           email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
           role: user.role,
+          profileCompleted: user.profileCompleted,
         },
       });
 

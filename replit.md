@@ -31,7 +31,7 @@ Supports dual database configurations:
 - **Migrations**: Drizzle Kit
 
 ### Key Features & Implementations
-- **Authentication System**: Multi-role (Customer, Admin, Super Admin) authentication with JWTs and bcrypt hashing, hybrid authentication middleware supporting both JWT and session-based auth for Google OAuth compatibility. Google One Tap sign-in secured with OAuth2Client token verification, audience validation, and email verification checks (October 2025).
+- **Authentication System**: Multi-role (Customer, Admin, Super Admin) authentication with JWTs and bcrypt hashing, hybrid authentication middleware supporting both JWT and session-based auth for Google OAuth compatibility.
 - **Product Management**: Hierarchical category system, comprehensive product catalog with images, pricing, inventory, GST integration, and image handling.
 - **E-commerce Features**: Persistent shopping cart, wishlist, full order management lifecycle, address management, and UPI QR code payment integration.
 - **Admin Dashboard**: Comprehensive order, product, customer, and banner management, with basic sales and inventory reporting.

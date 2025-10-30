@@ -627,6 +627,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark address phone as verified after OTP confirmation
+  app.post("/api/addresses/:id/verify-phone", authenticateUser, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const address = await storage.getAddress(id);
+      
+      if (!address || address.userId !== req.user.id) {
+        return res.status(404).json({ message: 'Address not found' });
+      }
+      
+      const updatedAddress = await storage.updateAddress(id, {
+        isPhoneVerified: true,
+        phoneVerifiedAt: new Date(),
+      });
+      
+      res.json(updatedAddress);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // User order history
   app.get("/api/orders/user", authenticateUser, async (req, res) => {
     try {

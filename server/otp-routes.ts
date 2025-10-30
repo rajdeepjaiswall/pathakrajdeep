@@ -8,6 +8,7 @@ const router = Router();
 const sendOtpSchema = z.object({
   identifier: z.string().min(1, "Email or phone number is required"),
   type: z.enum(["email", "whatsapp"], { required_error: "Type must be 'email' or 'whatsapp'" }),
+  customerName: z.string().optional().default("Customer"),
   purpose: z.string().optional().default("verification")
 });
 
@@ -20,13 +21,14 @@ const verifyOtpSchema = z.object({
 const resendOtpSchema = z.object({
   identifier: z.string().min(1, "Email or phone number is required"),
   type: z.enum(["email", "whatsapp"], { required_error: "Type must be 'email' or 'whatsapp'" }),
+  customerName: z.string().optional().default("Customer"),
   purpose: z.string().optional().default("verification")
 });
 
 // Send OTP (Email or WhatsApp)
 router.post("/send-otp", async (req, res) => {
   try {
-    const { identifier, type, purpose } = sendOtpSchema.parse(req.body);
+    const { identifier, type, customerName, purpose } = sendOtpSchema.parse(req.body);
 
     // Validate email format if type is email
     if (type === "email") {
@@ -54,7 +56,7 @@ router.post("/send-otp", async (req, res) => {
     if (type === "email") {
       result = await otpService.sendEmailOTP(identifier, purpose);
     } else {
-      result = await otpService.sendWhatsAppOTP(identifier, purpose);
+      result = await otpService.sendWhatsAppOTP(identifier, customerName, purpose);
     }
 
     if (result.success) {
@@ -129,9 +131,9 @@ router.post("/verify-otp", async (req, res) => {
 // Resend OTP
 router.post("/resend-otp", async (req, res) => {
   try {
-    const { identifier, type, purpose } = resendOtpSchema.parse(req.body);
+    const { identifier, type, customerName, purpose } = resendOtpSchema.parse(req.body);
 
-    const result = await otpService.resendOTP(identifier, type, purpose);
+    const result = await otpService.resendOTP(identifier, type, customerName, purpose);
 
     if (result.success) {
       res.status(200).json({

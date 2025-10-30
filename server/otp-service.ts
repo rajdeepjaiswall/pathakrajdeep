@@ -18,11 +18,15 @@ const createEmailTransporter = () => {
 interface Fast2SMSConfig {
   apiKey: string;
   baseUrl: string;
+  senderId: string;
+  otpTemplateId: string;
 }
 
 const fast2smsConfig: Fast2SMSConfig = {
   apiKey: process.env.FAST2SMS_API_KEY || '',
-  baseUrl: 'https://www.fast2sms.com/dev/bulkV2'
+  baseUrl: 'https://www.fast2sms.com/dev/bulkV2',
+  senderId: 'GETDWN',
+  otpTemplateId: '148245'
 };
 
 export class OTPService {
@@ -115,8 +119,8 @@ export class OTPService {
     }
   }
 
-  // Send SMS OTP via Fast2SMS
-  async sendWhatsAppOTP(phoneNumber: string, purpose: string = 'verification'): Promise<{ success: boolean; message: string }> {
+  // Send SMS OTP via Fast2SMS using DLT template
+  async sendWhatsAppOTP(phoneNumber: string, customerName: string = 'Customer', purpose: string = 'verification'): Promise<{ success: boolean; message: string }> {
     try {
       if (!fast2smsConfig.apiKey) {
         return {
@@ -133,23 +137,30 @@ export class OTPService {
         formattedPhone = formattedPhone.slice(2);
       }
       
-      // Fast2SMS API request
-      const response = await fetch(fast2smsConfig.baseUrl, {
-        method: 'POST',
-        headers: {
-          'authorization': fast2smsConfig.apiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          variables_values: otpCode,
-          route: 'otp',
-          numbers: formattedPhone
-        })
+      // DLT template variables: Name|OTP|
+      const variablesValues = `${customerName}|${otpCode}|`;
+      
+      // Build query parameters for DLT template
+      const params = new URLSearchParams({
+        authorization: fast2smsConfig.apiKey,
+        route: 'dlt',
+        sender_id: fast2smsConfig.senderId,
+        message: fast2smsConfig.otpTemplateId,
+        variables_values: variablesValues,
+        flash: '0',
+        numbers: formattedPhone
+      });
+      
+      // Fast2SMS DLT API request (GET)
+      const url = `${fast2smsConfig.baseUrl}?${params.toString()}`;
+      const response = await fetch(url, {
+        method: 'GET'
       });
 
       const responseData = await response.json();
 
       if (response.ok && responseData.return) {
+        console.log('Fast2SMS OTP sent successfully:', responseData);
         return {
           success: true,
           message: 'OTP sent successfully to your phone'
@@ -166,7 +177,7 @@ export class OTPService {
       return {
         success: false,
         message: 'Failed to send OTP. Please try again.'
-      };
+        };
     }
   }
   
@@ -260,7 +271,8 @@ export class OTPService {
       }
 
       // Check attempts limit
-      if (otpRecord.attempts >= 3) {
+      const attempts = otpRecord.attempts || 0;
+      if (attempts >= 3) {
         await db.delete(otps).where(eq(otps.id, otpRecord.id));
         return {
           success: false,
@@ -273,12 +285,12 @@ export class OTPService {
         // Increment attempts
         await db
           .update(otps)
-          .set({ attempts: otpRecord.attempts + 1 })
+          .set({ attempts: attempts + 1 })
           .where(eq(otps.id, otpRecord.id));
 
         return {
           success: false,
-          message: `Invalid OTP. ${3 - (otpRecord.attempts + 1)} attempts remaining.`
+          message: `Invalid OTP. ${3 - (attempts + 1)} attempts remaining.`
         };
       }
 
@@ -299,7 +311,7 @@ export class OTPService {
   }
 
   // Resend OTP with cooldown check
-  async resendOTP(identifier: string, type: 'email' | 'whatsapp', purpose: string = 'verification'): Promise<{ success: boolean; message: string; waitTime?: number }> {
+  async resendOTP(identifier: string, type: 'email' | 'whatsapp', customerName: string = 'Customer', purpose: string = 'verification'): Promise<{ success: boolean; message: string; waitTime?: number }> {
     try {
       // Check for existing OTP and cooldown
       const [existingOTP] = await db
@@ -331,7 +343,7 @@ export class OTPService {
       if (type === 'email') {
         return await this.sendEmailOTP(identifier, purpose);
       } else {
-        return await this.sendWhatsAppOTP(identifier, purpose);
+        return await this.sendWhatsAppOTP(identifier, customerName, purpose);
       }
     } catch (error) {
       console.error('Resend OTP Error:', error);

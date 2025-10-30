@@ -142,10 +142,11 @@ export default function Checkout() {
 
   // Send OTP mutation
   const sendOTPMutation = useMutation({
-    mutationFn: async (phoneNumber: string) => {
+    mutationFn: async ({phoneNumber, customerName}: {phoneNumber: string, customerName: string}) => {
       const response = await apiRequest('POST', '/api/otp/send-otp', {
         identifier: phoneNumber,
         type: 'whatsapp',
+        customerName: customerName,
         purpose: 'verification',
       });
       return response.json();
@@ -210,7 +211,10 @@ export default function Checkout() {
   const handleSendOTP = () => {
     const address = addresses.find(a => a.id === verifyingAddressId);
     if (address) {
-      sendOTPMutation.mutate(address.phone);
+      sendOTPMutation.mutate({
+        phoneNumber: address.phone,
+        customerName: address.name || user?.username || 'Customer'
+      });
     }
   };
 
@@ -224,7 +228,10 @@ export default function Checkout() {
   const handleResendOTP = () => {
     const address = addresses.find(a => a.id === verifyingAddressId);
     if (address && countdown === 0) {
-      sendOTPMutation.mutate(address.phone);
+      sendOTPMutation.mutate({
+        phoneNumber: address.phone,
+        customerName: address.name || user?.username || 'Customer'
+      });
     }
   };
 

@@ -72,6 +72,8 @@ export const addresses = pgTable("addresses", {
   pincode: text("pincode").notNull(),
   landmark: text("landmark"),
   isDefault: boolean("is_default").default(false),
+  isPhoneVerified: boolean("is_phone_verified").default(false),
+  phoneVerifiedAt: timestamp("phone_verified_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

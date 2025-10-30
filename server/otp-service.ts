@@ -14,17 +14,15 @@ const createEmailTransporter = () => {
   });
 };
 
-// WhatsApp configuration (requires WhatsApp Business API setup)
-interface WhatsAppConfig {
-  accessToken: string;
-  phoneNumberId: string;
+// Fast2SMS configuration
+interface Fast2SMSConfig {
+  apiKey: string;
   baseUrl: string;
 }
 
-const whatsappConfig: WhatsAppConfig = {
-  accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
-  phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
-  baseUrl: 'https://graph.facebook.com/v18.0'
+const fast2smsConfig: Fast2SMSConfig = {
+  apiKey: process.env.FAST2SMS_API_KEY || '',
+  baseUrl: 'https://www.fast2sms.com/dev/bulkV2'
 };
 
 export class OTPService {
@@ -117,71 +115,114 @@ export class OTPService {
     }
   }
 
-  // Send WhatsApp OTP
+  // Send SMS OTP via Fast2SMS
   async sendWhatsAppOTP(phoneNumber: string, purpose: string = 'verification'): Promise<{ success: boolean; message: string }> {
     try {
-      if (!whatsappConfig.accessToken || !whatsappConfig.phoneNumberId) {
+      if (!fast2smsConfig.apiKey) {
         return {
           success: false,
-          message: 'WhatsApp API not configured. Please contact administrator.'
+          message: 'SMS API not configured. Please contact administrator.'
         };
       }
 
       const otpCode = await this.createOTP(phoneNumber, 'whatsapp', purpose);
       
-      // Format phone number (remove any non-digits and ensure it starts with country code)
-      const formattedPhone = phoneNumber.replace(/\D/g, '');
+      // Format phone number (remove any non-digits, remove leading +91 or 91 if present)
+      let formattedPhone = phoneNumber.replace(/\D/g, '');
+      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+        formattedPhone = formattedPhone.slice(2);
+      }
       
-      const messageData = {
-        messaging_product: "whatsapp",
-        to: formattedPhone,
-        type: "template",
-        template: {
-          name: "otp_verification", // You need to create this template in WhatsApp Business Manager
-          language: {
-            code: "en"
-          },
-          components: [
-            {
-              type: "body",
-              parameters: [
-                {
-                  type: "text",
-                  text: otpCode
-                }
-              ]
-            }
-          ]
-        }
-      };
-
-      const response = await fetch(`${whatsappConfig.baseUrl}/${whatsappConfig.phoneNumberId}/messages`, {
+      // Fast2SMS API request
+      const response = await fetch(fast2smsConfig.baseUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${whatsappConfig.accessToken}`,
+          'authorization': fast2smsConfig.apiKey,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(messageData)
+        body: JSON.stringify({
+          variables_values: otpCode,
+          route: 'otp',
+          numbers: formattedPhone
+        })
       });
 
-      if (response.ok) {
+      const responseData = await response.json();
+
+      if (response.ok && responseData.return) {
         return {
           success: true,
-          message: 'OTP sent successfully to your WhatsApp'
+          message: 'OTP sent successfully to your phone'
         };
       } else {
-        const errorData = await response.json();
-        console.error('WhatsApp API Error:', errorData);
+        console.error('Fast2SMS API Error:', responseData);
         return {
           success: false,
-          message: 'Failed to send WhatsApp OTP. Please try again.'
+          message: 'Failed to send OTP. Please try again.'
         };
       }
     } catch (error) {
-      console.error('WhatsApp OTP Error:', error);
+      console.error('SMS OTP Error:', error);
       return {
         success: false,
-        message: 'Failed to send WhatsApp OTP. Please try again.'
+        message: 'Failed to send OTP. Please try again.'
+      };
+    }
+  }
+  
+  // Helper method to send order confirmation SMS
+  async sendOrderConfirmation(phoneNumber: string, orderNumber: string, trackingLink: string): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!fast2smsConfig.apiKey) {
+        return {
+          success: false,
+          message: 'SMS API not configured.'
+        };
+      }
+
+      // Format phone number
+      let formattedPhone = phoneNumber.replace(/\D/g, '');
+      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+        formattedPhone = formattedPhone.slice(2);
+      }
+
+      const message = `Your Pathak Bhandar order ${orderNumber} has been confirmed! Track your order: ${trackingLink}`;
+      
+      // For custom messages, Fast2SMS requires DLT template
+      // For now, we'll use a simple notification approach
+      const response = await fetch(fast2smsConfig.baseUrl, {
+        method: 'POST',
+        headers: {
+          'authorization': fast2smsConfig.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender_id: 'PATHAK',
+          message: message,
+          route: 'q',
+          numbers: formattedPhone
+        })
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok && responseData.return) {
+        return {
+          success: true,
+          message: 'Order confirmation sent successfully'
+        };
+      } else {
+        console.error('Fast2SMS Order Confirmation Error:', responseData);
+        return {
+          success: false,
+          message: 'Failed to send order confirmation SMS'
+        };
+      }
+    } catch (error) {
+      console.error('Order Confirmation SMS Error:', error);
+      return {
+        success: false,
+        message: 'Failed to send order confirmation SMS'
       };
     }
   }

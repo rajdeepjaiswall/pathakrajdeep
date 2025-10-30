@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, CreditCard, Smartphone, Truck, MapPin, Plus } from 'lucide-react';
+import { ArrowLeft, CreditCard, Smartphone, Truck, MapPin, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { insertAddressSchema, insertOrderSchema, type Address } from '@shared/schema';
 import { z } from 'zod';
 import { useEffect } from 'react';
+import { OTPInput } from '@/components/otp-input';
 
 const addressFormSchema = insertAddressSchema.omit({ userId: true });
 const orderFormSchema = z.object({
@@ -39,6 +40,12 @@ export default function Checkout() {
   const queryClient = useQueryClient();
   const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+  const [verifyingAddressId, setVerifyingAddressId] = useState<number | null>(null);
+  const [otpValue, setOtpValue] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [showVerificationWarning, setShowVerificationWarning] = useState(false);
 
   // Initialize audio context on component mount for better browser compatibility
   useEffect(() => {
@@ -100,6 +107,14 @@ export default function Checkout() {
     },
   });
 
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
   // Add address mutation
   const addAddressMutation = useMutation({
     mutationFn: async (data: z.infer<typeof addressFormSchema>) => {
@@ -124,6 +139,114 @@ export default function Checkout() {
       });
     },
   });
+
+  // Send OTP mutation
+  const sendOTPMutation = useMutation({
+    mutationFn: async (phoneNumber: string) => {
+      const response = await apiRequest('POST', '/api/otp/send-otp', {
+        identifier: phoneNumber,
+        type: 'whatsapp',
+        purpose: 'verification',
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      setOtpSent(true);
+      setCountdown(60);
+      toast({
+        title: 'OTP Sent',
+        description: 'Please check your phone for the verification code',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send OTP',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Verify OTP mutation
+  const verifyOTPMutation = useMutation({
+    mutationFn: async ({ phoneNumber, otp }: { phoneNumber: string; otp: string }) => {
+      const response = await apiRequest('POST', '/api/otp/verify-otp', {
+        identifier: phoneNumber,
+        otp,
+        type: 'whatsapp',
+      });
+      return response.json();
+    },
+    onSuccess: async () => {
+      if (verifyingAddressId) {
+        await apiRequest('POST', `/api/addresses/${verifyingAddressId}/verify-phone`, {});
+        queryClient.invalidateQueries({ queryKey: ['/api/addresses'] });
+        toast({
+          title: 'Phone Verified',
+          description: 'Your phone number has been verified successfully',
+        });
+        setIsVerifyingPhone(false);
+        setOtpValue('');
+        setOtpSent(false);
+        setVerifyingAddressId(null);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Verification Failed',
+        description: error.message || 'Invalid OTP. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleVerifyPhone = (address: Address) => {
+    setVerifyingAddressId(address.id);
+    setIsVerifyingPhone(true);
+    setOtpSent(false);
+    setOtpValue('');
+  };
+
+  const handleSendOTP = () => {
+    const address = addresses.find(a => a.id === verifyingAddressId);
+    if (address) {
+      sendOTPMutation.mutate(address.phone);
+    }
+  };
+
+  const handleVerifyOTP = () => {
+    const address = addresses.find(a => a.id === verifyingAddressId);
+    if (address && otpValue.length === 6) {
+      verifyOTPMutation.mutate({ phoneNumber: address.phone, otp: otpValue });
+    }
+  };
+
+  const handleResendOTP = () => {
+    const address = addresses.find(a => a.id === verifyingAddressId);
+    if (address && countdown === 0) {
+      sendOTPMutation.mutate(address.phone);
+    }
+  };
+
+  // Place order mutation with phone verification check
+  const handlePlaceOrder = (data: z.infer<typeof orderFormSchema>) => {
+    const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
+    if (!selectedAddr) {
+      toast({
+        title: 'Error',
+        description: 'Please select a delivery address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!selectedAddr.isPhoneVerified) {
+      setShowVerificationWarning(true);
+      return;
+    }
+
+    placeOrderMutation.mutate(data);
+  };
 
   // Place order mutation
   const placeOrderMutation = useMutation({
@@ -256,7 +379,28 @@ export default function Checkout() {
                               <span className="text-xs bg-champagne text-navy px-2 py-1 rounded">Default</span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600">{address.phone}</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm text-gray-600">{address.phone}</p>
+                            {address.isPhoneVerified ? (
+                              <span className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Verified
+                              </span>
+                            ) : (
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="h-auto p-0 text-xs text-blue-600"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleVerifyPhone(address);
+                                }}
+                                data-testid={`verify-phone-${address.id}`}
+                              >
+                                Verify Phone
+                              </Button>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600">
                             {address.addressLine1}, {address.addressLine2 && `${address.addressLine2}, `}
                             {address.city}, {address.state} - {address.pincode}
@@ -549,9 +693,10 @@ export default function Checkout() {
                 </div>
 
                 <Button
-                  onClick={orderForm.handleSubmit((data) => placeOrderMutation.mutate(data))}
+                  onClick={orderForm.handleSubmit(handlePlaceOrder)}
                   disabled={!selectedAddress || placeOrderMutation.isPending}
                   className="w-full bg-champagne text-navy hover:bg-champagne/90 py-3"
+                  data-testid="button-place-order"
                 >
                   {placeOrderMutation.isPending ? 'Placing Order...' : 'Place Order'}
                 </Button>
@@ -564,6 +709,124 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* OTP Verification Modal */}
+      <Dialog open={isVerifyingPhone} onOpenChange={setIsVerifyingPhone}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-green-600" />
+              Verify Phone Number
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {!otpSent ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 text-center">
+                  We'll send a verification code to{' '}
+                  <span className="font-semibold">
+                    {addresses.find(a => a.id === verifyingAddressId)?.phone}
+                  </span>
+                </p>
+                <Button
+                  onClick={handleSendOTP}
+                  disabled={sendOTPMutation.isPending}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  data-testid="button-send-otp"
+                >
+                  {sendOTPMutation.isPending ? 'Sending...' : 'Send OTP'}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Enter the 6-digit code sent to
+                  </p>
+                  <p className="font-semibold">
+                    {addresses.find(a => a.id === verifyingAddressId)?.phone}
+                  </p>
+                </div>
+
+                <div>
+                  <OTPInput
+                    value={otpValue}
+                    onChange={setOtpValue}
+                    disabled={verifyOTPMutation.isPending}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleVerifyOTP}
+                  disabled={otpValue.length !== 6 || verifyOTPMutation.isPending}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  data-testid="button-verify-otp"
+                >
+                  {verifyOTPMutation.isPending ? 'Verifying...' : 'Verify OTP'}
+                </Button>
+
+                <div className="text-center">
+                  {countdown > 0 ? (
+                    <p className="text-sm text-gray-500">
+                      Resend code in {countdown}s
+                    </p>
+                  ) : (
+                    <Button
+                      variant="link"
+                      onClick={handleResendOTP}
+                      disabled={sendOTPMutation.isPending}
+                      className="text-sm text-blue-600"
+                      data-testid="button-resend-otp"
+                    >
+                      {sendOTPMutation.isPending ? 'Sending...' : 'Resend OTP'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Verification Warning Dialog */}
+      <Dialog open={showVerificationWarning} onOpenChange={setShowVerificationWarning}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertCircle className="h-5 w-5" />
+              Phone Verification Required
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600">
+              Please verify your phone number to receive order updates and tracking information via SMS.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowVerificationWarning(false)}
+                className="flex-1"
+                data-testid="button-skip-verification"
+              >
+                Skip for Now
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowVerificationWarning(false);
+                  const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
+                  if (selectedAddr) {
+                    handleVerifyPhone(selectedAddr);
+                  }
+                }}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                data-testid="button-verify-now"
+              >
+                Verify Now
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
       <MobileNav />

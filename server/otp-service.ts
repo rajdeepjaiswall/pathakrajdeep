@@ -5,7 +5,7 @@ import { eq, and, lt } from 'drizzle-orm';
 
 // Email configuration
 const createEmailTransporter = () => {
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER || 'your-email@gmail.com',

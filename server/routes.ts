@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
+import { otpService } from "./otp-service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
 
@@ -1009,6 +1010,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const order = await storage.createOrder(orderData);
       console.log('Order created successfully:', order.id, order.orderNumber);
+      
+      // Send order confirmation SMS if phone is verified
+      if (order.deliveryAddress && order.deliveryAddress.phone) {
+        const trackingLink = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'https://pathakbhandar.in'}/track-order/${order.orderNumber}`;
+        try {
+          await otpService.sendOrderConfirmation(
+            order.deliveryAddress.phone,
+            order.orderNumber,
+            trackingLink
+          );
+          console.log('Order confirmation SMS sent to:', order.deliveryAddress.phone);
+        } catch (smsError) {
+          console.error('Failed to send order confirmation SMS:', smsError);
+          // Don't fail the order if SMS fails
+        }
+      }
+      
       res.json(order);
     } catch (error: any) {
       console.error('Order creation error:', error);

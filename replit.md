@@ -36,6 +36,7 @@ Supports dual database configurations:
 - **E-commerce Features**: Persistent shopping cart, wishlist, full order management lifecycle, address management, and UPI QR code payment integration.
 - **Admin Dashboard**: Comprehensive order, product, customer, and banner management, with basic sales and inventory reporting.
 - **Video Banner System**: Enhanced banner management with video upload capabilities, auto-play functionality, smart carousel timing (30-second delay after video ends), progress tracking, and file optimization.
+- **Phone Verification System**: SMS-based OTP verification for customer phone numbers during checkout using Fast2SMS API, with verification badges, resend functionality, and order confirmation SMS with tracking links.
 - **Data Flow**: JWT-based user authentication, category-based product display, user-specific shopping carts, and order processing with inventory updates.
 - **UI/UX Decisions**: Focus on a custom design system with Tailwind CSS and Radix UI for a consistent and premium look.
 
@@ -58,3 +59,6 @@ Supports dual database configurations:
 - Google Maps API (for address management)
 - Postal API (for PIN code auto-population)
 - Web Audio API (for audio notifications)
+- Fast2SMS API (for OTP verification and order confirmation SMS)
+  - Note: User declined Twilio Replit integration, uses Fast2SMS directly with API key stored in secrets
+  - Configuration: FAST2SMS_API_KEY environment variable

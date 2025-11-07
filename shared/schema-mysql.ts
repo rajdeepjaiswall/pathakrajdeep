@@ -90,6 +90,8 @@ export const addresses = mysqlTable(
     pincode: varchar("pincode", { length: 10 }).notNull(),
     landmark: text("landmark"),
     isDefault: boolean("isDefault").default(false),
+    isPhoneVerified: boolean("isPhoneVerified").default(false),
+    phoneVerifiedAt: timestamp("phoneVerifiedAt"),
     createdAt: timestamp("createdAt").defaultNow(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
   },
@@ -206,6 +208,19 @@ export const banners = mysqlTable("banners", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
 });
 
+// OTP table for phone/email verification
+export const otps = mysqlTable("otps", {
+  id: int("id").primaryKey().autoincrement(),
+  identifier: varchar("identifier", { length: 255 }).notNull(),
+  otp: varchar("otp", { length: 6 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull(),
+  purpose: varchar("purpose", { length: 50 }).notNull().default("verification"),
+  attempts: int("attempts").default(0),
+  isVerified: boolean("isVerified").default(false),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -227,6 +242,8 @@ export type Review = typeof reviews.$inferSelect;
 export type InsertReview = typeof reviews.$inferInsert;
 export type Banner = typeof banners.$inferSelect;
 export type InsertBanner = typeof banners.$inferInsert;
+export type Otp = typeof otps.$inferSelect;
+export type InsertOtp = typeof otps.$inferInsert;
 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users);
@@ -239,3 +256,4 @@ export const insertOrderSchema = createInsertSchema(orders);
 export const insertOrderItemSchema = createInsertSchema(orderItems);
 export const insertReviewSchema = createInsertSchema(reviews);
 export const insertBannerSchema = createInsertSchema(banners);
+export const insertOtpSchema = createInsertSchema(otps);

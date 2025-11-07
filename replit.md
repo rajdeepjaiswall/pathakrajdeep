@@ -62,3 +62,20 @@ Supports dual database configurations:
 - Fast2SMS API (for OTP verification and order confirmation SMS)
   - Note: User declined Twilio Replit integration, uses Fast2SMS directly with API key stored in secrets
   - Configuration: FAST2SMS_API_KEY environment variable
+  - DLT Template: ID 148245, Sender ID GETDWN, Format: CustomerName|OTP|
+
+## Deployment
+
+### cPanel Deployment
+A comprehensive deployment guide is available in `CPANEL_DEPLOYMENT_GUIDE.md` covering:
+- MySQL database setup via phpMyAdmin
+- File upload via File Manager
+- Node.js app configuration
+- Environment variables setup
+- SSL certificate installation
+- Complete SQL schema available in `database-schema-mysql.sql`
+
+### Database Migration Path
+- **Replit/Development**: Uses PostgreSQL (Neon) with `shared/schema.ts`
+- **cPanel/Production**: Uses MySQL with `shared/schema-mysql.ts`
+- Both schemas are maintained in parallel for dual deployment support

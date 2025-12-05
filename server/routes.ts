@@ -1438,7 +1438,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin OTP Configuration endpoints
+  app.get("/api/admin/otp-status", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const configured = !!process.env.FAST2SMS_API_KEY;
+      res.json({
+        configured,
+        senderId: 'GETDWN',
+        templateId: '148245',
+        message: configured ? 'API is configured' : 'API key not found in environment variables'
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
+  app.post("/api/admin/test-otp", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      if (!process.env.FAST2SMS_API_KEY) {
+        return res.status(400).json({
+          success: false,
+          message: 'Fast2SMS API Key not configured. Please add it to your Replit secrets.'
+        });
+      }
+
+      const result = await otpService.sendWhatsAppOTP(
+        req.body.phoneNumber,
+        'Admin Test',
+        'test'
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  });
 
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);

@@ -1,20 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { AlertCircle, CheckCircle, Save } from 'lucide-react';
+import { AlertCircle, CheckCircle, RefreshCw, Send } from 'lucide-react';
 
 export default function AdminSettings() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<any>(null);
 
   // Redirect if not super admin
   if (!user || user.role !== 'super_admin') {
@@ -22,43 +22,45 @@ export default function AdminSettings() {
     return null;
   }
 
-  const [settings, setSettings] = useState({
-    fast2smsApiKey: localStorage.getItem('fast2sms_api_key') || '',
-    fast2smsSenderId: localStorage.getItem('fast2sms_sender_id') || 'GETDWN',
-    fast2smsTemplateId: localStorage.getItem('fast2sms_template_id') || '148245',
+  // Fetch API status
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await apiRequest('GET', '/api/admin/otp-status');
+        const data = await response.json();
+        setStatus(data);
+      } catch (error: any) {
+        console.error('Failed to fetch OTP status:', error);
+        setStatus({ configured: false, message: 'Unable to fetch status' });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStatus();
+  }, []);
+
+  // Test OTP mutation
+  const testOtpMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', '/api/admin/test-otp', {
+        phoneNumber: '+919876543210', // Test number
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Test Sent',
+        description: 'Test OTP has been sent. Check if you received the WhatsApp message.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Test Failed',
+        description: error.message || 'Failed to send test OTP',
+        variant: 'destructive',
+      });
+    },
   });
-
-  const handleSaveSettings = async () => {
-    if (!settings.fast2smsApiKey.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Fast2SMS API Key is required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      // Save to localStorage (for client-side reference)
-      localStorage.setItem('fast2sms_api_key', settings.fast2smsApiKey);
-      localStorage.setItem('fast2sms_sender_id', settings.fast2smsSenderId);
-      localStorage.setItem('fast2sms_template_id', settings.fast2smsTemplateId);
-
-      toast({
-        title: 'Success',
-        description: 'Fast2SMS WhatsApp settings saved successfully. OTP messages will be sent via WhatsApp.',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to save settings',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cream via-white to-cream">
@@ -66,150 +68,155 @@ export default function AdminSettings() {
       
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-navy mb-2">Admin Settings</h1>
-          <p className="text-gray-600">Configure your Fast2SMS WhatsApp integration</p>
+          <h1 className="text-4xl font-bold text-navy mb-2">Fast2SMS WhatsApp Setup</h1>
+          <p className="text-gray-600">Configure your OTP verification service</p>
         </div>
 
-        {/* Fast2SMS Configuration Card */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-champagne to-cream border-b">
+        {/* Setup Instructions Card */}
+        <Card className="border-0 shadow-lg mb-6">
+          <CardHeader className="bg-blue-50 border-b">
             <CardTitle className="text-navy flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-500" />
-              Fast2SMS WhatsApp Configuration
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              How to Add Your Fast2SMS API Key
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="space-y-6">
-              {/* API Key Input */}
-              <div>
-                <Label htmlFor="apiKey" className="text-navy font-semibold mb-2 block">
-                  Fast2SMS API Key *
-                </Label>
-                <Input
-                  id="apiKey"
-                  type="password"
-                  placeholder="Enter your Fast2SMS API key"
-                  value={settings.fast2smsApiKey}
-                  onChange={(e) => setSettings({ ...settings, fast2smsApiKey: e.target.value })}
-                  className="border-2 border-gray-200 focus:border-champagne"
-                  data-testid="input-fast2sms-api-key"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Your API key is used to authenticate with Fast2SMS WhatsApp service. Get it from your Fast2SMS dashboard.
-                </p>
-              </div>
-
-              {/* Sender ID Input */}
-              <div>
-                <Label htmlFor="senderId" className="text-navy font-semibold mb-2 block">
-                  Sender ID
-                </Label>
-                <Input
-                  id="senderId"
-                  type="text"
-                  placeholder="e.g., GETDWN"
-                  value={settings.fast2smsSenderId}
-                  onChange={(e) => setSettings({ ...settings, fast2smsSenderId: e.target.value })}
-                  className="border-2 border-gray-200 focus:border-champagne"
-                  data-testid="input-sender-id"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  The WhatsApp sender ID registered with Fast2SMS.
-                </p>
-              </div>
-
-              {/* Template ID Input */}
-              <div>
-                <Label htmlFor="templateId" className="text-navy font-semibold mb-2 block">
-                  DLT Template ID
-                </Label>
-                <Input
-                  id="templateId"
-                  type="text"
-                  placeholder="e.g., 148245"
-                  value={settings.fast2smsTemplateId}
-                  onChange={(e) => setSettings({ ...settings, fast2smsTemplateId: e.target.value })}
-                  className="border-2 border-gray-200 focus:border-champagne"
-                  data-testid="input-template-id"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  The approved DLT template ID for OTP messages on Fast2SMS.
-                </p>
-              </div>
-
-              {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex gap-3">
-                  <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-semibold mb-1">WhatsApp OTP Format</p>
-                    <p>Messages will be sent in format: <code className="bg-blue-100 px-2 py-1 rounded">CustomerName|OTP|</code></p>
-                  </div>
+            <div className="space-y-4 text-sm">
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold text-xs">1</div>
+                <div>
+                  <p className="font-semibold text-navy">Open Secrets in Replit</p>
+                  <p className="text-gray-600">In the left sidebar, click on the <strong>Secrets</strong> (🔒) tab</p>
                 </div>
               </div>
-
-              {/* Save Button */}
-              <Button
-                onClick={handleSaveSettings}
-                disabled={isSaving}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 flex items-center justify-center gap-2"
-                data-testid="button-save-settings"
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? 'Saving...' : 'Save Settings'}
-              </Button>
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold text-xs">2</div>
+                <div>
+                  <p className="font-semibold text-navy">Find or Create FAST2SMS_API_KEY</p>
+                  <p className="text-gray-600">Look for <code className="bg-gray-100 px-2 py-1 rounded text-xs">FAST2SMS_API_KEY</code> or add it if missing</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold text-xs">3</div>
+                <div>
+                  <p className="font-semibold text-navy">Paste Your API Key</p>
+                  <p className="text-gray-600">Copy your Fast2SMS API key and paste it in the value field</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold text-xs">4</div>
+                <div>
+                  <p className="font-semibold text-navy">Save & Restart</p>
+                  <p className="text-gray-600">The app will automatically restart. Then test the connection below.</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Connection Status Card */}
-        <Card className="mt-6 border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
+        {/* API Status Card */}
+        <Card className="border-0 shadow-lg">
+          <CardHeader className={`border-b ${status?.configured ? 'bg-green-50' : 'bg-orange-50'}`}>
             <CardTitle className="text-navy flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              API Connection Status
+              {status?.configured ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  API Connected & Ready
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                  API Not Yet Configured
+                </>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="space-y-3">
-              <p className="text-sm text-gray-600">
-                {settings.fast2smsApiKey ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 bg-green-600 rounded-full"></span>
-                    API Key configured and ready to use
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 bg-orange-600 rounded-full"></span>
-                    API Key not configured yet
-                  </span>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-semibold text-navy mb-2">Status Details:</p>
+                  <ul className="text-sm text-gray-600 space-y-2">
+                    <li className="flex items-center gap-2">
+                      {status?.configured ? (
+                        <span className="h-2 w-2 bg-green-600 rounded-full"></span>
+                      ) : (
+                        <span className="h-2 w-2 bg-orange-600 rounded-full"></span>
+                      )}
+                      <span>
+                        {status?.configured ? '✓ API Key is configured' : '✗ API Key not found'}
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="h-2 w-2 bg-blue-600 rounded-full"></span>
+                      <span>Sender ID: {status?.senderId || 'GETDWN'}</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="h-2 w-2 bg-blue-600 rounded-full"></span>
+                      <span>Template ID: {status?.templateId || '148245'}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Test OTP Button */}
+                {status?.configured && (
+                  <Button
+                    onClick={() => testOtpMutation.mutate()}
+                    disabled={testOtpMutation.isPending}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 flex items-center justify-center gap-2"
+                    data-testid="button-test-otp"
+                  >
+                    <Send className="h-4 w-4" />
+                    {testOtpMutation.isPending ? 'Sending Test...' : 'Send Test OTP'}
+                  </Button>
                 )}
-              </p>
-              <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-                Once configured, OTP verification messages will be sent to customers' WhatsApp during checkout.
-              </p>
-            </div>
+
+                {/* Refresh Status Button */}
+                <Button
+                  onClick={() => {
+                    setIsLoading(true);
+                    window.location.reload();
+                  }}
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2"
+                  data-testid="button-refresh-status"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh Status
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Debug Info Card */}
+        {/* Configuration Info */}
         <Card className="mt-6 border-0 shadow-lg">
           <CardHeader className="bg-gray-50 border-b">
-            <CardTitle className="text-navy">Debug Information</CardTitle>
+            <CardTitle className="text-navy">WhatsApp OTP Configuration</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            <Textarea
-              value={JSON.stringify({
-                apiKeyConfigured: !!settings.fast2smsApiKey,
-                senderId: settings.fast2smsSenderId,
-                templateId: settings.fast2smsTemplateId,
-                timestamp: new Date().toISOString(),
-              }, null, 2)}
-              readOnly
-              className="bg-gray-100 text-xs font-mono"
-              rows={6}
-              data-testid="textarea-debug-info"
-            />
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="font-semibold text-navy mb-1">Message Format:</p>
+                <code className="bg-gray-100 px-3 py-2 rounded block text-xs">CustomerName|OTP|</code>
+              </div>
+              <div>
+                <p className="font-semibold text-navy mb-1">Template ID:</p>
+                <p className="text-gray-600">148245</p>
+              </div>
+              <div>
+                <p className="font-semibold text-navy mb-1">When OTP is Sent:</p>
+                <ul className="text-gray-600 space-y-1 list-disc list-inside">
+                  <li>Customer verifies phone at checkout</li>
+                  <li>Customer requests OTP resend</li>
+                  <li>Order confirmation (after payment)</li>
+                </ul>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </main>

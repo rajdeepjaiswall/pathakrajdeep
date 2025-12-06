@@ -198,7 +198,30 @@ export const otps = pgTable("otps", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Manual Payment Configuration (singleton for QR/UPI settings)
+export const manualPaymentConfig = pgTable("manual_payment_config", {
+  id: serial("id").primaryKey(),
+  qrImageUrl: text("qr_image_url"),
+  upiId: text("upi_id"),
+  isActive: boolean("is_active").default(true),
+  updatedBy: integer("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
+// Manual Payment Details (linked to orders for tracking UTR and verification)
+export const manualPaymentDetails = pgTable("manual_payment_details", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  utrReference: text("utr_reference"),
+  status: text("status").notNull().default("pending"), // pending, success, failed
+  submittedAt: timestamp("submitted_at"),
+  verifiedByAdminId: integer("verified_by_admin_id").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -280,6 +303,24 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
   product: one(products, {
     fields: [reviews.product_id],
     references: [products.id],
+  }),
+}));
+
+export const manualPaymentDetailsRelations = relations(manualPaymentDetails, ({ one }) => ({
+  order: one(orders, {
+    fields: [manualPaymentDetails.orderId],
+    references: [orders.id],
+  }),
+  verifiedByAdmin: one(users, {
+    fields: [manualPaymentDetails.verifiedByAdminId],
+    references: [users.id],
+  }),
+}));
+
+export const manualPaymentConfigRelations = relations(manualPaymentConfig, ({ one }) => ({
+  updatedByUser: one(users, {
+    fields: [manualPaymentConfig.updatedBy],
+    references: [users.id],
   }),
 }));
 
@@ -369,6 +410,18 @@ export const insertBannerSchema = createInsertSchema(banners).omit({
   updatedAt: true,
 });
 
+export const insertManualPaymentConfigSchema = createInsertSchema(manualPaymentConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertManualPaymentDetailsSchema = createInsertSchema(manualPaymentDetails).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Select schemas
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -383,6 +436,8 @@ export type Review = typeof reviews.$inferSelect;
 export type Banner = typeof banners.$inferSelect;
 
 export type Otp = typeof otps.$inferSelect;
+export type ManualPaymentConfig = typeof manualPaymentConfig.$inferSelect;
+export type ManualPaymentDetails = typeof manualPaymentDetails.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -398,3 +453,5 @@ export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type InsertBanner = z.infer<typeof insertBannerSchema>;
 
 export type InsertOtp = z.infer<typeof insertOtpSchema>;
+export type InsertManualPaymentConfig = z.infer<typeof insertManualPaymentConfigSchema>;
+export type InsertManualPaymentDetails = z.infer<typeof insertManualPaymentDetailsSchema>;

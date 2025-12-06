@@ -37,6 +37,14 @@ Supports dual database configurations:
 - **Admin Dashboard**: Comprehensive order, product, customer, and banner management, with basic sales and inventory reporting.
 - **Video Banner System**: Enhanced banner management with video upload capabilities, auto-play functionality, smart carousel timing (30-second delay after video ends), progress tracking, and file optimization.
 - **Phone Verification System**: SMS-based OTP verification for customer phone numbers during checkout using Fast2SMS API, with verification badges, resend functionality, and order confirmation SMS with tracking links.
+- **Manual QR/UPI Payment System**: Complete payment verification flow with:
+  - Admin-configurable QR code and UPI details (admin/payments page)
+  - Multi-step checkout: Address → Payment Method → Payment Waiting → Confirmation
+  - Customer UTR submission for payment verification
+  - Admin dashboard for pending payment verification (approve/reject)
+  - Payment statuses: pending_payment, payment_success, payment_failed
+  - WhatsApp support integration for failed payments
+  - Database tables: manual_payment_config, manual_payment_details
 - **Data Flow**: JWT-based user authentication, category-based product display, user-specific shopping carts, and order processing with inventory updates.
 - **UI/UX Decisions**: Focus on a custom design system with Tailwind CSS and Radix UI for a consistent and premium look.
 

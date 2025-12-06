@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, CreditCard, Smartphone, Truck, MapPin, Plus, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CreditCard, Smartphone, Truck, MapPin, Plus, CheckCircle, AlertCircle, QrCode, Copy, Clock, MessageCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,20 +17,26 @@ import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice, getGSTBreakdown } from '@/lib/cart';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient as globalQueryClient } from '@/lib/queryClient';
 import { playSuccessChime, initializeAudioContext } from '@/lib/sounds';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { insertAddressSchema, insertOrderSchema, type Address } from '@shared/schema';
+import { insertAddressSchema, type Address, type ManualPaymentConfig } from '@shared/schema';
 import { z } from 'zod';
-import { useEffect } from 'react';
 import { OTPInput } from '@/components/otp-input';
+import { Progress } from '@/components/ui/progress';
 
 const addressFormSchema = insertAddressSchema.omit({ userId: true });
-const orderFormSchema = z.object({
-  paymentMethod: z.enum(['upi', 'card', 'cod', 'wallet']),
-  notes: z.string().optional(),
-});
+
+type CheckoutStep = 'address' | 'payment' | 'waiting' | 'confirmation';
+type PaymentMethod = 'cod' | 'qr';
+
+const CHECKOUT_STEPS = [
+  { id: 'address', label: 'Address', icon: MapPin },
+  { id: 'payment', label: 'Payment', icon: CreditCard },
+  { id: 'waiting', label: 'Processing', icon: Clock },
+  { id: 'confirmation', label: 'Done', icon: CheckCircle },
+];
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
@@ -38,29 +44,33 @@ export default function Checkout() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState<number | null>(null);
+  const [utrInput, setUtrInput] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'submitted' | 'success' | 'failed'>('pending');
+  const [orderNotes, setOrderNotes] = useState('');
+  
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const [verifyingAddressId, setVerifyingAddressId] = useState<number | null>(null);
   const [otpValue, setOtpValue] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [showVerificationWarning, setShowVerificationWarning] = useState(false);
 
-  // Initialize audio context on component mount for better browser compatibility
   useEffect(() => {
     const handleUserInteraction = () => {
       initializeAudioContext();
       document.removeEventListener('click', handleUserInteraction);
     };
     document.addEventListener('click', handleUserInteraction);
-    
     return () => {
       document.removeEventListener('click', handleUserInteraction);
     };
   }, []);
 
-  // Redirect if not authenticated
   if (!isAuthenticated) {
     toast({
       title: "Authentication Required",
@@ -71,18 +81,20 @@ export default function Checkout() {
     return null;
   }
 
-  // Redirect if cart is empty
-  if (items.length === 0) {
+  if (items.length === 0 && currentStep === 'address') {
     setLocation('/cart');
     return null;
   }
 
-  // Fetch addresses
   const { data: addresses = [] } = useQuery<Address[]>({
     queryKey: ['/api/addresses'],
   });
 
-  // Address form
+  const { data: paymentConfig } = useQuery<{ qrImageUrl: string; upiId: string } | null>({
+    queryKey: ['/api/manual-payment-config'],
+    retry: false,
+  });
+
   const addressForm = useForm({
     resolver: zodResolver(addressFormSchema),
     defaultValues: {
@@ -98,16 +110,6 @@ export default function Checkout() {
     },
   });
 
-  // Order form
-  const orderForm = useForm({
-    resolver: zodResolver(orderFormSchema),
-    defaultValues: {
-      paymentMethod: 'cod' as const,
-      notes: '',
-    },
-  });
-
-  // Countdown timer for OTP resend
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -115,7 +117,33 @@ export default function Checkout() {
     }
   }, [countdown]);
 
-  // Add address mutation
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (currentStep === 'waiting' && createdOrderId && paymentStatus === 'submitted') {
+      interval = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/orders/${createdOrderId}/payment-status`, {
+            credentials: 'include',
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'success') {
+              setPaymentStatus('success');
+              setCurrentStep('confirmation');
+              clearCart();
+              playSuccessChime();
+            } else if (data.status === 'failed') {
+              setPaymentStatus('failed');
+            }
+          }
+        } catch (error) {
+          console.error('Error polling payment status:', error);
+        }
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [currentStep, createdOrderId, paymentStatus, clearCart]);
+
   const addAddressMutation = useMutation({
     mutationFn: async (data: z.infer<typeof addressFormSchema>) => {
       const response = await apiRequest('POST', '/api/addresses', data);
@@ -140,7 +168,6 @@ export default function Checkout() {
     },
   });
 
-  // Send OTP mutation
   const sendOTPMutation = useMutation({
     mutationFn: async ({phoneNumber, customerName}: {phoneNumber: string, customerName: string}) => {
       const response = await apiRequest('POST', '/api/otp/send-otp', {
@@ -168,7 +195,6 @@ export default function Checkout() {
     },
   });
 
-  // Verify OTP mutation
   const verifyOTPMutation = useMutation({
     mutationFn: async ({ phoneNumber, otp }: { phoneNumber: string; otp: string }) => {
       const response = await apiRequest('POST', '/api/otp/verify-otp', {
@@ -196,6 +222,113 @@ export default function Checkout() {
       toast({
         title: 'Verification Failed',
         description: error.message || 'Invalid OTP. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const placeOrderMutation = useMutation({
+    mutationFn: async () => {
+      const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
+      if (!selectedAddr) throw new Error('Please select a delivery address');
+
+      const isPendingPayment = paymentMethod === 'qr';
+      const orderData = {
+        user_id: user!.id,
+        orderNumber: `PB${Date.now()}`,
+        status: isPendingPayment ? 'pending_payment' : 'pending',
+        subtotal: summary.subtotal.toString(),
+        gstAmount: summary.gstAmount.toString(),
+        deliveryCharge: summary.deliveryCharge.toString(),
+        total: summary.total.toString(),
+        paymentMethod: paymentMethod === 'qr' ? 'upi' : 'cod',
+        paymentStatus: isPendingPayment ? 'pending' : 'confirmed',
+        deliveryAddress: {
+          name: selectedAddr.name,
+          phone: selectedAddr.phone,
+          addressLine1: selectedAddr.addressLine1,
+          addressLine2: selectedAddr.addressLine2,
+          city: selectedAddr.city,
+          state: selectedAddr.state,
+          pincode: selectedAddr.pincode,
+          landmark: selectedAddr.landmark,
+        },
+        notes: orderNotes,
+      };
+
+      const response = await apiRequest('POST', '/api/orders', orderData);
+      const order = await response.json();
+
+      for (const item of items) {
+        await apiRequest('POST', '/api/order-items', {
+          order_id: order.id,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.product.price,
+          total: (parseFloat(item.product.price) * item.quantity).toString(),
+        });
+      }
+
+      return order;
+    },
+    onSuccess: (order) => {
+      setCreatedOrderId(order.id);
+      
+      if (paymentMethod === 'cod') {
+        const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
+        const orderDetails = {
+          ...order,
+          deliveryAddress: selectedAddr,
+          paymentMethod: 'cod',
+          total: summary.total.toString(),
+          subtotal: summary.subtotal.toString(),
+          gstAmount: summary.gstAmount.toString(),
+          deliveryCharge: summary.deliveryCharge.toString(),
+        };
+        localStorage.setItem('lastOrderDetails', JSON.stringify(orderDetails));
+        playSuccessChime();
+        clearCart();
+        queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+        toast({
+          title: 'Order placed successfully!',
+          description: `Order #${order.orderNumber} has been placed`,
+        });
+        setLocation('/order-confirmation');
+      } else {
+        setCurrentStep('waiting');
+        toast({
+          title: 'Order created!',
+          description: 'Please complete your payment',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to place order',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const submitUTRMutation = useMutation({
+    mutationFn: async (utr: string) => {
+      const response = await apiRequest('POST', `/api/orders/${createdOrderId}/submit-utr`, {
+        utrReference: utr,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      setPaymentStatus('submitted');
+      toast({
+        title: 'UTR Submitted',
+        description: 'Your payment is being verified. This may take a few minutes.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to submit UTR',
         variant: 'destructive',
       });
     },
@@ -235,8 +368,7 @@ export default function Checkout() {
     }
   };
 
-  // Place order mutation with phone verification check
-  const handlePlaceOrder = (data: z.infer<typeof orderFormSchema>) => {
+  const handleContinueToPayment = () => {
     const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
     if (!selectedAddr) {
       toast({
@@ -246,478 +378,625 @@ export default function Checkout() {
       });
       return;
     }
-
+    
     if (!selectedAddr.isPhoneVerified) {
-      setShowVerificationWarning(true);
-      return;
-    }
-
-    placeOrderMutation.mutate(data);
-  };
-
-  // Place order mutation
-  const placeOrderMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof orderFormSchema>) => {
-      const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
-      if (!selectedAddr) throw new Error('Please select a delivery address');
-
-      const orderData = {
-        user_id: user!.id,
-        orderNumber: `PB${Date.now()}`,
-        status: 'pending',
-        subtotal: summary.subtotal.toString(),
-        gstAmount: summary.gstAmount.toString(),
-        deliveryCharge: summary.deliveryCharge.toString(),
-        total: summary.total.toString(),
-        paymentMethod: 'cod',
-        paymentStatus: 'confirmed',
-        deliveryAddress: {
-          name: selectedAddr.name,
-          phone: selectedAddr.phone,
-          addressLine1: selectedAddr.addressLine1,
-          addressLine2: selectedAddr.addressLine2,
-          city: selectedAddr.city,
-          state: selectedAddr.state,
-          pincode: selectedAddr.pincode,
-          landmark: selectedAddr.landmark,
-        },
-        notes: data.notes,
-      };
-
-      console.log('Placing order with data:', orderData);
-      const response = await apiRequest('POST', '/api/orders', orderData);
-      const order = await response.json();
-      console.log('Order created successfully:', order);
-
-      // Create order items
-      for (const item of items) {
-        await apiRequest('POST', '/api/order-items', {
-          order_id: order.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          price: item.product.price,
-          total: (parseFloat(item.product.price) * item.quantity).toString(),
-        });
-      }
-
-      return order;
-    },
-    onSuccess: (order) => {
-      const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
-      
-      // Store order details for confirmation page
-      const orderDetails = {
-        ...order,
-        deliveryAddress: selectedAddr,
-        paymentMethod: 'cod',
-        total: summary.total.toString(),
-        subtotal: summary.subtotal.toString(),
-        gstAmount: summary.gstAmount.toString(),
-        deliveryCharge: summary.deliveryCharge.toString(),
-      };
-      
-      localStorage.setItem('lastOrderDetails', JSON.stringify(orderDetails));
-      
-      // Play success chime sound
-      playSuccessChime();
-      
-      clearCart();
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
-        title: 'Order placed successfully!',
-        description: `Order #${order.orderNumber} has been placed`,
-      });
-      setLocation('/order-confirmation');
-    },
-    onError: (error: any) => {
-      console.error('Order placement failed:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to place order',
+        title: 'Phone Verification Required',
+        description: 'Please verify your phone number before proceeding',
         variant: 'destructive',
       });
-    },
-  });
+      handleVerifyPhone(selectedAddr);
+      return;
+    }
+    
+    setCurrentStep('payment');
+  };
+
+  const handlePlaceOrder = () => {
+    placeOrderMutation.mutate();
+  };
+
+  const handleCopyUPI = () => {
+    if (paymentConfig?.upiId) {
+      navigator.clipboard.writeText(paymentConfig.upiId);
+      toast({
+        title: 'Copied!',
+        description: 'UPI ID copied to clipboard',
+      });
+    }
+  };
+
+  const handleOpenUPIApp = () => {
+    if (paymentConfig?.upiId) {
+      const amount = summary.total;
+      const upiLink = `upi://pay?pa=${paymentConfig.upiId}&pn=Pathak%20Bhandar&am=${amount}&cu=INR`;
+      window.location.href = upiLink;
+    }
+  };
+
+  const handleWhatsAppSupport = () => {
+    const message = encodeURIComponent(`Hi, I need help with my payment for order. My UTR is: ${utrInput}`);
+    window.open(`https://wa.me/918931014976?text=${message}`, '_blank');
+  };
+
+  const getStepProgress = () => {
+    const stepIndex = CHECKOUT_STEPS.findIndex(s => s.id === currentStep);
+    return ((stepIndex + 1) / CHECKOUT_STEPS.length) * 100;
+  };
 
   const gstBreakdown = getGSTBreakdown(items);
+
+  const renderStepIndicator = () => (
+    <div className="mb-8">
+      <Progress value={getStepProgress()} className="h-2 mb-4" />
+      <div className="flex justify-between">
+        {CHECKOUT_STEPS.map((step, index) => {
+          const stepIndex = CHECKOUT_STEPS.findIndex(s => s.id === currentStep);
+          const isCompleted = index < stepIndex;
+          const isCurrent = step.id === currentStep;
+          const StepIcon = step.icon;
+          
+          return (
+            <div 
+              key={step.id} 
+              className={`flex flex-col items-center ${
+                isCompleted || isCurrent ? 'text-navy' : 'text-gray-400'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                isCompleted ? 'bg-green-500 text-white' : 
+                isCurrent ? 'bg-champagne text-navy' : 
+                'bg-gray-200 text-gray-400'
+              }`}>
+                {isCompleted ? <Check className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
+              </div>
+              <span className="text-xs font-medium hidden sm:block">{step.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderAddressStep = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Select Delivery Address
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {addresses.length === 0 ? (
+            <p className="text-gray-600 mb-4">No saved addresses. Please add a delivery address.</p>
+          ) : (
+            <RadioGroup
+              value={selectedAddress?.toString()}
+              onValueChange={(value) => setSelectedAddress(parseInt(value))}
+            >
+              {addresses.map((address) => (
+                <div key={address.id} className={`flex items-start space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                  selectedAddress === address.id ? 'border-champagne bg-champagne/10' : 'hover:border-gray-300'
+                }`}>
+                  <RadioGroupItem value={address.id.toString()} className="mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">{address.name}</span>
+                      {address.isDefault && (
+                        <span className="text-xs bg-champagne text-navy px-2 py-1 rounded">Default</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm text-gray-600">{address.phone}</p>
+                      {address.isPhoneVerified ? (
+                        <span className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Verified
+                        </span>
+                      ) : (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs text-blue-600"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleVerifyPhone(address);
+                          }}
+                          data-testid={`verify-phone-${address.id}`}
+                        >
+                          Verify Phone
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {address.addressLine1}, {address.addressLine2 && `${address.addressLine2}, `}
+                      {address.city}, {address.state} - {address.pincode}
+                    </p>
+                    {address.landmark && (
+                      <p className="text-sm text-gray-500">Landmark: {address.landmark}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </RadioGroup>
+          )}
+
+          <Dialog open={isAddingAddress} onOpenChange={setIsAddingAddress}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Address
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add New Address</DialogTitle>
+              </DialogHeader>
+              <Form {...addressForm}>
+                <form onSubmit={addressForm.handleSubmit((data) => addAddressMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={addressForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-address-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-address-phone" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="addressLine1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address Line 1</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-address-line1" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="addressLine2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address Line 2 (Optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-address-line2" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={addressForm.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid="input-address-city" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={addressForm.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>State</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid="input-address-state" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={addressForm.control}
+                    name="pincode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pincode</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-address-pincode" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="landmark"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Landmark (Optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-address-landmark" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-champagne text-navy hover:bg-champagne/90"
+                    disabled={addAddressMutation.isPending}
+                    data-testid="button-add-address"
+                  >
+                    {addAddressMutation.isPending ? 'Adding...' : 'Add Address'}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Order Notes (Optional)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea 
+            value={orderNotes}
+            onChange={(e) => setOrderNotes(e.target.value)}
+            placeholder="Any special instructions for your order..."
+            rows={3}
+            data-testid="input-order-notes"
+          />
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-between">
+        <Link href="/cart">
+          <Button variant="outline" data-testid="button-back-to-cart">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Cart
+          </Button>
+        </Link>
+        <Button 
+          onClick={handleContinueToPayment}
+          disabled={!selectedAddress}
+          className="bg-champagne text-navy hover:bg-champagne/90"
+          data-testid="button-continue-to-payment"
+        >
+          Continue to Payment
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderPaymentStep = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Select Payment Method
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup
+            value={paymentMethod}
+            onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
+            className="space-y-3"
+          >
+            <div 
+              className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                paymentMethod === 'cod' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
+              onClick={() => setPaymentMethod('cod')}
+            >
+              <RadioGroupItem value="cod" />
+              <div className="flex items-center gap-2 flex-1">
+                <Truck className="h-5 w-5 text-green-600" />
+                <div>
+                  <span className="font-semibold text-green-800">Cash on Delivery</span>
+                  <p className="text-sm text-gray-600">Pay when your order arrives</p>
+                </div>
+              </div>
+            </div>
+
+            {paymentConfig && (
+              <div 
+                className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                  paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setPaymentMethod('qr')}
+              >
+                <RadioGroupItem value="qr" />
+                <div className="flex items-center gap-2 flex-1">
+                  <QrCode className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <span className="font-semibold text-blue-800">Pay via UPI / QR Code</span>
+                    <p className="text-sm text-gray-600">Scan QR or use UPI ID to pay instantly</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </RadioGroup>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-between">
+        <Button 
+          variant="outline" 
+          onClick={() => setCurrentStep('address')}
+          data-testid="button-back-to-address"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Address
+        </Button>
+        <Button 
+          onClick={handlePlaceOrder}
+          disabled={placeOrderMutation.isPending}
+          className="bg-champagne text-navy hover:bg-champagne/90"
+          data-testid="button-place-order"
+        >
+          {placeOrderMutation.isPending ? 'Processing...' : paymentMethod === 'cod' ? 'Place Order' : 'Proceed to Payment'}
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderWaitingStep = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Complete Your Payment
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {paymentStatus === 'pending' && (
+            <>
+              <div className="text-center space-y-4">
+                <div className="bg-blue-50 p-6 rounded-lg">
+                  <p className="text-2xl font-bold text-navy mb-2">
+                    Amount to Pay: {formatPrice(summary.total)}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Scan the QR code or use UPI ID to make payment
+                  </p>
+                </div>
+
+                {paymentConfig?.qrImageUrl && (
+                  <div className="flex justify-center">
+                    <img 
+                      src={paymentConfig.qrImageUrl} 
+                      alt="Payment QR Code" 
+                      className="w-64 h-64 object-contain border rounded-lg"
+                    />
+                  </div>
+                )}
+
+                {paymentConfig?.upiId && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2 p-3 bg-gray-100 rounded-lg">
+                      <span className="font-mono font-medium">{paymentConfig.upiId}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleCopyUPI}
+                        data-testid="button-copy-upi"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button 
+                      onClick={handleOpenUPIApp}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      data-testid="button-open-upi"
+                    >
+                      <Smartphone className="h-4 w-4 mr-2" />
+                      Open UPI App
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t pt-6 space-y-4">
+                <Label>Enter UTR / Transaction Reference Number</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    value={utrInput}
+                    onChange={(e) => setUtrInput(e.target.value)}
+                    placeholder="Enter 12-digit UTR number"
+                    className="flex-1"
+                    data-testid="input-utr"
+                  />
+                  <Button 
+                    onClick={() => submitUTRMutation.mutate(utrInput)}
+                    disabled={utrInput.length < 6 || submitUTRMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    data-testid="button-submit-utr"
+                  >
+                    {submitUTRMutation.isPending ? 'Submitting...' : 'Submit'}
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-500">
+                  You can find the UTR number in your UPI app's transaction history
+                </p>
+              </div>
+            </>
+          )}
+
+          {paymentStatus === 'submitted' && (
+            <div className="text-center space-y-4 py-8">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
+                <Clock className="h-8 w-8 text-yellow-600 animate-pulse" />
+              </div>
+              <h3 className="text-xl font-semibold text-navy">Payment Verification in Progress</h3>
+              <p className="text-gray-600">
+                We're verifying your payment. This usually takes a few minutes.
+              </p>
+              <p className="text-sm text-gray-500">
+                You can close this page - we'll notify you once verified.
+              </p>
+            </div>
+          )}
+
+          {paymentStatus === 'failed' && (
+            <div className="text-center space-y-4 py-8">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-red-600">Payment Verification Failed</h3>
+              <p className="text-gray-600">
+                We couldn't verify your payment. Please contact support for assistance.
+              </p>
+              <Button 
+                onClick={handleWhatsAppSupport}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                data-testid="button-whatsapp-support"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Contact Support on WhatsApp
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderConfirmationStep = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="text-center py-12">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="h-10 w-10 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-navy mb-2">Payment Successful!</h2>
+          <p className="text-gray-600 mb-6">
+            Your order has been confirmed and will be processed shortly.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link href="/customer/orders">
+              <Button variant="outline" data-testid="button-view-orders">
+                View Orders
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button className="bg-champagne text-navy hover:bg-champagne/90" data-testid="button-continue-shopping">
+                Continue Shopping
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderOrderSummary = () => (
+    <Card className="sticky top-4">
+      <CardHeader>
+        <CardTitle>Order Summary</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3 max-h-60 overflow-y-auto">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center gap-3">
+              <img
+                src={item.product.images[0] || '/placeholder-product.jpg'}
+                alt={item.product.name}
+                className="w-12 h-12 object-cover rounded-lg"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-navy truncate">{item.product.name}</p>
+                <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-medium text-sm">
+                  {formatPrice(parseFloat(item.product.price) * item.quantity)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t pt-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">Subtotal</span>
+            <span className="font-medium">{formatPrice(summary.subtotal)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">CGST</span>
+            <span className="font-medium">{formatPrice(gstBreakdown.cgst)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">SGST</span>
+            <span className="font-medium">{formatPrice(gstBreakdown.sgst)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">Delivery</span>
+            <span className="font-medium text-green-600">
+              {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
+            </span>
+          </div>
+          <div className="border-t pt-2 flex justify-between font-bold text-lg">
+            <span>Total</span>
+            <span className="text-navy">{formatPrice(summary.total)}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-cream">
       <Header />
       
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Link href="/cart">
-            <Button variant="ghost" size="sm" className="text-navy">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Cart
-            </Button>
-          </Link>
           <h1 className="text-3xl font-bold text-navy">Checkout</h1>
         </div>
 
+        {renderStepIndicator()}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Delivery Address */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Delivery Address
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {addresses.length === 0 ? (
-                  <p className="text-gray-600 mb-4">No saved addresses. Please add a delivery address.</p>
-                ) : (
-                  <RadioGroup
-                    value={selectedAddress?.toString()}
-                    onValueChange={(value) => setSelectedAddress(parseInt(value))}
-                  >
-                    {addresses.map((address) => (
-                      <div key={address.id} className="flex items-start space-x-3 p-4 border rounded-lg">
-                        <RadioGroupItem value={address.id.toString()} className="mt-1" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium">{address.name}</span>
-                            {address.isDefault && (
-                              <span className="text-xs bg-champagne text-navy px-2 py-1 rounded">Default</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm text-gray-600">{address.phone}</p>
-                            {address.isPhoneVerified ? (
-                              <span className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Verified
-                              </span>
-                            ) : (
-                              <Button
-                                variant="link"
-                                size="sm"
-                                className="h-auto p-0 text-xs text-blue-600"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleVerifyPhone(address);
-                                }}
-                                data-testid={`verify-phone-${address.id}`}
-                              >
-                                Verify Phone
-                              </Button>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            {address.addressLine1}, {address.addressLine2 && `${address.addressLine2}, `}
-                            {address.city}, {address.state} - {address.pincode}
-                          </p>
-                          {address.landmark && (
-                            <p className="text-sm text-gray-500">Landmark: {address.landmark}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                )}
-
-                <Dialog open={isAddingAddress} onOpenChange={setIsAddingAddress}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add New Address
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Add New Address</DialogTitle>
-                    </DialogHeader>
-                    <Form {...addressForm}>
-                      <form onSubmit={addressForm.handleSubmit((data) => addAddressMutation.mutate(data))} className="space-y-4">
-                        <FormField
-                          control={addressForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={addressForm.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone Number</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={addressForm.control}
-                          name="addressLine1"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Address Line 1</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={addressForm.control}
-                          name="addressLine2"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Address Line 2 (Optional)</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={addressForm.control}
-                            name="city"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>City</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={addressForm.control}
-                            name="state"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>State</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <FormField
-                          control={addressForm.control}
-                          name="pincode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Pincode</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={addressForm.control}
-                          name="landmark"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Landmark (Optional)</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-champagne text-navy hover:bg-champagne/90"
-                          disabled={addAddressMutation.isPending}
-                        >
-                          {addAddressMutation.isPending ? 'Adding...' : 'Add Address'}
-                        </Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
-
-            {/* Payment Method */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Payment Method
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...orderForm}>
-                  <FormField
-                    control={orderForm.control}
-                    name="paymentMethod"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="space-y-3"
-                          >
-                            <div className="flex items-center space-x-3 p-4 border-2 border-green-500 bg-green-50 rounded-lg">
-                              <RadioGroupItem value="cod" checked />
-                              <div className="flex items-center gap-2">
-                                <Truck className="h-5 w-5 text-green-600" />
-                                <span className="font-semibold text-green-800">Cash on Delivery (Recommended)</span>
-                              </div>
-                            </div>
-                            <div className="opacity-50 pointer-events-none">
-                              <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                                <RadioGroupItem value="upi" disabled />
-                                <div className="flex items-center gap-2">
-                                  <Smartphone className="h-5 w-5 text-gray-400" />
-                                  <span className="text-gray-500">UPI Payment (Coming Soon)</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="opacity-50 pointer-events-none">
-                              <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                                <RadioGroupItem value="card" disabled />
-                                <div className="flex items-center gap-2">
-                                  <CreditCard className="h-5 w-5 text-gray-400" />
-                                  <span className="text-gray-500">Credit/Debit Card (Coming Soon)</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="hidden">
-                              <RadioGroupItem value="cod" />
-                              <div className="flex items-center gap-2">
-                                <Truck className="h-5 w-5 text-green-600" />
-                                <span>Cash on Delivery</span>
-                              </div>
-                            </div>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </Form>
-              </CardContent>
-            </Card>
-
-            {/* Order Notes */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Notes (Optional)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...orderForm}>
-                  <FormField
-                    control={orderForm.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Any special instructions for your order..."
-                            rows={3}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </Form>
-              </CardContent>
-            </Card>
+          <div className="lg:col-span-2">
+            {currentStep === 'address' && renderAddressStep()}
+            {currentStep === 'payment' && renderPaymentStep()}
+            {currentStep === 'waiting' && renderWaitingStep()}
+            {currentStep === 'confirmation' && renderConfirmationStep()}
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Order Items */}
-                <div className="space-y-3">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3">
-                      <img
-                        src={item.product.images[0] || '/placeholder-product.jpg'}
-                        alt={item.product.name}
-                        className="w-12 h-12 object-cover rounded-lg"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-navy truncate">{item.product.name}</p>
-                        <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-sm">
-                          {formatPrice(parseFloat(item.product.price) * item.quantity)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-medium">{formatPrice(summary.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">CGST</span>
-                    <span className="font-medium">{formatPrice(gstBreakdown.cgst)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">SGST</span>
-                    <span className="font-medium">{formatPrice(gstBreakdown.sgst)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Delivery</span>
-                    <span className="font-medium text-green-600">
-                      {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
-                    </span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span className="text-navy">{formatPrice(summary.total)}</span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={orderForm.handleSubmit(handlePlaceOrder)}
-                  disabled={!selectedAddress || placeOrderMutation.isPending}
-                  className="w-full bg-champagne text-navy hover:bg-champagne/90 py-3"
-                  data-testid="button-place-order"
-                >
-                  {placeOrderMutation.isPending ? 'Placing Order...' : 'Place Order'}
-                </Button>
-
-                <p className="text-xs text-gray-500 text-center">
-                  By placing your order, you agree to our Terms & Conditions
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          {currentStep !== 'confirmation' && (
+            <div className="lg:col-span-1">
+              {renderOrderSummary()}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* OTP Verification Modal */}
       <Dialog open={isVerifyingPhone} onOpenChange={setIsVerifyingPhone}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -791,46 +1070,6 @@ export default function Checkout() {
                 </div>
               </div>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Verification Warning Dialog */}
-      <Dialog open={showVerificationWarning} onOpenChange={setShowVerificationWarning}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-orange-600">
-              <AlertCircle className="h-5 w-5" />
-              Phone Verification Required
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-gray-600">
-              Please verify your phone number to receive order updates and tracking information via SMS.
-            </p>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowVerificationWarning(false)}
-                className="flex-1"
-                data-testid="button-skip-verification"
-              >
-                Skip for Now
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowVerificationWarning(false);
-                  const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
-                  if (selectedAddr) {
-                    handleVerifyPhone(selectedAddr);
-                  }
-                }}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                data-testid="button-verify-now"
-              >
-                Verify Now
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>

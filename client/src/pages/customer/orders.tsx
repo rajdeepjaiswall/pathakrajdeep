@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User, ArrowLeft, Home, PhoneCall } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User, ArrowLeft, Home, PhoneCall, CreditCard, AlertCircle, MessageCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Header from '@/components/layout/header';
@@ -116,9 +117,41 @@ export default function CustomerOrders() {
     },
   });
 
+  const [utrInputs, setUtrInputs] = useState<{ [orderId: number]: string }>({});
+
+  const submitUTRMutation = useMutation({
+    mutationFn: async ({ orderId, utr }: { orderId: number; utr: string }) => {
+      const response = await apiRequest('POST', `/api/orders/${orderId}/submit-utr`, {
+        utrReference: utr,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      toast({
+        title: 'UTR Submitted',
+        description: 'Your payment is being verified. This may take a few minutes.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to submit UTR',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleWhatsAppSupport = (orderNumber: string) => {
+    const message = encodeURIComponent(`Hi, I need help with my payment for order ${orderNumber}`);
+    window.open(`https://wa.me/918931014976?text=${message}`, '_blank');
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-orange-100 text-orange-800';
+      case 'pending_payment': return 'bg-yellow-100 text-yellow-800';
+      case 'payment_failed': return 'bg-red-100 text-red-800';
       case 'order_received': return 'bg-blue-100 text-blue-800';
       case 'preparing': return 'bg-purple-100 text-purple-800';
       case 'dispatched': return 'bg-indigo-100 text-indigo-800';
@@ -132,6 +165,8 @@ export default function CustomerOrders() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="h-3 w-3" />;
+      case 'pending_payment': return <CreditCard className="h-3 w-3" />;
+      case 'payment_failed': return <AlertCircle className="h-3 w-3" />;
       case 'order_received': return <CheckCircle className="h-3 w-3" />;
       case 'preparing': return <Package className="h-3 w-3" />;
       case 'dispatched': return <Truck className="h-3 w-3" />;
@@ -144,6 +179,8 @@ export default function CustomerOrders() {
   const getStatusDisplay = (status: string) => {
     switch (status) {
       case 'pending': return 'Order Placed';
+      case 'pending_payment': return 'Awaiting Payment';
+      case 'payment_failed': return 'Payment Failed';
       case 'order_received': return 'Order Received';
       case 'preparing': return 'Preparing';
       case 'dispatched': return 'Dispatched';
@@ -155,7 +192,7 @@ export default function CustomerOrders() {
   };
 
   const canCancelOrder = (status: string) => {
-    return ['pending'].includes(status);
+    return ['pending', 'pending_payment'].includes(status);
   };
 
   const getOrderProgress = (status: string) => {
@@ -256,8 +293,71 @@ export default function CustomerOrders() {
                 </CardHeader>
 
                 <CardContent className="p-6">
+                  {/* Pending Payment Section */}
+                  {order.status === 'pending_payment' && (
+                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CreditCard className="h-5 w-5 text-yellow-600" />
+                        <h4 className="font-medium text-yellow-800">Complete Your Payment</h4>
+                      </div>
+                      <p className="text-sm text-yellow-700 mb-4">
+                        Please complete your UPI payment and enter the UTR number below for verification.
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Enter 12-digit UTR number"
+                          value={utrInputs[order.id] || ''}
+                          onChange={(e) => setUtrInputs(prev => ({ ...prev, [order.id]: e.target.value }))}
+                          className="flex-1"
+                          data-testid={`input-utr-${order.id}`}
+                        />
+                        <Button
+                          onClick={() => {
+                            const utr = utrInputs[order.id];
+                            if (utr && utr.length >= 6) {
+                              submitUTRMutation.mutate({ orderId: order.id, utr });
+                            }
+                          }}
+                          disabled={(utrInputs[order.id]?.length || 0) < 6 || submitUTRMutation.isPending}
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                          data-testid={`button-submit-utr-${order.id}`}
+                        >
+                          {submitUTRMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            'Submit'
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-yellow-600 mt-2">
+                        Find the UTR number in your UPI app's transaction history
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Payment Failed Section */}
+                  {order.status === 'payment_failed' && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                        <h4 className="font-medium text-red-800">Payment Verification Failed</h4>
+                      </div>
+                      <p className="text-sm text-red-700 mb-4">
+                        We couldn't verify your payment. Please contact support for assistance.
+                      </p>
+                      <Button
+                        onClick={() => handleWhatsAppSupport(order.orderNumber)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        data-testid={`button-whatsapp-${order.id}`}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Contact Support on WhatsApp
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Order Progress */}
-                  {order.status !== 'cancelled' && (
+                  {order.status !== 'cancelled' && order.status !== 'pending_payment' && order.status !== 'payment_failed' && (
                     <div className="mb-6">
                       <div className="flex justify-between text-sm text-gray-600 mb-2">
                         <span>Order Progress</span>

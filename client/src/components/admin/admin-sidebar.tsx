@@ -10,7 +10,8 @@ import {
   Grid3X3,
   LogOut,
   ArrowLeft,
-  Home
+  Home,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
@@ -46,6 +47,11 @@ const adminNavItems = [
     title: 'Customers',
     href: '/admin/customers',
     icon: Users,
+  },
+  {
+    title: 'Payments',
+    href: '/admin/payments',
+    icon: CreditCard,
   },
   {
     title: 'Analytics',

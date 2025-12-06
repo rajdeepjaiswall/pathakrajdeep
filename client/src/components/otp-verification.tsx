@@ -244,19 +244,39 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
                 />
               </div>
             ) : (
-              <div className="space-y-2">
-                <Label htmlFor="email-otp">OTP Code</Label>
-                <Input
-                  id="email-otp"
-                  type="text"
-                  placeholder="Enter 6-digit OTP"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  disabled={loading}
-                />
-                <p className="text-sm text-muted-foreground">
-                  OTP sent to {identifier}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="email-otp" className="text-base font-medium mb-3 block">Enter OTP Code</Label>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Check your email. OTP sent to: <span className="font-medium text-foreground">{identifier}</span>
+                  </p>
+                </div>
+                <div className="flex justify-center gap-2">
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <input
+                      key={index}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={otp[index] || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        if (value.length === 1) {
+                          setOtp(otp.substring(0, index) + value + otp.substring(index + 1));
+                          if (index < 5) {
+                            const nextInput = (e.target as HTMLInputElement).parentElement?.children[index + 1] as HTMLInputElement;
+                            nextInput?.focus();
+                          }
+                        }
+                      }}
+                      disabled={loading}
+                      className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                      data-testid={`otp-box-${index}`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  (Master OTP for testing: 565656)
                 </p>
               </div>
             )}
@@ -279,19 +299,39 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp-otp">OTP Code</Label>
-                <Input
-                  id="whatsapp-otp"
-                  type="text"
-                  placeholder="Enter 6-digit OTP"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  disabled={loading}
-                />
-                <p className="text-sm text-muted-foreground">
-                  OTP sent to {identifier} via WhatsApp
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="whatsapp-otp" className="text-base font-medium mb-3 block">Enter OTP Code</Label>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Check WhatsApp. OTP sent to: <span className="font-medium text-foreground">{identifier}</span>
+                  </p>
+                </div>
+                <div className="flex justify-center gap-2">
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <input
+                      key={index}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={otp[index] || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        if (value.length === 1) {
+                          setOtp(otp.substring(0, index) + value + otp.substring(index + 1));
+                          if (index < 5) {
+                            const nextInput = (e.target as HTMLInputElement).parentElement?.children[index + 1] as HTMLInputElement;
+                            nextInput?.focus();
+                          }
+                        }
+                      }}
+                      disabled={loading}
+                      className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                      data-testid={`otp-box-whatsapp-${index}`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  (Master OTP for testing: 565656)
                 </p>
               </div>
             )}

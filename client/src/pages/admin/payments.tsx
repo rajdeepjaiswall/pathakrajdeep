@@ -4,7 +4,7 @@ import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import Header from '@/components/layout/header';
+import AdminSidebar from '@/components/admin/admin-sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -180,14 +180,15 @@ export default function AdminPayments() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cream via-white to-cream">
-      <Header />
+    <div className="min-h-screen bg-cream">
+      <AdminSidebar />
       
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-navy mb-2">Payment Settings</h1>
-          <p className="text-gray-600">Configure QR payment and verify customer payments</p>
-        </div>
+      <div className="lg:pl-64">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-navy mb-2">Payment Settings</h1>
+            <p className="text-gray-600">Configure QR payment and verify customer payments</p>
+          </div>
 
         <Tabs defaultValue="config" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -390,7 +391,6 @@ export default function AdminPayments() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
 
       <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
         <DialogContent className="max-w-md">
@@ -477,6 +477,8 @@ export default function AdminPayments() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   );
 }

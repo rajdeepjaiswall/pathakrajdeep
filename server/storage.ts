@@ -1,9 +1,11 @@
 import { 
   users, categories, products, addresses, orders, orderItems, cartItems, wishlistItems, coupons, reviews, banners, otps,
+  manualPaymentConfig, manualPaymentDetails,
   type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct,
   type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
   type CartItem, type InsertCartItem, type WishlistItem, type InsertWishlistItem, type Coupon, type InsertCoupon, type Review, type InsertReview,
-  type Banner, type InsertBanner, type Otp, type InsertOtp
+  type Banner, type InsertBanner, type Otp, type InsertOtp,
+  type ManualPaymentConfig, type InsertManualPaymentConfig, type ManualPaymentDetails, type InsertManualPaymentDetails
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, desc, asc, sql } from "drizzle-orm";
@@ -98,6 +100,18 @@ export interface IStorage {
   deleteOtp(identifier: string, type: string): Promise<void>;
   incrementOtpAttempts(identifier: string, type: string): Promise<void>;
   cleanupExpiredOtps(): Promise<void>;
+
+  // Manual Payment Config methods
+  getManualPaymentConfig(): Promise<ManualPaymentConfig | undefined>;
+  upsertManualPaymentConfig(config: InsertManualPaymentConfig): Promise<ManualPaymentConfig>;
+
+  // Manual Payment Details methods
+  createManualPaymentDetails(details: InsertManualPaymentDetails): Promise<ManualPaymentDetails>;
+  getManualPaymentDetailsByOrderId(orderId: number): Promise<ManualPaymentDetails | undefined>;
+  updateManualPaymentDetails(id: number, updates: Partial<ManualPaymentDetails>): Promise<ManualPaymentDetails>;
+  submitUTR(orderId: number, utrReference: string): Promise<ManualPaymentDetails>;
+  verifyPayment(detailsId: number, adminId: number, status: 'success' | 'failed', rejectionReason?: string): Promise<ManualPaymentDetails>;
+  getPendingPayments(): Promise<(ManualPaymentDetails & { order: Order; user: User })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -792,6 +806,118 @@ export class DatabaseStorage implements IStorage {
       .groupBy(orderItems.product_id);
     
     return result.map(item => item.productId);
+  }
+
+  // Manual Payment Config methods
+  async getManualPaymentConfig(): Promise<ManualPaymentConfig | undefined> {
+    const [config] = await db.select().from(manualPaymentConfig).limit(1);
+    return config || undefined;
+  }
+
+  async upsertManualPaymentConfig(config: InsertManualPaymentConfig): Promise<ManualPaymentConfig> {
+    const existing = await this.getManualPaymentConfig();
+    if (existing) {
+      const [updated] = await db
+        .update(manualPaymentConfig)
+        .set({ ...config, updatedAt: new Date() })
+        .where(eq(manualPaymentConfig.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(manualPaymentConfig)
+        .values(config)
+        .returning();
+      return created;
+    }
+  }
+
+  // Manual Payment Details methods
+  async createManualPaymentDetails(details: InsertManualPaymentDetails): Promise<ManualPaymentDetails> {
+    const [created] = await db
+      .insert(manualPaymentDetails)
+      .values(details)
+      .returning();
+    return created;
+  }
+
+  async getManualPaymentDetailsByOrderId(orderId: number): Promise<ManualPaymentDetails | undefined> {
+    const [details] = await db
+      .select()
+      .from(manualPaymentDetails)
+      .where(eq(manualPaymentDetails.orderId, orderId));
+    return details || undefined;
+  }
+
+  async updateManualPaymentDetails(id: number, updates: Partial<ManualPaymentDetails>): Promise<ManualPaymentDetails> {
+    const [updated] = await db
+      .update(manualPaymentDetails)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(manualPaymentDetails.id, id))
+      .returning();
+    return updated;
+  }
+
+  async submitUTR(orderId: number, utrReference: string): Promise<ManualPaymentDetails> {
+    const details = await this.getManualPaymentDetailsByOrderId(orderId);
+    if (!details) {
+      throw new Error('Payment details not found for this order');
+    }
+    const [updated] = await db
+      .update(manualPaymentDetails)
+      .set({ 
+        utrReference, 
+        submittedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(manualPaymentDetails.id, details.id))
+      .returning();
+    return updated;
+  }
+
+  async verifyPayment(detailsId: number, adminId: number, status: 'success' | 'failed', rejectionReason?: string): Promise<ManualPaymentDetails> {
+    const [updated] = await db
+      .update(manualPaymentDetails)
+      .set({ 
+        status,
+        verifiedByAdminId: adminId,
+        verifiedAt: new Date(),
+        rejectionReason: status === 'failed' ? rejectionReason : null,
+        updatedAt: new Date()
+      })
+      .where(eq(manualPaymentDetails.id, detailsId))
+      .returning();
+    
+    // Update the order status based on payment verification
+    if (updated) {
+      const orderStatus = status === 'success' ? 'pending' : 'payment_failed';
+      await db
+        .update(orders)
+        .set({ status: orderStatus })
+        .where(eq(orders.id, updated.orderId));
+    }
+    
+    return updated;
+  }
+
+  async getPendingPayments(): Promise<(ManualPaymentDetails & { order: Order; user: User })[]> {
+    const results = await db
+      .select({
+        paymentDetails: manualPaymentDetails,
+        order: orders,
+        user: users
+      })
+      .from(manualPaymentDetails)
+      .innerJoin(orders, eq(orders.id, manualPaymentDetails.orderId))
+      .innerJoin(users, eq(users.id, orders.user_id))
+      .where(eq(manualPaymentDetails.status, 'pending'))
+      .orderBy(desc(manualPaymentDetails.createdAt));
+    
+    return results.map(r => ({
+      ...r.paymentDetails,
+      order: r.order,
+      user: r.user
+    }));
   }
 }
 

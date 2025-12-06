@@ -1478,6 +1478,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual Payment Configuration routes (Admin only)
+  app.get("/api/admin/manual-payment-config", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const config = await storage.getManualPaymentConfig();
+      res.json(config || { qrImageUrl: null, upiId: null, isActive: false });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/manual-payment-config", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { qrImageUrl, upiId, isActive } = req.body;
+      const config = await storage.upsertManualPaymentConfig({
+        qrImageUrl,
+        upiId,
+        isActive,
+        updatedBy: req.user!.id
+      });
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer - Get payment config (public for checkout)
+  app.get("/api/manual-payment-config", async (req, res) => {
+    try {
+      const config = await storage.getManualPaymentConfig();
+      if (!config || !config.isActive) {
+        return res.status(404).json({ message: "Manual payment not available" });
+      }
+      res.json({ qrImageUrl: config.qrImageUrl, upiId: config.upiId });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer - Submit UTR for an order
+  app.post("/api/orders/:orderId/submit-utr", authenticateUser, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const { utrReference } = req.body;
+      
+      if (!utrReference || utrReference.trim().length < 6) {
+        return res.status(400).json({ message: "Invalid UTR reference" });
+      }
+      
+      // Verify order belongs to user
+      const order = await storage.getOrder(orderId, req.user!.id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      const details = await storage.submitUTR(orderId, utrReference.trim());
+      res.json(details);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer - Get payment status for an order
+  app.get("/api/orders/:orderId/payment-status", authenticateUser, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      
+      // Verify order belongs to user
+      const order = await storage.getOrder(orderId, req.user!.id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      const details = await storage.getManualPaymentDetailsByOrderId(orderId);
+      res.json(details || { status: 'no_payment_details' });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin - Get all pending payments
+  app.get("/api/admin/pending-payments", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const pendingPayments = await storage.getPendingPayments();
+      res.json(pendingPayments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin - Verify a payment
+  app.post("/api/admin/verify-payment/:detailsId", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const detailsId = parseInt(req.params.detailsId);
+      const { status, rejectionReason } = req.body;
+      
+      if (!['success', 'failed'].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'success' or 'failed'" });
+      }
+      
+      if (status === 'failed' && !rejectionReason) {
+        return res.status(400).json({ message: "Rejection reason is required for failed payments" });
+      }
+      
+      const details = await storage.verifyPayment(detailsId, req.user!.id, status, rejectionReason);
+      res.json(details);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);
 

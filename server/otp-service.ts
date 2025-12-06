@@ -37,7 +37,7 @@ export class OTPService {
   }
 
   // Create OTP record in database
-  async createOTP(identifier: string, type: 'email' | 'whatsapp', purpose: string = 'verification'): Promise<string> {
+  async createOTP(identifier: string, type: 'email' | 'whatsapp' | 'sms', purpose: string = 'verification'): Promise<string> {
     // Clean up any existing OTPs for this identifier
     await db.delete(otps).where(
       and(

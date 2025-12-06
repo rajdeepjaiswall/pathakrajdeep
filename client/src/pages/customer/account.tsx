@@ -34,6 +34,7 @@ const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email').optional().or(z.literal('')),
+  phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number').optional().or(z.literal('')),
 });
 
 // Address schema
@@ -96,6 +97,7 @@ export default function CustomerAccount() {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
       email: user?.email || '',
+      phone: user?.phone || '',
     },
   });
 
@@ -458,6 +460,16 @@ export default function CustomerAccount() {
                         error={profileForm.formState.errors.lastName?.message}
                       />
                     </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="10-digit mobile number"
+                      {...profileForm.register('phone')}
+                      error={profileForm.formState.errors.phone?.message}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="email">Email</Label>

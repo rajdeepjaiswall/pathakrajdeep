@@ -322,13 +322,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Profile management routes
   app.put("/api/auth/profile", authenticateUser, async (req, res) => {
     try {
-      const { firstName, lastName, email } = req.body;
+      const { firstName, lastName, email, phone } = req.body;
       const userId = req.user.id;
       
       const updatedUser = await storage.updateUser(userId, {
         firstName,
         lastName,
         email,
+        ...(phone && { phone }),
       });
       
       res.json(updatedUser);

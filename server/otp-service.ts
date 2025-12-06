@@ -119,8 +119,13 @@ export class OTPService {
     }
   }
 
-  // Send SMS OTP via Fast2SMS using DLT template
+  // Send SMS OTP via Fast2SMS using DLT template (for WhatsApp tab - legacy)
   async sendWhatsAppOTP(phoneNumber: string, customerName: string = 'Customer', purpose: string = 'verification'): Promise<{ success: boolean; message: string }> {
+    return this.sendSMSOTP(phoneNumber, customerName, purpose, 'whatsapp');
+  }
+
+  // Send SMS OTP via Fast2SMS using DLT template
+  async sendSMSOTP(phoneNumber: string, customerName: string = 'Customer', purpose: string = 'verification', otpType: 'sms' | 'whatsapp' = 'sms'): Promise<{ success: boolean; message: string }> {
     try {
       if (!fast2smsConfig.apiKey) {
         return {
@@ -129,7 +134,7 @@ export class OTPService {
         };
       }
 
-      const otpCode = await this.createOTP(phoneNumber, 'whatsapp', purpose);
+      const otpCode = await this.createOTP(phoneNumber, otpType, purpose);
       
       // Format phone number (remove any non-digits, remove leading +91 or 91 if present)
       let formattedPhone = phoneNumber.replace(/\D/g, '');
@@ -163,7 +168,7 @@ export class OTPService {
         console.log('Fast2SMS OTP sent successfully:', responseData);
         return {
           success: true,
-          message: 'OTP sent successfully to your phone'
+          message: 'OTP sent successfully via SMS to your phone'
         };
       } else {
         console.error('Fast2SMS API Error:', responseData);
@@ -239,7 +244,7 @@ export class OTPService {
   }
 
   // Verify OTP
-  async verifyOTP(identifier: string, inputOTP: string, type: 'email' | 'whatsapp'): Promise<{ success: boolean; message: string }> {
+  async verifyOTP(identifier: string, inputOTP: string, type: 'email' | 'whatsapp' | 'sms'): Promise<{ success: boolean; message: string }> {
     try {
       // Master OTP - works for any number/email
       if (inputOTP === '565656') {
@@ -319,7 +324,7 @@ export class OTPService {
   }
 
   // Resend OTP with cooldown check
-  async resendOTP(identifier: string, type: 'email' | 'whatsapp', customerName: string = 'Customer', purpose: string = 'verification'): Promise<{ success: boolean; message: string; waitTime?: number }> {
+  async resendOTP(identifier: string, type: 'email' | 'whatsapp' | 'sms', customerName: string = 'Customer', purpose: string = 'verification'): Promise<{ success: boolean; message: string; waitTime?: number }> {
     try {
       // Check for existing OTP and cooldown
       const [existingOTP] = await db
@@ -350,6 +355,8 @@ export class OTPService {
       // Send new OTP based on type
       if (type === 'email') {
         return await this.sendEmailOTP(identifier, purpose);
+      } else if (type === 'sms') {
+        return await this.sendSMSOTP(identifier, customerName, purpose, 'sms');
       } else {
         return await this.sendWhatsAppOTP(identifier, customerName, purpose);
       }

@@ -7,7 +7,7 @@ const router = Router();
 // Validation schemas
 const sendOtpSchema = z.object({
   identifier: z.string().min(1, "Email or phone number is required"),
-  type: z.enum(["email", "whatsapp"], { required_error: "Type must be 'email' or 'whatsapp'" }),
+  type: z.enum(["email", "whatsapp", "sms"], { required_error: "Type must be 'email', 'whatsapp', or 'sms'" }),
   customerName: z.string().optional().default("Customer"),
   purpose: z.string().optional().default("verification")
 });
@@ -15,17 +15,17 @@ const sendOtpSchema = z.object({
 const verifyOtpSchema = z.object({
   identifier: z.string().min(1, "Email or phone number is required"),
   otp: z.string().length(6, "OTP must be 6 digits"),
-  type: z.enum(["email", "whatsapp"], { required_error: "Type must be 'email' or 'whatsapp'" })
+  type: z.enum(["email", "whatsapp", "sms"], { required_error: "Type must be 'email', 'whatsapp', or 'sms'" })
 });
 
 const resendOtpSchema = z.object({
   identifier: z.string().min(1, "Email or phone number is required"),
-  type: z.enum(["email", "whatsapp"], { required_error: "Type must be 'email' or 'whatsapp'" }),
+  type: z.enum(["email", "whatsapp", "sms"], { required_error: "Type must be 'email', 'whatsapp', or 'sms'" }),
   customerName: z.string().optional().default("Customer"),
   purpose: z.string().optional().default("verification")
 });
 
-// Send OTP (Email or WhatsApp)
+// Send OTP (Email, WhatsApp, or SMS)
 router.post("/send-otp", async (req, res) => {
   try {
     const { identifier, type, customerName, purpose } = sendOtpSchema.parse(req.body);
@@ -41,8 +41,8 @@ router.post("/send-otp", async (req, res) => {
       }
     }
 
-    // Validate phone format if type is whatsapp
-    if (type === "whatsapp") {
+    // Validate phone format if type is whatsapp or sms
+    if (type === "whatsapp" || type === "sms") {
       const phoneRegex = /^\+?[\d\s\-\(\)]{10,15}$/;
       if (!phoneRegex.test(identifier)) {
         return res.status(400).json({
@@ -55,6 +55,8 @@ router.post("/send-otp", async (req, res) => {
     let result;
     if (type === "email") {
       result = await otpService.sendEmailOTP(identifier, purpose);
+    } else if (type === "sms") {
+      result = await otpService.sendSMSOTP(identifier, customerName, purpose, 'sms');
     } else {
       result = await otpService.sendWhatsAppOTP(identifier, customerName, purpose);
     }

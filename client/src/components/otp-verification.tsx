@@ -5,17 +5,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, MessageCircle, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Mail, MessageCircle, CheckCircle2, AlertCircle, Smartphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface OTPVerificationProps {
-  onVerificationSuccess?: (identifier: string, type: 'email' | 'whatsapp') => void;
+  onVerificationSuccess?: (identifier: string, type: 'email' | 'whatsapp' | 'sms') => void;
   purpose?: string;
   className?: string;
 }
 
 export function OTPVerification({ onVerificationSuccess, purpose = "verification", className }: OTPVerificationProps) {
-  const [activeTab, setActiveTab] = useState<'email' | 'whatsapp'>('email');
+  const [activeTab, setActiveTab] = useState<'email' | 'whatsapp' | 'sms'>('sms');
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'input' | 'verify'>('input');
@@ -39,7 +39,7 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
       return;
     }
 
-    if (activeTab === 'whatsapp' && !/^\+?[\d\s\-\(\)]{10,15}$/.test(identifier)) {
+    if ((activeTab === 'whatsapp' || activeTab === 'sms') && !/^\+?[\d\s\-\(\)]{10,15}$/.test(identifier)) {
       setMessage('Please enter a valid phone number');
       setMessageType('error');
       return;
@@ -201,7 +201,7 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
   };
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value as 'email' | 'whatsapp');
+    setActiveTab(value as 'email' | 'whatsapp' | 'sms');
     resetForm();
   };
 
@@ -213,22 +213,82 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
           OTP Verification
         </CardTitle>
         <CardDescription>
-          Verify your identity using email or WhatsApp
+          Verify your identity using SMS, Email, or WhatsApp
         </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-4">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="email" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="sms" className="flex items-center gap-1">
+              <Smartphone className="h-4 w-4" />
+              SMS
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center gap-1">
               <Mail className="h-4 w-4" />
               Email
             </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+            <TabsTrigger value="whatsapp" className="flex items-center gap-1">
               <MessageCircle className="h-4 w-4" />
               WhatsApp
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="sms" className="space-y-4 mt-4">
+            {step === 'input' ? (
+              <div className="space-y-2">
+                <Label htmlFor="sms-phone">Phone Number</Label>
+                <Input
+                  id="sms-phone"
+                  type="tel"
+                  placeholder="Enter your 10-digit mobile number"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  disabled={loading}
+                  data-testid="input-sms-phone"
+                />
+                <p className="text-sm text-muted-foreground">
+                  We'll send an OTP via SMS to this number
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="sms-otp" className="text-base font-medium mb-3 block">Enter OTP Code</Label>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Check your SMS. OTP sent to: <span className="font-medium text-foreground">{identifier}</span>
+                  </p>
+                </div>
+                <div className="flex justify-center gap-2">
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <input
+                      key={index}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={otp[index] || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        if (value.length === 1) {
+                          setOtp(otp.substring(0, index) + value + otp.substring(index + 1));
+                          if (index < 5) {
+                            const nextInput = (e.target as HTMLInputElement).parentElement?.children[index + 1] as HTMLInputElement;
+                            nextInput?.focus();
+                          }
+                        }
+                      }}
+                      disabled={loading}
+                      className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                      data-testid={`otp-box-sms-${index}`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  (Master OTP for testing: 565656)
+                </p>
+              </div>
+            )}
+          </TabsContent>
           
           <TabsContent value="email" className="space-y-4 mt-4">
             {step === 'input' ? (

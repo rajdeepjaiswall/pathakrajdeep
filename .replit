@@ -61,3 +61,8 @@ externalPort = 3002
 
 [agent]
 integrations = ["javascript_websocket==1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+VITE_GOOGLE_CLIENT_ID = "1069780387537-jnkntl3hmbqdt5lndahb58dq83tqo0ek.apps.googleusercontent.com"

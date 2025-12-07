@@ -172,16 +172,10 @@ CREATE INDEX idx_addresses_user ON addresses(user_id);
 CREATE INDEX idx_order_items_order ON order_items(order_id);
 CREATE INDEX idx_reviews_product ON reviews(product_id);
 
--- SECURITY: Do NOT insert default admin users with hardcoded passwords!
--- Instead, create your first admin user through your application's registration endpoint
--- or use a secure initialization script that:
--- 1. Prompts for a secure password
--- 2. Hashes it using bcrypt
--- 3. Inserts the admin user
---
--- Example (run separately after deployment):
--- INSERT INTO users (username, password, firstName, lastName, email, role) 
--- VALUES ('your_username', 'BCRYPT_HASH_HERE', 'First', 'Last', 'your_email@domain.com', 'admin');
+-- Insert default admin users (password: bhandar123 for pathakji, web123 for rajdeep)
+INSERT INTO users (username, password, firstName, lastName, email, role) VALUES 
+('pathakji', '$2b$10$YNlGWNtjvqKrKjxqKxOHauFh.7b6NOH1qZJb4FLqcz/IQ7RLZPh6K', 'Pathak', 'Ji', 'admin@pathakbhandar.com', 'admin'),
+('rajdeep', '$2b$10$YNlGWNtjvqKrKjxqKxOHauFh.7b6NOH1qZJb4FLqcz/IQ7RLZPh6K', 'Rajdeep', 'Admin', 'rajdeep@pathakbhandar.com', 'super_admin');
 
 -- Insert sample categories
 INSERT INTO categories (name, description, image) VALUES 

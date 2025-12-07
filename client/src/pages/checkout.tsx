@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ArrowRight, CreditCard, Smartphone, Truck, MapPin, Plus, CheckCircle, AlertCircle, QrCode, Copy, Clock, MessageCircle, Check, Wallet, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CreditCard, Smartphone, Truck, MapPin, Plus, CheckCircle, AlertCircle, QrCode, Copy, Clock, MessageCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,7 @@ import { Progress } from '@/components/ui/progress';
 const addressFormSchema = insertAddressSchema.omit({ userId: true });
 
 type CheckoutStep = 'address' | 'payment' | 'waiting' | 'confirmation';
-type PaymentMethod = 'cod' | 'qr' | 'gateway';
+type PaymentMethod = 'cod' | 'qr';
 
 const CHECKOUT_STEPS = [
   { id: 'address', label: 'Address', icon: MapPin },
@@ -92,11 +92,6 @@ export default function Checkout() {
 
   const { data: paymentConfig } = useQuery<{ qrImageUrl: string; upiId: string } | null>({
     queryKey: ['/api/manual-payment-config'],
-    retry: false,
-  });
-
-  const { data: gatewayConfig } = useQuery<{ provider: string; displayName: string; isTestMode: boolean } | null>({
-    queryKey: ['/api/payment-gateway'],
     retry: false,
   });
 
@@ -237,12 +232,7 @@ export default function Checkout() {
       const selectedAddr = addresses.find((addr) => addr.id === selectedAddress);
       if (!selectedAddr) throw new Error('Please select a delivery address');
 
-      const isPendingPayment = paymentMethod === 'qr' || paymentMethod === 'gateway';
-      const getPaymentMethodName = () => {
-        if (paymentMethod === 'qr') return 'upi';
-        if (paymentMethod === 'gateway') return 'gateway';
-        return 'cod';
-      };
+      const isPendingPayment = paymentMethod === 'qr';
       const orderData = {
         user_id: user!.id,
         orderNumber: `PB${Date.now()}`,
@@ -251,7 +241,7 @@ export default function Checkout() {
         gstAmount: summary.gstAmount.toString(),
         deliveryCharge: summary.deliveryCharge.toString(),
         total: summary.total.toString(),
-        paymentMethod: getPaymentMethodName(),
+        paymentMethod: paymentMethod === 'qr' ? 'upi' : 'cod',
         paymentStatus: isPendingPayment ? 'pending' : 'confirmed',
         deliveryAddress: {
           name: selectedAddr.name,
@@ -304,17 +294,11 @@ export default function Checkout() {
           description: `Order #${order.orderNumber} has been placed`,
         });
         setLocation('/order-confirmation');
-      } else if (paymentMethod === 'qr') {
+      } else {
         setCurrentStep('waiting');
         toast({
           title: 'Order created!',
-          description: 'Please complete your UPI payment',
-        });
-      } else if (paymentMethod === 'gateway') {
-        setCurrentStep('waiting');
-        toast({
-          title: 'Order created!',
-          description: 'Redirecting to payment gateway...',
+          description: 'Please complete your payment',
         });
       }
     },
@@ -727,7 +711,6 @@ export default function Checkout() {
                 paymentMethod === 'cod' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
               }`}
               onClick={() => setPaymentMethod('cod')}
-              data-testid="payment-option-cod"
             >
               <RadioGroupItem value="cod" />
               <div className="flex items-center gap-2 flex-1">
@@ -745,39 +728,15 @@ export default function Checkout() {
                   paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
                 }`}
                 onClick={() => setPaymentMethod('qr')}
-                data-testid="payment-option-qr"
               >
                 <RadioGroupItem value="qr" />
                 <div className="flex items-center gap-2 flex-1">
                   <QrCode className="h-5 w-5 text-blue-600" />
                   <div>
                     <span className="font-semibold text-blue-800">Pay via UPI / QR Code</span>
-                    <p className="text-sm text-gray-600">Scan QR or tap UPI ID to open payment apps</p>
+                    <p className="text-sm text-gray-600">Scan QR or use UPI ID to pay instantly</p>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {gatewayConfig && (
-              <div 
-                className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                  paymentMethod === 'gateway' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => setPaymentMethod('gateway')}
-                data-testid="payment-option-gateway"
-              >
-                <RadioGroupItem value="gateway" />
-                <div className="flex items-center gap-2 flex-1">
-                  <Wallet className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <span className="font-semibold text-purple-800">Pay via {gatewayConfig.displayName}</span>
-                    <p className="text-sm text-gray-600">
-                      Cards, UPI, Net Banking & more
-                      {gatewayConfig.isTestMode && <span className="ml-1 text-orange-500">(Test Mode)</span>}
-                    </p>
-                  </div>
-                </div>
-                <ExternalLink className="h-4 w-4 text-gray-400" />
               </div>
             )}
           </RadioGroup>
@@ -799,205 +758,134 @@ export default function Checkout() {
           className="bg-champagne text-navy hover:bg-champagne/90"
           data-testid="button-place-order"
         >
-          {placeOrderMutation.isPending ? 'Processing...' : 
-            paymentMethod === 'cod' ? 'Place Order' : 
-            paymentMethod === 'gateway' ? 'Pay Now' : 
-            'Proceed to Payment'}
+          {placeOrderMutation.isPending ? 'Processing...' : paymentMethod === 'cod' ? 'Place Order' : 'Proceed to Payment'}
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
     </div>
   );
 
-  const renderWaitingStep = () => {
-    if (paymentMethod === 'gateway') {
-      return (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="h-5 w-5" />
-                Payment Gateway
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-center space-y-4 py-8">
-                <div className="bg-purple-50 p-6 rounded-lg">
+  const renderWaitingStep = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Complete Your Payment
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {paymentStatus === 'pending' && (
+            <>
+              <div className="text-center space-y-4">
+                <div className="bg-blue-50 p-6 rounded-lg">
                   <p className="text-2xl font-bold text-navy mb-2">
-                    Amount: {formatPrice(summary.total)}
+                    Amount to Pay: {formatPrice(summary.total)}
                   </p>
                   <p className="text-sm text-gray-600">
-                    Order #{createdOrderId ? `PB${createdOrderId}` : 'Processing...'}
-                  </p>
-                </div>
-                
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
-                  <Wallet className="h-8 w-8 text-purple-600" />
-                </div>
-                
-                <h3 className="text-xl font-semibold text-navy">Payment Gateway Integration</h3>
-                <p className="text-gray-600">
-                  {gatewayConfig?.displayName || 'Payment gateway'} integration is being set up.
-                  {gatewayConfig?.isTestMode && <span className="block text-orange-500 text-sm mt-1">(Currently in Test Mode)</span>}
-                </p>
-                
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                  <p className="text-sm text-yellow-800">
-                    Payment gateway redirect will be available once the admin completes the gateway configuration with API credentials.
+                    Scan the QR code or use UPI ID to make payment
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-2 mt-4">
-                  <Button 
-                    onClick={() => {
-                      setPaymentMethod('qr');
-                      setPaymentStatus('pending');
-                    }}
-                    variant="outline"
-                    className="w-full"
-                    data-testid="button-switch-to-qr"
-                  >
-                    <QrCode className="h-4 w-4 mr-2" />
-                    Pay via QR/UPI Instead
-                  </Button>
-                  <Button 
-                    onClick={handleWhatsAppSupport}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    data-testid="button-gateway-support"
-                  >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Contact Support
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <QrCode className="h-5 w-5" />
-              Complete Your Payment
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {paymentStatus === 'pending' && (
-              <>
-                <div className="text-center space-y-4">
-                  <div className="bg-blue-50 p-6 rounded-lg">
-                    <p className="text-2xl font-bold text-navy mb-2">
-                      Amount to Pay: {formatPrice(summary.total)}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Scan the QR code or use UPI ID to make payment
-                    </p>
+                {paymentConfig?.qrImageUrl && (
+                  <div className="flex justify-center">
+                    <img 
+                      src={paymentConfig.qrImageUrl} 
+                      alt="Payment QR Code" 
+                      className="w-64 h-64 object-contain border rounded-lg"
+                    />
                   </div>
+                )}
 
-                  {paymentConfig?.qrImageUrl && (
-                    <div className="flex justify-center">
-                      <img 
-                        src={paymentConfig.qrImageUrl} 
-                        alt="Payment QR Code" 
-                        className="w-64 h-64 object-contain border rounded-lg"
-                      />
-                    </div>
-                  )}
-
-                  {paymentConfig?.upiId && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center gap-2 p-3 bg-gray-100 rounded-lg">
-                        <span className="font-mono font-medium">{paymentConfig.upiId}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={handleCopyUPI}
-                          data-testid="button-copy-upi"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {paymentConfig?.upiId && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2 p-3 bg-gray-100 rounded-lg">
+                      <span className="font-mono font-medium">{paymentConfig.upiId}</span>
                       <Button 
-                        onClick={handleOpenUPIApp}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                        data-testid="button-open-upi"
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleCopyUPI}
+                        data-testid="button-copy-upi"
                       >
-                        <Smartphone className="h-4 w-4 mr-2" />
-                        Open UPI App
+                        <Copy className="h-4 w-4" />
                       </Button>
                     </div>
-                  )}
-                </div>
-
-                <div className="border-t pt-6 space-y-4">
-                  <Label>Enter UTR / Transaction Reference Number</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      value={utrInput}
-                      onChange={(e) => setUtrInput(e.target.value)}
-                      placeholder="Enter 12-digit UTR number"
-                      className="flex-1"
-                      data-testid="input-utr"
-                    />
                     <Button 
-                      onClick={() => submitUTRMutation.mutate(utrInput)}
-                      disabled={utrInput.length < 6 || submitUTRMutation.isPending}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      data-testid="button-submit-utr"
+                      onClick={handleOpenUPIApp}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      data-testid="button-open-upi"
                     >
-                      {submitUTRMutation.isPending ? 'Submitting...' : 'Submit'}
+                      <Smartphone className="h-4 w-4 mr-2" />
+                      Open UPI App
                     </Button>
                   </div>
-                  <p className="text-sm text-gray-500">
-                    You can find the UTR number in your UPI app's transaction history
-                  </p>
-                </div>
-              </>
-            )}
+                )}
+              </div>
 
-            {paymentStatus === 'submitted' && (
-              <div className="text-center space-y-4 py-8">
-                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
-                  <Clock className="h-8 w-8 text-yellow-600 animate-pulse" />
+              <div className="border-t pt-6 space-y-4">
+                <Label>Enter UTR / Transaction Reference Number</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    value={utrInput}
+                    onChange={(e) => setUtrInput(e.target.value)}
+                    placeholder="Enter 12-digit UTR number"
+                    className="flex-1"
+                    data-testid="input-utr"
+                  />
+                  <Button 
+                    onClick={() => submitUTRMutation.mutate(utrInput)}
+                    disabled={utrInput.length < 6 || submitUTRMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    data-testid="button-submit-utr"
+                  >
+                    {submitUTRMutation.isPending ? 'Submitting...' : 'Submit'}
+                  </Button>
                 </div>
-                <h3 className="text-xl font-semibold text-navy">Payment Verification in Progress</h3>
-                <p className="text-gray-600">
-                  We're verifying your payment. This usually takes a few minutes.
-                </p>
                 <p className="text-sm text-gray-500">
-                  You can close this page - we'll notify you once verified.
+                  You can find the UTR number in your UPI app's transaction history
                 </p>
               </div>
-            )}
+            </>
+          )}
 
-            {paymentStatus === 'failed' && (
-              <div className="text-center space-y-4 py-8">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-                  <AlertCircle className="h-8 w-8 text-red-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-red-600">Payment Verification Failed</h3>
-                <p className="text-gray-600">
-                  We couldn't verify your payment. Please contact support for assistance.
-                </p>
-                <Button 
-                  onClick={handleWhatsAppSupport}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  data-testid="button-whatsapp-support"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Contact Support on WhatsApp
-                </Button>
+          {paymentStatus === 'submitted' && (
+            <div className="text-center space-y-4 py-8">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
+                <Clock className="h-8 w-8 text-yellow-600 animate-pulse" />
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
+              <h3 className="text-xl font-semibold text-navy">Payment Verification in Progress</h3>
+              <p className="text-gray-600">
+                We're verifying your payment. This usually takes a few minutes.
+              </p>
+              <p className="text-sm text-gray-500">
+                You can close this page - we'll notify you once verified.
+              </p>
+            </div>
+          )}
+
+          {paymentStatus === 'failed' && (
+            <div className="text-center space-y-4 py-8">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-red-600">Payment Verification Failed</h3>
+              <p className="text-gray-600">
+                We couldn't verify your payment. Please contact support for assistance.
+              </p>
+              <Button 
+                onClick={handleWhatsAppSupport}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                data-testid="button-whatsapp-support"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Contact Support on WhatsApp
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   const renderConfirmationStep = () => (
     <div className="space-y-6">

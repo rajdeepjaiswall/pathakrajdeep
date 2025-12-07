@@ -58,7 +58,7 @@ export default function ProductManager() {
   // Add product mutation
   const addProductMutation = useMutation({
     mutationFn: async (productData: any) => {
-      return apiRequest('POST', '/api/products', productData);
+      return apiRequest('/api/products', 'POST', productData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
@@ -81,7 +81,7 @@ export default function ProductManager() {
   // Update product mutation
   const updateProductMutation = useMutation({
     mutationFn: async ({ id, ...productData }: any) => {
-      return apiRequest('PUT', `/api/products/${id}`, productData);
+      return apiRequest(`/api/products/${id}`, 'PUT', productData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });

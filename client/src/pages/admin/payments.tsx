@@ -248,105 +248,34 @@ export default function AdminPayments() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>QR Code Image</Label>
-                  <div className="flex flex-col gap-4">
-                    {qrImageUrl ? (
-                      <div className="space-y-3">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white inline-block">
-                          <img 
-                            src={qrImageUrl} 
-                            alt="Payment QR Code" 
-                            className="w-48 h-48 object-contain"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => document.getElementById('qr-upload')?.click()}
-                            disabled={isUploading}
-                            data-testid="button-change-qr"
-                          >
-                            {isUploading ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Upload className="h-4 w-4 mr-2" />
-                            )}
-                            Change Image
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            onClick={() => setQrImageUrl('')}
-                            data-testid="button-remove-qr"
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div 
-                        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-champagne hover:bg-champagne/5 transition-colors"
-                        onClick={() => document.getElementById('qr-upload')?.click()}
-                        data-testid="qr-upload-area"
-                      >
-                        <Upload className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-                        <p className="text-gray-600 font-medium">Click to upload QR code image</p>
-                        <p className="text-sm text-gray-500 mt-1">PNG, JPG up to 5MB</p>
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      id="qr-upload"
-                      accept="image/png,image/jpeg,image/jpg"
-                      className="hidden"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.size > 5 * 1024 * 1024) {
-                            toast({
-                              title: 'File too large',
-                              description: 'Please upload an image smaller than 5MB',
-                              variant: 'destructive',
-                            });
-                            return;
-                          }
-                          
-                          setIsUploading(true);
-                          try {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const base64 = event.target?.result as string;
-                              setQrImageUrl(base64);
-                              setIsUploading(false);
-                            };
-                            reader.onerror = () => {
-                              toast({
-                                title: 'Upload failed',
-                                description: 'Failed to read the image file',
-                                variant: 'destructive',
-                              });
-                              setIsUploading(false);
-                            };
-                            reader.readAsDataURL(file);
-                          } catch (error) {
-                            toast({
-                              title: 'Upload failed',
-                              description: 'Failed to process the image',
-                              variant: 'destructive',
-                            });
-                            setIsUploading(false);
-                          }
-                        }
-                        e.target.value = '';
-                      }}
-                      data-testid="input-qr-file"
-                    />
-                  </div>
+                  <Label htmlFor="qrImage">QR Code Image URL</Label>
+                  <Input
+                    id="qrImage"
+                    placeholder="https://example.com/qr-code.png"
+                    value={qrImageUrl}
+                    onChange={(e) => setQrImageUrl(e.target.value)}
+                    data-testid="input-qr-url"
+                  />
                   <p className="text-sm text-gray-500">
-                    Upload your UPI QR code image that customers will scan to pay
+                    Upload your QR code image to a hosting service and paste the URL here
                   </p>
                 </div>
+
+                {qrImageUrl && (
+                  <div className="space-y-2">
+                    <Label>QR Code Preview</Label>
+                    <div className="border rounded-lg p-4 bg-white inline-block">
+                      <img 
+                        src={qrImageUrl} 
+                        alt="Payment QR Code" 
+                        className="w-48 h-48 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder-qr.png';
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <Button 
                   onClick={() => saveConfigMutation.mutate()}

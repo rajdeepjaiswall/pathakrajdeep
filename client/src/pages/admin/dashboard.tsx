@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { 
   ShoppingCart, 
@@ -14,28 +14,16 @@ import {
   Truck,
   XCircle,
   Volume2,
-  Bell,
-  IndianRupee,
-  QrCode,
-  Upload,
-  ToggleLeft,
-  ToggleRight,
-  CreditCard
+  Bell
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import AdminSidebar from '@/components/admin/admin-sidebar';
 import { useAuth } from '@/hooks/use-auth';
-import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/cart';
 import { ORDER_STATUSES } from '@/lib/constants';
-import { apiRequest } from '@/lib/queryClient';
 import { Link, useLocation } from 'wouter';
-import type { ManualPaymentConfig } from '@shared/schema';
 
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
@@ -211,71 +199,6 @@ export default function AdminDashboard() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  // Payment config state and queries
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const [qrImageUrl, setQrImageUrl] = useState('');
-  const [upiId, setUpiId] = useState('');
-  const [qrEnabled, setQrEnabled] = useState(false);
-
-  // Fetch manual payment config
-  const { data: paymentConfig } = useQuery<ManualPaymentConfig | null>({
-    queryKey: ['/api/admin/manual-payment-config'],
-    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
-  });
-
-  // Fetch QR payment orders (users who selected QR payment)
-  const { data: qrPaymentOrders = [] } = useQuery<any[]>({
-    queryKey: ['/api/admin/orders', { paymentMethod: 'qr' }],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/orders?paymentMethod=qr', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (!response.ok) return [];
-      return response.json();
-    },
-    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
-  });
-
-  // Update local state when config loads
-  useEffect(() => {
-    if (paymentConfig) {
-      setQrImageUrl(paymentConfig.qrImageUrl || '');
-      setUpiId(paymentConfig.upiId || '');
-      setQrEnabled(paymentConfig.isActive || false);
-    }
-  }, [paymentConfig]);
-
-  // Save payment config mutation
-  const savePaymentConfigMutation = useMutation({
-    mutationFn: async (data: { qrImageUrl: string; upiId: string; isActive: boolean }) => {
-      const response = await apiRequest('POST', '/api/admin/manual-payment-config', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/manual-payment-config'] });
-      toast({
-        title: 'Payment Settings Saved',
-        description: 'QR/UPI payment configuration updated successfully',
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to save payment settings',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const handleSavePaymentConfig = () => {
-    savePaymentConfigMutation.mutate({
-      qrImageUrl,
-      upiId,
-      isActive: qrEnabled,
-    });
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
@@ -332,44 +255,38 @@ export default function AdminDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
             <Link href="/admin/orders">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-orders">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
                 <ShoppingCart className="h-6 w-6" />
                 <span>Orders</span>
               </Button>
             </Link>
             <Link href="/admin/products">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-products">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
                 <Package className="h-6 w-6" />
                 <span>Products</span>
               </Button>
             </Link>
             <Link href="/admin/customers">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-customers">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
                 <Users className="h-6 w-6" />
                 <span>Customers</span>
               </Button>
             </Link>
             <Link href="/admin/banners">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-banners">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
                 <TrendingUp className="h-6 w-6" />
                 <span>Banners</span>
               </Button>
             </Link>
             <Link href="/admin/categories">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-categories">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
                 <Package className="h-6 w-6" />
                 <span>Categories</span>
               </Button>
             </Link>
-            <Link href="/admin/payments">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-payments">
-                <IndianRupee className="h-6 w-6" />
-                <span>Payments</span>
-              </Button>
-            </Link>
-            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-reports">
+            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy">
               <TrendingUp className="h-6 w-6" />
               <span>Reports</span>
             </Button>
@@ -608,124 +525,6 @@ export default function AdminDashboard() {
                   {(!analytics?.topProducts || analytics.topProducts.length === 0) && (
                     <p className="text-gray-500 text-center py-8">No sales data yet</p>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Payment Settings Widget */}
-          <div className="mt-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <IndianRupee className="h-5 w-5 text-champagne" />
-                  Payment Settings (QR/UPI)
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Enable QR Payment</span>
-                  <Switch
-                    checked={qrEnabled}
-                    onCheckedChange={setQrEnabled}
-                    data-testid="switch-qr-enabled"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="qrImageUrl">QR Code Image URL</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="qrImageUrl"
-                          value={qrImageUrl}
-                          onChange={(e) => setQrImageUrl(e.target.value)}
-                          placeholder="https://example.com/qr-code.png"
-                          data-testid="input-qr-image-url"
-                        />
-                        <Button variant="outline" size="icon">
-                          <QrCode className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {qrImageUrl && (
-                        <div className="mt-2 p-2 border rounded-lg">
-                          <img
-                            src={qrImageUrl}
-                            alt="QR Preview"
-                            className="w-32 h-32 object-contain mx-auto"
-                            onError={(e) => (e.currentTarget.style.display = 'none')}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="upiId">UPI ID</Label>
-                      <Input
-                        id="upiId"
-                        value={upiId}
-                        onChange={(e) => setUpiId(e.target.value)}
-                        placeholder="yourname@upi"
-                        data-testid="input-upi-id"
-                      />
-                    </div>
-
-                    <Button
-                      onClick={handleSavePaymentConfig}
-                      disabled={savePaymentConfigMutation.isPending}
-                      className="w-full bg-champagne text-navy hover:bg-champagne/90"
-                      data-testid="button-save-payment-config"
-                    >
-                      {savePaymentConfigMutation.isPending ? 'Saving...' : 'Save Payment Settings'}
-                    </Button>
-                  </div>
-
-                  {/* QR Payment Orders List */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-navy flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      QR Payment Orders ({qrPaymentOrders.length})
-                    </h4>
-                    <div className="max-h-64 overflow-y-auto space-y-2">
-                      {qrPaymentOrders.length > 0 ? (
-                        qrPaymentOrders.slice(0, 10).map((order: any) => (
-                          <div
-                            key={order.id}
-                            className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100"
-                            data-testid={`qr-order-${order.id}`}
-                          >
-                            <div>
-                              <p className="font-medium text-navy">#{order.orderNumber}</p>
-                              <p className="text-sm text-gray-600">
-                                {order.deliveryAddress?.name || 'Customer'}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {order.deliveryAddress?.phone}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-navy">{formatPrice(parseFloat(order.total))}</p>
-                              <Badge className={`text-xs ${getStatusColor(order.status)}`}>
-                                {order.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <QrCode className="h-12 w-12 mx-auto text-gray-300 mb-2" />
-                          <p>No QR payment orders yet</p>
-                        </div>
-                      )}
-                    </div>
-                    {qrPaymentOrders.length > 10 && (
-                      <Link href="/admin/payments">
-                        <Button variant="outline" className="w-full">
-                          View All QR Orders ({qrPaymentOrders.length})
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
                 </div>
               </CardContent>
             </Card>

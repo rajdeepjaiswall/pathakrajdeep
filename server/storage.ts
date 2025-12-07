@@ -1,12 +1,11 @@
 import { 
   users, categories, products, addresses, orders, orderItems, cartItems, wishlistItems, coupons, reviews, banners, otps,
-  manualPaymentConfig, manualPaymentDetails, paymentGatewayConfig,
+  manualPaymentConfig, manualPaymentDetails,
   type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct,
   type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
   type CartItem, type InsertCartItem, type WishlistItem, type InsertWishlistItem, type Coupon, type InsertCoupon, type Review, type InsertReview,
   type Banner, type InsertBanner, type Otp, type InsertOtp,
-  type ManualPaymentConfig, type InsertManualPaymentConfig, type ManualPaymentDetails, type InsertManualPaymentDetails,
-  type PaymentGatewayConfig, type InsertPaymentGatewayConfig
+  type ManualPaymentConfig, type InsertManualPaymentConfig, type ManualPaymentDetails, type InsertManualPaymentDetails
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, desc, asc, sql } from "drizzle-orm";
@@ -113,12 +112,6 @@ export interface IStorage {
   submitUTR(orderId: number, utrReference: string): Promise<ManualPaymentDetails>;
   verifyPayment(detailsId: number, adminId: number, status: 'success' | 'failed', rejectionReason?: string): Promise<ManualPaymentDetails>;
   getPendingPayments(): Promise<(ManualPaymentDetails & { order: Order; user: User })[]>;
-
-  // Payment Gateway Config methods
-  getPaymentGatewayConfigs(): Promise<PaymentGatewayConfig[]>;
-  getPaymentGatewayConfig(provider: string): Promise<PaymentGatewayConfig | undefined>;
-  getActivePaymentGateway(): Promise<PaymentGatewayConfig | undefined>;
-  upsertPaymentGatewayConfig(config: InsertPaymentGatewayConfig): Promise<PaymentGatewayConfig>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -925,52 +918,6 @@ export class DatabaseStorage implements IStorage {
       order: r.order,
       user: r.user
     }));
-  }
-
-  // Payment Gateway Config methods
-  async getPaymentGatewayConfigs(): Promise<PaymentGatewayConfig[]> {
-    return db.select().from(paymentGatewayConfig).orderBy(desc(paymentGatewayConfig.createdAt));
-  }
-
-  async getPaymentGatewayConfig(provider: string): Promise<PaymentGatewayConfig | undefined> {
-    const [config] = await db
-      .select()
-      .from(paymentGatewayConfig)
-      .where(eq(paymentGatewayConfig.provider, provider));
-    return config || undefined;
-  }
-
-  async getActivePaymentGateway(): Promise<PaymentGatewayConfig | undefined> {
-    const [config] = await db
-      .select()
-      .from(paymentGatewayConfig)
-      .where(eq(paymentGatewayConfig.isActive, true));
-    return config || undefined;
-  }
-
-  async upsertPaymentGatewayConfig(config: InsertPaymentGatewayConfig): Promise<PaymentGatewayConfig> {
-    // If activating this gateway, deactivate all others first
-    if (config.isActive) {
-      await db
-        .update(paymentGatewayConfig)
-        .set({ isActive: false, updatedAt: new Date() });
-    }
-
-    const existing = await this.getPaymentGatewayConfig(config.provider);
-    if (existing) {
-      const [updated] = await db
-        .update(paymentGatewayConfig)
-        .set({ ...config, updatedAt: new Date() })
-        .where(eq(paymentGatewayConfig.id, existing.id))
-        .returning();
-      return updated;
-    } else {
-      const [created] = await db
-        .insert(paymentGatewayConfig)
-        .values(config)
-        .returning();
-      return created;
-    }
   }
 }
 

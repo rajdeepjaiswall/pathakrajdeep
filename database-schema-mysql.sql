@@ -181,13 +181,9 @@ CREATE TABLE otps (
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 13. Admin User Creation
--- DO NOT create default admin users with hardcoded credentials in SQL files.
--- Instead, create your first admin user through:
---   1. Your application's secure setup/onboarding process, OR
---   2. A secure admin creation script that uses environment variables/secrets, OR
---   3. Manual creation with a strong, unique password via your application
--- 
--- Example manual INSERT (replace with secure credentials):
--- INSERT INTO users (username, password, firstName, lastName, role, isActive) 
--- VALUES ('your_username', 'bcrypt_hash_from_app', 'First', 'Last', 'super_admin', TRUE);
+-- 13. Insert Default Admin User
+-- Username: pathakji
+-- Password: bhandar123
+-- IMPORTANT: Change password after first login!
+INSERT INTO users (username, password, firstName, lastName, role, isActive) 
+VALUES ('pathakji', '$2b$10$8QXGzH9yX5Z9h0YrKqY.ZO7pF5H8qJ3F5h0YrKqY.ZO7pF5H8qJ3F', 'Pathak', 'Admin', 'super_admin', TRUE);

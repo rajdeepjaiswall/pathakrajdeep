@@ -7,7 +7,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 console.log('🚀 Starting client export process...\n');
 
@@ -47,10 +46,11 @@ const filesToCopy = [
 filesToCopy.forEach(file => {
     if (fs.existsSync(file)) {
         const isDirectory = fs.lstatSync(file).isDirectory();
+        const destPath = path.join(sourceDir, path.basename(file));
         if (isDirectory) {
-            execSync(`cp -r "${file}" "${sourceDir}/"`, { stdio: 'inherit' });
+            fs.cpSync(file, destPath, { recursive: true });
         } else {
-            execSync(`cp "${file}" "${sourceDir}/"`, { stdio: 'inherit' });
+            fs.copyFileSync(file, destPath);
         }
         console.log(`   ✓ Copied ${file}`);
     }
@@ -62,7 +62,7 @@ const deploymentDir = path.join(fullExportDir, 'deployment-options');
 fs.mkdirSync(deploymentDir, { recursive: true });
 
 if (fs.existsSync('cpanel-deployment-package')) {
-    execSync(`cp -r cpanel-deployment-package "${deploymentDir}/cpanel-hosting"`, { stdio: 'inherit' });
+    fs.cpSync('cpanel-deployment-package', path.join(deploymentDir, 'cpanel-hosting'), { recursive: true });
     console.log('   ✓ Copied cPanel deployment package');
 }
 
@@ -83,7 +83,7 @@ const docFiles = [
 
 docFiles.forEach(file => {
     if (fs.existsSync(file)) {
-        execSync(`cp "${file}" "${docsDir}/"`, { stdio: 'inherit' });
+        fs.copyFileSync(file, path.join(docsDir, path.basename(file)));
         console.log(`   ✓ Copied ${file}`);
     }
 });
@@ -370,18 +370,8 @@ For any questions during setup, refer to the documentation or contact the origin
 fs.writeFileSync(path.join(fullExportDir, 'README.md'), packageInfo);
 console.log('   ✓ Created package information');
 
-// 8. Create compressed archive
-console.log('\n📦 Creating compressed archive...');
-try {
-    execSync(`tar -czf "${fullExportDir}.tar.gz" "${fullExportDir}"`, { stdio: 'inherit' });
-    console.log(`   ✓ Created ${fullExportDir}.tar.gz`);
-} catch (error) {
-    console.log('   ⚠️ Could not create compressed archive (tar not available)');
-}
-
 console.log('\n🎉 Client export completed successfully!');
 console.log(`\n📁 Package Location: ${fullExportDir}/`);
-console.log(`📦 Archive: ${fullExportDir}.tar.gz`);
 console.log('\n📋 What\'s included:');
 console.log('   ✓ Complete source code');
 console.log('   ✓ Multiple deployment options');

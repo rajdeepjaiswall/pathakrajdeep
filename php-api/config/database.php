@@ -4,11 +4,18 @@
  */
 
 class Database {
-    private $host = "localhost";
-    private $db_name = "pathak_bhandar_db";
-    private $username = "your_mysql_username";
-    private $password = "your_mysql_password";
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     private $conn;
+
+    public function __construct() {
+        $this->host = getenv('DB_HOST') ?: 'localhost';
+        $this->db_name = getenv('DB_NAME') ?: 'pathak_bhandar_db';
+        $this->username = getenv('DB_USERNAME') ?: 'your_mysql_username';
+        $this->password = getenv('DB_PASSWORD') ?: 'your_mysql_password';
+    }
 
     public function getConnection() {
         $this->conn = null;

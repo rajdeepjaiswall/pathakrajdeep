@@ -15,8 +15,19 @@ export function initializeGoogleAuth() {
 
   // Determine the callback URL based on environment
   const getCallbackURL = () => {
-    // Always use custom domain for production stability (doesn't change on redeployment)
-    return `https://pathakbhandar.in/api/auth/google/callback`;
+    // Use environment variable or fallback based on NODE_ENV
+    if (process.env.GOOGLE_CALLBACK_URL) {
+      return process.env.GOOGLE_CALLBACK_URL;
+    }
+    
+    // For production deployments
+    if (process.env.NODE_ENV === 'production') {
+      const host = process.env.REPLIT_WORKSPACE_DOMAIN || 'pathakbhandar.in';
+      return `https://${host}/api/auth/google/callback`;
+    }
+    
+    // For development
+    return `http://localhost:5000/api/auth/google/callback`;
   };
 
   const callbackURL = getCallbackURL();

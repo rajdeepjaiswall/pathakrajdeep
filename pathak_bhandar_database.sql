@@ -571,9 +571,9 @@ COPY public.addresses (id, user_id, name, phone, address_line_1, address_line_2,
 --
 
 COPY public.banners (id, title, description, image_url, video_url, link_url, link_type, link_id, is_active, display_order, created_at, updated_at) FROM stdin;
-1	Premium Bakery Collection	Discover our finest selection of traditional sweets and snacks	https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80	\N	/products	category	\N	t	1	2025-05-31 11:52:37.3318	2025-05-31 11:52:37.3318
-2	Fresh Daily Specials	Made fresh every morning with authentic recipes	https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80	\N	/products?featured=true	category	\N	t	2	2025-05-31 11:52:37.3318	2025-05-31 11:52:37.3318
-3	Traditional Sweets	Experience the authentic taste of Indian sweets	https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80	\N	/products?category=1	category	\N	t	3	2025-05-31 11:52:37.3318	2025-05-31 11:52:37.3318
+1       Premium Bakery Collection       Discover our finest selection of traditional sweets and snacks  https://images.unsplash.com/photo-1555507036-ab1f4038808a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80       \N      /products       category        \N      t       1       2025-05-31 11:52:37.3318        2025-05-31 11:52:37.3318
+2       Fresh Daily Specials    Made fresh every morning with authentic recipes https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80    \N      /products?featured=true category        \N      t       2       2025-05-31 11:52:37.3318        2025-05-31 11:52:37.3318
+3       Traditional Sweets      Experience the authentic taste of Indian sweets https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80    \N      /products?category=1    category        \N      t       3       2025-05-31 11:52:37.3318        2025-05-31 11:52:37.3318
 \.
 
 
@@ -590,12 +590,12 @@ COPY public.cart_items (id, user_id, product_id, quantity, created_at) FROM stdi
 --
 
 COPY public.categories (id, name, description, image, is_active, created_at) FROM stdin;
-1	Biscuits	Traditional and premium biscuits	https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300	t	2025-05-31 11:51:55.350674
-2	Snacks	Crispy and delicious snacks	https://images.unsplash.com/photo-1621939514649-280e2ee25f60?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300	t	2025-05-31 11:51:55.350674
-3	Cookies	Homemade style cookies	https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300	t	2025-05-31 11:51:55.350674
-4	Pastries	Fresh baked pastries	https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300	t	2025-05-31 11:51:55.350674
-5	Cake	Special occasion cakes	https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300	t	2025-05-31 11:51:55.350674
-6	Rolls	Soft and fresh rolls	https://images.unsplash.com/photo-1549931319-a545dcf3bc73?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300	t	2025-05-31 11:51:55.350674
+1       Biscuits        Traditional and premium biscuits        https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300       t       2025-05-31 11:51:55.350674
+2       Snacks  Crispy and delicious snacks     https://images.unsplash.com/photo-1621939514649-280e2ee25f60?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300    t       2025-05-31 11:51:55.350674
+3       Cookies Homemade style cookies  https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300    t       2025-05-31 11:51:55.350674
+4       Pastries        Fresh baked pastries    https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300    t       2025-05-31 11:51:55.350674
+5       Cake    Special occasion cakes  https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300    t       2025-05-31 11:51:55.350674
+6       Rolls   Soft and fresh rolls    https://images.unsplash.com/photo-1549931319-a545dcf3bc73?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300       t       2025-05-31 11:51:55.350674
 \.
 
 
@@ -628,12 +628,12 @@ COPY public.orders (id, user_id, order_number, status, subtotal, gst_amount, del
 --
 
 COPY public.products (id, name, description, price, weight, category_id, images, stock, is_active, hsn_code, gst_rate, tags, featured, created_at) FROM stdin;
-1	Rasgulla	Soft spongy cottage cheese balls in sugar syrup	120.00	500g	1	["https://images.unsplash.com/photo-1631452180519-c014fe946bc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]	50	t	1905	5.00	["sweet", "traditional"]	t	2025-05-31 11:52:23.882348
-2	Gulab Jamun	Deep fried milk solids in aromatic syrup	150.00	500g	1	["https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]	40	t	1905	5.00	["sweet", "popular"]	t	2025-05-31 11:52:23.882348
-3	Samosa	Crispy triangular pastry with spiced potato filling	40.00	4 pieces	2	["https://images.unsplash.com/photo-1601050690597-df0568f70950?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1621939514649-280e2ee25f60?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606491956689-2ea866880c84?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]	30	t	1905	5.00	["snack", "fried"]	t	2025-05-31 11:52:23.882348
-4	Kachori	Flaky pastry filled with spiced lentils	35.00	4 pieces	2	["https://images.unsplash.com/photo-1621939514649-280e2ee25f60?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1601050690597-df0568f70950?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606491956689-2ea866880c84?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]	25	t	1905	5.00	["snack", "spicy"]	f	2025-05-31 11:52:23.882348
-5	Mysore Pak	Rich gram flour sweet with ghee	200.00	250g	1	["https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]	20	t	1905	5.00	["sweet", "premium"]	t	2025-05-31 11:52:23.882348
-6	Chocolate Cookies	Fresh baked chocolate chip cookies	80.00	200g	3	["https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]	35	t	1905	5.00	["cookies", "chocolate"]	t	2025-05-31 11:52:23.882348
+1       Rasgulla        Soft spongy cottage cheese balls in sugar syrup 120.00  500g    1       ["https://images.unsplash.com/photo-1631452180519-c014fe946bc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]        50      t       1905    5.00    ["sweet", "traditional"]        t       2025-05-31 11:52:23.882348
+2       Gulab Jamun     Deep fried milk solids in aromatic syrup        150.00  500g    1       ["https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]        40      t       1905    5.00    ["sweet", "popular"]    t       2025-05-31 11:52:23.882348
+3       Samosa  Crispy triangular pastry with spiced potato filling     40.00   4 pieces        2       ["https://images.unsplash.com/photo-1601050690597-df0568f70950?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1621939514649-280e2ee25f60?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606491956689-2ea866880c84?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]        30      t       1905    5.00    ["snack", "fried"]      t       2025-05-31 11:52:23.882348
+4       Kachori Flaky pastry filled with spiced lentils 35.00   4 pieces        2       ["https://images.unsplash.com/photo-1621939514649-280e2ee25f60?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1601050690597-df0568f70950?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606491956689-2ea866880c84?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]        25      t       1905    5.00    ["snack", "spicy"]      f       2025-05-31 11:52:23.882348
+5       Mysore Pak      Rich gram flour sweet with ghee 200.00  250g    1       ["https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]        20      t       1905    5.00    ["sweet", "premium"]    t       2025-05-31 11:52:23.882348
+6       Chocolate Cookies       Fresh baked chocolate chip cookies      80.00   200g    3       ["https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300", "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"]   35      t       1905    5.00    ["cookies", "chocolate"]        t       2025-05-31 11:52:23.882348
 \.
 
 
@@ -650,11 +650,6 @@ COPY public.reviews (id, user_id, product_id, rating, comment, is_approved, crea
 --
 
 COPY public.users (id, username, email, phone, password, role, is_verified, created_at, address, latitude, longitude, address_line_1, address_line_2, area, city, state, pin_code) FROM stdin;
-1	demo	demo@pathakbhandar.com	9876543210	demo123	customer	t	2025-05-31 12:04:34.779146	\N	\N	\N	\N	\N	\N	\N	\N	\N
-2	testuser	test@example.com	1234567890	$2b$10$vG5vuG2.mE5zLYI.sqRdqec/nli2lXOuQx3Z9ZR7blbYafFI36A26	customer	f	2025-05-31 12:46:33.934287	\N	\N	\N	\N	\N	\N	\N	\N	\N
-3	Rajdeep	rajdeep.jaiswal7@gmail.com	7897965915	$2b$10$2mpM/.ssEFJTVYoa7p7wbOBLyXqwe.QkjsZGCdUnK8nxS5jFZ4G2q	customer	f	2025-05-31 12:48:39.093796	\N	\N	\N	\N	\N	\N	\N	\N	\N
-4	pathakji	\N	\N	bhandar123	admin	f	2025-05-31 14:29:11.791185	\N	\N	\N	\N	\N	\N	\N	\N	\N
-5	rajdeep	\N	\N	web123	super_admin	f	2025-05-31 14:29:11.791185	\N	\N	\N	\N	\N	\N	\N	\N	\N
 \.
 
 
@@ -733,7 +728,7 @@ SELECT pg_catalog.setval('public.reviews_id_seq', 1, false);
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 5, true);
+SELECT pg_catalog.setval('public.users_id_seq', 1, false);
 
 
 --

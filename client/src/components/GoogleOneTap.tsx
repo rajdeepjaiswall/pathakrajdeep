@@ -64,9 +64,15 @@ export default function GoogleOneTap() {
   const initializeGoogleOneTap = () => {
     if (!window.google?.accounts?.id) return;
 
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      console.error('Google Client ID not configured');
+      return;
+    }
+
     try {
       window.google.accounts.id.initialize({
-        client_id: '1069780387537-jnkntl3hmbqdt5lndahb58dq83tqo0ek.apps.googleusercontent.com',
+        client_id: clientId,
         callback: handleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true,

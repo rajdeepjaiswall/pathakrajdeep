@@ -40,20 +40,16 @@ localPort = 8080
 externalPort = 8080
 
 [[ports]]
-localPort = 34547
-externalPort = 5000
-
-[[ports]]
 localPort = 37017
 externalPort = 4200
 
 [[ports]]
-localPort = 38419
-externalPort = 3003
-
-[[ports]]
 localPort = 40073
 externalPort = 3000
+
+[[ports]]
+localPort = 41783
+externalPort = 3003
 
 [[ports]]
 localPort = 43245
@@ -65,3 +61,8 @@ externalPort = 3002
 
 [agent]
 integrations = ["javascript_websocket==1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+VITE_GOOGLE_CLIENT_ID = "1069780387537-jnkntl3hmbqdt5lndahb58dq83tqo0ek.apps.googleusercontent.com"

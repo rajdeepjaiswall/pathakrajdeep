@@ -30,6 +30,7 @@ import AdminBanners from "@/pages/admin/banners";
 import AdminCategories from "@/pages/admin/categories";
 import AdminSettings from "@/pages/admin/settings";
 import AdminPayments from "@/pages/admin/payments";
+import AdminPaymentGateway from "@/pages/admin/payment-gateway";
 import SuperAdminLogin from "@/pages/super-admin/login";
 import SuperAdminDashboard from "@/pages/super-admin/dashboard";
 import LogoManager from "@/pages/super-admin/logo-manager";
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/admin/categories" component={AdminCategories} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/payments" component={AdminPayments} />
+      <Route path="/admin/payment-gateway" component={AdminPaymentGateway} />
       <Route path="/super-admin/login" component={SuperAdminLogin} />
       <Route path="/super-admin" component={SuperAdminDashboard} />
       <Route path="/super-admin/logo-manager" component={LogoManager} />

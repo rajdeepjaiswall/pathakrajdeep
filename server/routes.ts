@@ -1588,6 +1588,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment Gateway Configuration routes (Admin only)
+  app.get("/api/admin/payment-gateways", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const configs = await storage.getPaymentGatewayConfigs();
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/payment-gateways", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { provider, displayName, keyId, keySecret, merchantId, isActive, isTestMode, webhookSecret } = req.body;
+      
+      if (!provider || !displayName) {
+        return res.status(400).json({ message: "Provider and display name are required" });
+      }
+      
+      const config = await storage.upsertPaymentGatewayConfig({
+        provider,
+        displayName,
+        keyId,
+        keySecret,
+        merchantId,
+        isActive,
+        isTestMode,
+        webhookSecret,
+        updatedBy: req.user!.id
+      });
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer - Get active payment gateway (public for checkout)
+  app.get("/api/payment-gateway", async (req, res) => {
+    try {
+      const gateway = await storage.getActivePaymentGateway();
+      if (!gateway) {
+        return res.status(404).json({ message: "No payment gateway configured" });
+      }
+      // Don't expose secrets to customers
+      res.json({ 
+        provider: gateway.provider, 
+        displayName: gateway.displayName,
+        isTestMode: gateway.isTestMode 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);
 

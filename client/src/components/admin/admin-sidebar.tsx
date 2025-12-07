@@ -11,7 +11,8 @@ import {
   LogOut,
   ArrowLeft,
   Home,
-  CreditCard
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
@@ -52,6 +53,11 @@ const adminNavItems = [
     title: 'Payments',
     href: '/admin/payments',
     icon: CreditCard,
+  },
+  {
+    title: 'Payment Gateway',
+    href: '/admin/payment-gateway',
+    icon: Wallet,
   },
   {
     title: 'Analytics',

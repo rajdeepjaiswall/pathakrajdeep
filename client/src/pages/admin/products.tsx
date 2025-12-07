@@ -76,7 +76,9 @@ export default function AdminProducts() {
     mutationFn: async (data: z.infer<typeof productFormSchema>) => {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
       const method = editingProduct ? 'PUT' : 'POST';
-      const response = await apiRequest(method, url, data);
+      // Don't send images/videos as base64 to avoid 413 payload too large errors
+      const { images, videos, ...submitData } = data;
+      const response = await apiRequest(method, url, submitData);
       return response.json();
     },
     onSuccess: () => {

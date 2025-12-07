@@ -58,7 +58,9 @@ export default function ProductManager() {
   // Add product mutation
   const addProductMutation = useMutation({
     mutationFn: async (productData: any) => {
-      return apiRequest('POST', '/api/products', productData);
+      // Don't send images/videos as base64 to avoid 413 payload too large errors
+      const { images, videos, ...submitData } = productData;
+      return apiRequest('POST', '/api/products', submitData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
@@ -81,7 +83,9 @@ export default function ProductManager() {
   // Update product mutation
   const updateProductMutation = useMutation({
     mutationFn: async ({ id, ...productData }: any) => {
-      return apiRequest('PUT', `/api/products/${id}`, productData);
+      // Don't send images/videos as base64 to avoid 413 payload too large errors
+      const { images, videos, ...submitData } = productData;
+      return apiRequest('PUT', `/api/products/${id}`, submitData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });

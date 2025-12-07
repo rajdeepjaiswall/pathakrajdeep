@@ -650,11 +650,6 @@ COPY public.reviews (id, user_id, product_id, rating, comment, is_approved, crea
 --
 
 COPY public.users (id, username, email, phone, password, role, is_verified, created_at, address, latitude, longitude, address_line_1, address_line_2, area, city, state, pin_code) FROM stdin;
-1       demo    demo@pathakbhandar.com  9876543210      $2b$10$AD3PsRaEM3jyJ6QrQPbN5O0Ty3tXj9KGFqRR3Yr9oIR72xIuO0n2S    customer        t       2025-05-31 12:04:34.779146      \N      \N      \N      \N      \N      \N      \N      \N      \N
-2       testuser        test@example.com        1234567890      $2b$10$vG5vuG2.mE5zLYI.sqRdqec/nli2lXOuQx3Z9ZR7blbYafFI36A26    customer        f       2025-05-31 12:46:33.934287      \N      \N      \N      \N      \N      \N      \N      \N      \N
-3       Rajdeep rajdeep.jaiswal7@gmail.com      7897965915      $2b$10$2mpM/.ssEFJTVYoa7p7wbOBLyXqwe.QkjsZGCdUnK8nxS5jFZ4G2q    customer        f       2025-05-31 12:48:39.093796      \N      \N      \N      \N      \N      \N      \N      \N      \N
-4       pathakji        \N      \N      $2b$10$Su12mE.S24Oxz/esTTed5OUQyfGRHgd5S7lCQGSYJ4VlA/EVyXoAS    admin   f       2025-05-31 14:29:11.791185      \N      \N      \N      \N      \N      \N      \N      \N      \N
-5       rajdeep \N      \N      $2b$10$IGX7eBzSHs4.P8AguvUoz.jeBLUavqE4RPEySGkUXb7uz5G7BF8dy    super_admin     f       2025-05-31 14:29:11.791185      \N      \N      \N      \N      \N      \N      \N      \N      \N
 \.
 
 
@@ -733,7 +728,7 @@ SELECT pg_catalog.setval('public.reviews_id_seq', 1, false);
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 5, true);
+SELECT pg_catalog.setval('public.users_id_seq', 1, false);
 
 
 --

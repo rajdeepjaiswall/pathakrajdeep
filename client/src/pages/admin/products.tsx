@@ -76,7 +76,7 @@ export default function AdminProducts() {
     mutationFn: async (data: z.infer<typeof productFormSchema>) => {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
       const method = editingProduct ? 'PUT' : 'POST';
-      const response = await apiRequest(url, method, data);
+      const response = await apiRequest(method, url, data);
       return response.json();
     },
     onSuccess: () => {
@@ -101,7 +101,7 @@ export default function AdminProducts() {
   // Update stock mutation
   const updateStockMutation = useMutation({
     mutationFn: async ({ productId, stock }: { productId: number; stock: number }) => {
-      const response = await apiRequest(`/api/products/${productId}`, 'PUT', { stock });
+      const response = await apiRequest('PUT', `/api/products/${productId}`, { stock });
       return response.json();
     },
     onSuccess: () => {

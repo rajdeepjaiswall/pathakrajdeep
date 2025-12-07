@@ -223,6 +223,23 @@ export const manualPaymentDetails = pgTable("manual_payment_details", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Payment Gateway Configuration (for Razorpay, Stripe, PhonePe, etc.)
+export const paymentGatewayConfig = pgTable("payment_gateway_config", {
+  id: serial("id").primaryKey(),
+  provider: text("provider").notNull(), // razorpay, stripe, phonepe, paytm
+  displayName: text("display_name").notNull(),
+  keyId: text("key_id"),
+  keySecret: text("key_secret"),
+  merchantId: text("merchant_id"),
+  isActive: boolean("is_active").default(false),
+  isTestMode: boolean("is_test_mode").default(true),
+  webhookSecret: text("webhook_secret"),
+  additionalConfig: jsonb("additional_config").$type<Record<string, string>>().default({}),
+  updatedBy: integer("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   addresses: many(addresses),
@@ -422,6 +439,12 @@ export const insertManualPaymentDetailsSchema = createInsertSchema(manualPayment
   updatedAt: true,
 });
 
+export const insertPaymentGatewayConfigSchema = createInsertSchema(paymentGatewayConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Select schemas
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -438,6 +461,7 @@ export type Banner = typeof banners.$inferSelect;
 export type Otp = typeof otps.$inferSelect;
 export type ManualPaymentConfig = typeof manualPaymentConfig.$inferSelect;
 export type ManualPaymentDetails = typeof manualPaymentDetails.$inferSelect;
+export type PaymentGatewayConfig = typeof paymentGatewayConfig.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -455,3 +479,4 @@ export type InsertBanner = z.infer<typeof insertBannerSchema>;
 export type InsertOtp = z.infer<typeof insertOtpSchema>;
 export type InsertManualPaymentConfig = z.infer<typeof insertManualPaymentConfigSchema>;
 export type InsertManualPaymentDetails = z.infer<typeof insertManualPaymentDetailsSchema>;
+export type InsertPaymentGatewayConfig = z.infer<typeof insertPaymentGatewayConfigSchema>;

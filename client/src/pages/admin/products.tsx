@@ -54,7 +54,7 @@ export default function AdminProducts() {
   });
 
   // Product form
-  const productForm = useForm({
+  const productForm = useForm<z.infer<typeof productFormSchema>>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
       name: '',
@@ -62,14 +62,14 @@ export default function AdminProducts() {
       price: '0',
       weight: '',
       category_id: undefined,
-      images: [],
-      videos: [],
-      ingredients: [],
+      images: [] as string[],
+      videos: [] as string[],
+      ingredients: [] as string[],
       stock: 0,
       isActive: true,
       hsnCode: '',
       gstRate: '5.00',
-      tags: [],
+      tags: [] as string[],
       featured: false,
     },
   });
@@ -391,77 +391,114 @@ export default function AdminProducts() {
                                           const file = e.target.files?.[0];
                                           if (file) {
                                             const progressKey = `image-${index}`;
-                                            setUploadProgress(prev => ({ ...prev, [progressKey]: 0 }));
-                                            
-                                            const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.7): Promise<string> => {
-                                              return new Promise((resolve, reject) => {
-                                                const reader = new FileReader();
-                                                reader.onload = (e) => {
-                                                  setUploadProgress(prev => ({ ...prev, [progressKey]: 30 }));
-                                                  try {
-                                                    const img = new Image();
-                                                    img.onload = () => {
-                                                      try {
-                                                        const canvas = document.createElement('canvas');
-                                                        let { width, height } = img;
-                                                        
-                                                        if (width > maxWidth) {
-                                                          height = (height * maxWidth) / width;
-                                                          width = maxWidth;
-                                                        }
-                                                        
-                                                        canvas.width = width;
-                                                        canvas.height = height;
-                                                        const ctx = canvas.getContext('2d');
-                                                        if (ctx) {
-                                                          ctx.drawImage(img, 0, 0, width, height);
-                                                          setUploadProgress(prev => ({ ...prev, [progressKey]: 70 }));
-                                                          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                                                          resolve(compressedDataUrl);
-                                                        } else {
-                                                          reject(new Error('Failed to get canvas context'));
-                                                        }
-                                                      } catch (err) {
-                                                        reject(err);
-                                                      }
-                                                    };
-                                                    img.onerror = () => reject(new Error('Failed to load image'));
-                                                    img.src = e.target?.result as string;
-                                                  } catch (err) {
-                                                    reject(err);
-                                                  }
-                                                };
-                                                reader.onerror = reject;
-                                                reader.readAsDataURL(file);
-                                              });
-                                            };
+                                            setUploadProgress(prev => ({ ...prev, [progressKey]: 10 }));
                                             
                                             try {
-                                              const compressedImage = await compressImage(file);
-                                              const newImages = [...field.value];
-                                              newImages[index] = compressedImage;
-                                              field.onChange(newImages);
-                                              setUploadProgress(prev => ({ ...prev, [progressKey]: 100 }));
+                                              const reader = new FileReader();
                                               
-                                              setTimeout(() => {
+                                              reader.onprogress = (event) => {
+                                                if (event.lengthComputable) {
+                                                  const progress = Math.round((event.loaded / event.total) * 50);
+                                                  setUploadProgress(prev => ({ ...prev, [progressKey]: progress }));
+                                                }
+                                              };
+                                              
+                                              reader.onload = async (readerEvent) => {
+                                                try {
+                                                  setUploadProgress(prev => ({ ...prev, [progressKey]: 60 }));
+                                                  const dataUrl = readerEvent.target?.result as string;
+                                                  
+                                                  const img = document.createElement('img');
+                                                  img.src = dataUrl;
+                                                  
+                                                  await new Promise<void>((resolve, reject) => {
+                                                    img.onload = () => resolve();
+                                                    img.onerror = () => reject(new Error('Image load failed'));
+                                                    setTimeout(() => resolve(), 3000);
+                                                  });
+                                                  
+                                                  setUploadProgress(prev => ({ ...prev, [progressKey]: 80 }));
+                                                  
+                                                  const canvas = document.createElement('canvas');
+                                                  const maxWidth = 800;
+                                                  let { width, height } = img;
+                                                  
+                                                  if (width > maxWidth) {
+                                                    height = (height * maxWidth) / width;
+                                                    width = maxWidth;
+                                                  }
+                                                  
+                                                  canvas.width = width || 800;
+                                                  canvas.height = height || 600;
+                                                  const ctx = canvas.getContext('2d');
+                                                  
+                                                  if (ctx && img.complete && img.naturalWidth > 0) {
+                                                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                                                    
+                                                    const newImages = [...field.value];
+                                                    newImages[index] = compressedDataUrl;
+                                                    field.onChange(newImages);
+                                                  } else {
+                                                    const newImages = [...field.value];
+                                                    newImages[index] = dataUrl;
+                                                    field.onChange(newImages);
+                                                  }
+                                                  
+                                                  setUploadProgress(prev => ({ ...prev, [progressKey]: 100 }));
+                                                  
+                                                  setTimeout(() => {
+                                                    setUploadProgress(prev => {
+                                                      const { [progressKey]: _, ...rest } = prev;
+                                                      return rest;
+                                                    });
+                                                  }, 500);
+                                                  
+                                                  toast({
+                                                    title: "Photo uploaded",
+                                                    description: `Photo ${index + 1} has been added`,
+                                                  });
+                                                } catch (error) {
+                                                  console.error('Image processing error:', error);
+                                                  const dataUrl = readerEvent.target?.result as string;
+                                                  const newImages = [...field.value];
+                                                  newImages[index] = dataUrl;
+                                                  field.onChange(newImages);
+                                                  
+                                                  setUploadProgress(prev => {
+                                                    const { [progressKey]: _, ...rest } = prev;
+                                                    return rest;
+                                                  });
+                                                  
+                                                  toast({
+                                                    title: "Photo uploaded",
+                                                    description: `Photo ${index + 1} added (original size)`,
+                                                  });
+                                                }
+                                              };
+                                              
+                                              reader.onerror = () => {
                                                 setUploadProgress(prev => {
                                                   const { [progressKey]: _, ...rest } = prev;
                                                   return rest;
                                                 });
-                                              }, 500);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to read file",
+                                                  variant: "destructive",
+                                                });
+                                              };
                                               
-                                              toast({
-                                                title: "Photo uploaded",
-                                                description: `Photo ${index + 1} has been compressed and added`,
-                                              });
+                                              reader.readAsDataURL(file);
                                             } catch (error) {
+                                              console.error('Upload error:', error);
                                               setUploadProgress(prev => {
                                                 const { [progressKey]: _, ...rest } = prev;
                                                 return rest;
                                               });
                                               toast({
                                                 title: "Error",
-                                                description: "Failed to process image",
+                                                description: "Failed to upload image",
                                                 variant: "destructive",
                                               });
                                             }

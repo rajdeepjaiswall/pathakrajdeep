@@ -806,19 +806,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const productData = insertProductSchema.parse(req.body);
       
-      // Validate and filter images - reject base64 images over 200KB
+      // Validate and filter images - reject base64 images over 500KB
       if (productData.images && Array.isArray(productData.images)) {
-        const maxImageSize = 200 * 1024; // 200KB per image
+        const maxImageSize = 500 * 1024; // 500KB per image
         const validImages = productData.images.filter((img: string) => {
           if (!img) return false;
-          // Allow URL-based images
           if (!img.startsWith('data:')) return true;
-          // Check base64 size
           const base64Data = img.split(',')[1] || '';
           const sizeInBytes = Math.ceil(base64Data.length * 0.75);
           return sizeInBytes < maxImageSize;
         });
         productData.images = validImages;
+      }
+      
+      // Validate and filter videos - allow base64 videos up to 10MB
+      if (productData.videos && Array.isArray(productData.videos)) {
+        const maxVideoSize = 10 * 1024 * 1024; // 10MB per video
+        const validVideos = productData.videos.filter((vid: string) => {
+          if (!vid || !vid.trim()) return false;
+          if (!vid.startsWith('data:')) return true;
+          const base64Data = vid.split(',')[1] || '';
+          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
+          return sizeInBytes < maxVideoSize;
+        });
+        productData.videos = validVideos;
       }
       
       const product = await storage.createProduct(productData);
@@ -832,19 +843,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const productData = insertProductSchema.parse(req.body);
       
-      // Validate and filter images - reject base64 images over 200KB
+      // Validate and filter images - reject base64 images over 500KB
       if (productData.images && Array.isArray(productData.images)) {
-        const maxImageSize = 200 * 1024; // 200KB per image
+        const maxImageSize = 500 * 1024; // 500KB per image
         const validImages = productData.images.filter((img: string) => {
           if (!img) return false;
-          // Allow URL-based images
           if (!img.startsWith('data:')) return true;
-          // Check base64 size
           const base64Data = img.split(',')[1] || '';
           const sizeInBytes = Math.ceil(base64Data.length * 0.75);
           return sizeInBytes < maxImageSize;
         });
         productData.images = validImages;
+      }
+      
+      // Validate and filter videos - allow base64 videos up to 10MB
+      if (productData.videos && Array.isArray(productData.videos)) {
+        const maxVideoSize = 10 * 1024 * 1024; // 10MB per video
+        const validVideos = productData.videos.filter((vid: string) => {
+          if (!vid || !vid.trim()) return false;
+          if (!vid.startsWith('data:')) return true;
+          const base64Data = vid.split(',')[1] || '';
+          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
+          return sizeInBytes < maxVideoSize;
+        });
+        productData.videos = validVideos;
       }
       
       const product = await storage.updateProduct(parseInt(req.params.id), productData);

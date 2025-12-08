@@ -272,28 +272,33 @@ export default function ProductDetail() {
               <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
               <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="description" className="mt-6">
+            <TabsContent value="description" className="mt-4">
               <Card>
-                <CardContent className="p-6">
-                  <p className="text-gray-600 leading-relaxed">
-                    {product.description || 'No detailed description available.'}
-                  </p>
+                <CardContent className="p-4">
+                  <p className="text-gray-600">{product.description}</p>
                 </CardContent>
               </Card>
             </TabsContent>
-            
-            <TabsContent value="ingredients" className="mt-6">
+            <TabsContent value="ingredients" className="mt-4">
               <Card>
-                <CardContent className="p-6">
-                  <p className="text-gray-600">
-                    Ingredients information will be displayed here when available.
-                  </p>
+                <CardContent className="p-4">
+                  {product.ingredients && product.ingredients.length > 0 ? (
+                    <ul className="space-y-2">
+                      {product.ingredients.map((ingredient: string, index: number) => (
+                        <li key={index} className="flex items-start gap-3">
+                          <span className="text-champagne font-bold mt-1">•</span>
+                          <span className="text-gray-700">{ingredient}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500">No ingredients listed</p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
-            
-            <TabsContent value="reviews" className="mt-6">
+
+            <TabsContent value="reviews" className="mt-4">
               <div className="space-y-6">
                 {reviews.length === 0 ? (
                   <Card>

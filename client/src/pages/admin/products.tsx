@@ -24,6 +24,7 @@ import { useLocation } from 'wouter';
 const productFormSchema = insertProductSchema.extend({
   images: z.array(z.string()).default([]),
   videos: z.array(z.string()).default([]),
+  ingredients: z.array(z.string()).default([]),
 });
 
 export default function AdminProducts() {
@@ -63,6 +64,7 @@ export default function AdminProducts() {
       category_id: undefined,
       images: [],
       videos: [],
+      ingredients: [],
       stock: 0,
       isActive: true,
       hsnCode: '',
@@ -155,6 +157,7 @@ export default function AdminProducts() {
       category_id: product.category_id,
       images: product.images || [],
       videos: product.videos || [],
+      ingredients: product.ingredients || [],
       stock: product.stock,
       isActive: product.isActive,
       hsnCode: product.hsnCode || '',
@@ -394,28 +397,39 @@ export default function AdminProducts() {
                                               return new Promise((resolve, reject) => {
                                                 const reader = new FileReader();
                                                 reader.onload = (e) => {
-                                                  setUploadProgress(prev => ({ ...prev, [progressKey]: 50 }));
-                                                  const img = new Image();
-                                                  img.onload = () => {
-                                                    const canvas = document.createElement('canvas');
-                                                    let { width, height } = img;
-                                                    
-                                                    if (width > maxWidth) {
-                                                      height = (height * maxWidth) / width;
-                                                      width = maxWidth;
-                                                    }
-                                                    
-                                                    canvas.width = width;
-                                                    canvas.height = height;
-                                                    const ctx = canvas.getContext('2d');
-                                                    ctx?.drawImage(img, 0, 0, width, height);
-                                                    
-                                                    setUploadProgress(prev => ({ ...prev, [progressKey]: 85 }));
-                                                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                                                    resolve(compressedDataUrl);
-                                                  };
-                                                  img.onerror = reject;
-                                                  img.src = e.target?.result as string;
+                                                  setUploadProgress(prev => ({ ...prev, [progressKey]: 30 }));
+                                                  try {
+                                                    const img = new Image();
+                                                    img.onload = () => {
+                                                      try {
+                                                        const canvas = document.createElement('canvas');
+                                                        let { width, height } = img;
+                                                        
+                                                        if (width > maxWidth) {
+                                                          height = (height * maxWidth) / width;
+                                                          width = maxWidth;
+                                                        }
+                                                        
+                                                        canvas.width = width;
+                                                        canvas.height = height;
+                                                        const ctx = canvas.getContext('2d');
+                                                        if (ctx) {
+                                                          ctx.drawImage(img, 0, 0, width, height);
+                                                          setUploadProgress(prev => ({ ...prev, [progressKey]: 70 }));
+                                                          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                                                          resolve(compressedDataUrl);
+                                                        } else {
+                                                          reject(new Error('Failed to get canvas context'));
+                                                        }
+                                                      } catch (err) {
+                                                        reject(err);
+                                                      }
+                                                    };
+                                                    img.onerror = () => reject(new Error('Failed to load image'));
+                                                    img.src = e.target?.result as string;
+                                                  } catch (err) {
+                                                    reject(err);
+                                                  }
                                                 };
                                                 reader.onerror = reject;
                                                 reader.readAsDataURL(file);
@@ -458,6 +472,57 @@ export default function AdminProducts() {
                                   )}
                                 </div>
                               ))}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Ingredients Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-navy">Ingredients</h3>
+                    </div>
+                    <FormField
+                      control={productForm.control}
+                      name="ingredients"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="space-y-2">
+                              {field.value.map((ingredient, index) => (
+                                <div key={index} className="flex gap-2">
+                                  <Input
+                                    value={ingredient}
+                                    onChange={(e) => {
+                                      const newIngredients = [...field.value];
+                                      newIngredients[index] = e.target.value;
+                                      field.onChange(newIngredients);
+                                    }}
+                                    placeholder={`Ingredient ${index + 1}`}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newIngredients = field.value.filter((_, i) => i !== index);
+                                      field.onChange(newIngredients);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => field.onChange([...field.value, ''])}
+                              >
+                                Add Ingredient
+                              </Button>
                             </div>
                           </FormControl>
                           <FormMessage />

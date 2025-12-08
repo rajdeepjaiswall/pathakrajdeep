@@ -34,6 +34,7 @@ export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -364,12 +365,20 @@ export default function AdminProducts() {
                                       htmlFor={`image-${index}`}
                                       className="cursor-pointer block w-full h-full"
                                     >
-                                      <div className="space-y-2 flex flex-col items-center justify-center h-full">
-                                        <Upload className="h-8 w-8 text-gray-400" />
-                                        <span className="text-sm text-champagne hover:text-champagne/80">
-                                          Click to upload photo
-                                        </span>
-                                      </div>
+                                      {uploadProgress[`image-${index}`] !== undefined ? (
+                                        <div className="flex flex-col items-center justify-center h-full space-y-2">
+                                          <div className="w-16 h-16 rounded-full border-4 border-gray-200 border-t-champagne animate-spin" />
+                                          <span className="text-xs text-navy font-semibold">{uploadProgress[`image-${index}`]}%</span>
+                                          <span className="text-xs text-gray-600">Uploading...</span>
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-2 flex flex-col items-center justify-center h-full">
+                                          <Upload className="h-8 w-8 text-gray-400" />
+                                          <span className="text-sm text-champagne hover:text-champagne/80">
+                                            Click to upload photo
+                                          </span>
+                                        </div>
+                                      )}
                                       <Input
                                         type="file"
                                         accept="image/*"
@@ -378,11 +387,14 @@ export default function AdminProducts() {
                                         onChange={async (e) => {
                                           const file = e.target.files?.[0];
                                           if (file) {
-                                            // Compress image before converting to base64
+                                            const progressKey = `image-${index}`;
+                                            setUploadProgress(prev => ({ ...prev, [progressKey]: 0 }));
+                                            
                                             const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.7): Promise<string> => {
                                               return new Promise((resolve, reject) => {
                                                 const reader = new FileReader();
                                                 reader.onload = (e) => {
+                                                  setUploadProgress(prev => ({ ...prev, [progressKey]: 50 }));
                                                   const img = new Image();
                                                   img.onload = () => {
                                                     const canvas = document.createElement('canvas');
@@ -398,6 +410,7 @@ export default function AdminProducts() {
                                                     const ctx = canvas.getContext('2d');
                                                     ctx?.drawImage(img, 0, 0, width, height);
                                                     
+                                                    setUploadProgress(prev => ({ ...prev, [progressKey]: 85 }));
                                                     const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
                                                     resolve(compressedDataUrl);
                                                   };
@@ -414,12 +427,24 @@ export default function AdminProducts() {
                                               const newImages = [...field.value];
                                               newImages[index] = compressedImage;
                                               field.onChange(newImages);
+                                              setUploadProgress(prev => ({ ...prev, [progressKey]: 100 }));
+                                              
+                                              setTimeout(() => {
+                                                setUploadProgress(prev => {
+                                                  const { [progressKey]: _, ...rest } = prev;
+                                                  return rest;
+                                                });
+                                              }, 500);
                                               
                                               toast({
                                                 title: "Photo uploaded",
                                                 description: `Photo ${index + 1} has been compressed and added`,
                                               });
                                             } catch (error) {
+                                              setUploadProgress(prev => {
+                                                const { [progressKey]: _, ...rest } = prev;
+                                                return rest;
+                                              });
                                               toast({
                                                 title: "Error",
                                                 description: "Failed to process image",
@@ -458,10 +483,12 @@ export default function AdminProducts() {
                                 <div key={index} className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                                   {field.value[index] ? (
                                     <div className="relative">
-                                      <div className="w-full h-24 bg-gray-100 rounded flex items-center justify-center">
-                                        <Video className="h-8 w-8 text-gray-400" />
-                                        <span className="ml-2 text-sm text-gray-600">Video {index + 1}</span>
-                                      </div>
+                                      <video 
+                                        src={field.value[index]} 
+                                        className="w-full h-24 bg-gray-100 rounded object-cover"
+                                        controls
+                                        preload="metadata"
+                                      />
                                       <Button
                                         type="button"
                                         variant="destructive"
@@ -481,12 +508,20 @@ export default function AdminProducts() {
                                       htmlFor={`video-${index}`}
                                       className="cursor-pointer block w-full h-full"
                                     >
-                                      <div className="space-y-2 flex flex-col items-center justify-center h-full">
-                                        <Upload className="h-8 w-8 text-gray-400" />
-                                        <span className="text-sm text-champagne hover:text-champagne/80">
-                                          Click to upload video
-                                        </span>
-                                      </div>
+                                      {uploadProgress[`video-${index}`] !== undefined ? (
+                                        <div className="flex flex-col items-center justify-center h-full space-y-2">
+                                          <div className="w-16 h-16 rounded-full border-4 border-gray-200 border-t-champagne animate-spin" />
+                                          <span className="text-xs text-navy font-semibold">{uploadProgress[`video-${index}`]}%</span>
+                                          <span className="text-xs text-gray-600">Uploading...</span>
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-2 flex flex-col items-center justify-center h-full">
+                                          <Upload className="h-8 w-8 text-gray-400" />
+                                          <span className="text-sm text-champagne hover:text-champagne/80">
+                                            Click to upload video
+                                          </span>
+                                        </div>
+                                      )}
                                       <Input
                                         type="file"
                                         accept="video/*"
@@ -495,17 +530,44 @@ export default function AdminProducts() {
                                         onChange={(e) => {
                                           const file = e.target.files?.[0];
                                           if (file) {
-                                            // Convert video file to data URL for persistence
+                                            const progressKey = `video-${index}`;
+                                            setUploadProgress(prev => ({ ...prev, [progressKey]: 0 }));
+                                            
                                             const reader = new FileReader();
+                                            reader.onprogress = (event) => {
+                                              if (event.lengthComputable) {
+                                                const percent = Math.round((event.loaded / event.total) * 100);
+                                                setUploadProgress(prev => ({ ...prev, [progressKey]: percent }));
+                                              }
+                                            };
                                             reader.onload = (event) => {
                                               const videoUrl = event.target?.result as string;
                                               const newVideos = [...field.value];
                                               newVideos[index] = videoUrl;
                                               field.onChange(newVideos);
                                               
+                                              setUploadProgress(prev => ({ ...prev, [progressKey]: 100 }));
+                                              setTimeout(() => {
+                                                setUploadProgress(prev => {
+                                                  const { [progressKey]: _, ...rest } = prev;
+                                                  return rest;
+                                                });
+                                              }, 500);
+                                              
                                               toast({
                                                 title: "Video uploaded",
                                                 description: `Video ${index + 1} has been added successfully`,
+                                              });
+                                            };
+                                            reader.onerror = () => {
+                                              setUploadProgress(prev => {
+                                                const { [progressKey]: _, ...rest } = prev;
+                                                return rest;
+                                              });
+                                              toast({
+                                                title: "Error",
+                                                description: "Failed to upload video",
+                                                variant: "destructive",
                                               });
                                             };
                                             reader.readAsDataURL(file);

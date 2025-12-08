@@ -117,6 +117,9 @@ export default function ProductDetail() {
                     {currentMedia.type === 'video' ? (
                       <video
                         src={currentMedia.url}
+                        autoPlay
+                        muted
+                        loop
                         controls
                         className="w-full h-full object-cover"
                       />

@@ -78,13 +78,18 @@ export default function GoogleOneTap() {
         cancel_on_tap_outside: true,
         context: 'signin',
         ux_mode: 'popup',
-        use_fedcm_for_prompt: true,
+        use_fedcm_for_prompt: false,
       });
 
       // Show the One Tap prompt
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed()) {
-          console.log('One Tap not displayed:', notification.getNotDisplayedReason());
+          const reason = notification.getNotDisplayedReason();
+          console.log('One Tap not displayed:', reason);
+          // Common reasons: opt_out_or_no_session, browser_not_supported, invalid_client, etc.
+          if (reason === 'invalid_client') {
+            console.error('Google One Tap: Invalid client - check if domain is authorized in Google Cloud Console');
+          }
         } else if (notification.isSkippedMoment()) {
           console.log('One Tap skipped:', notification.getSkippedReason());
         } else if (notification.isDismissedMoment()) {

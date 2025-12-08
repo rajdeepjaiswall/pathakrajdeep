@@ -92,16 +92,20 @@ export default function ProductDetail() {
           {/* Product Media Gallery */}
           <div className="space-y-4">
             {(() => {
-              // Create combined media array
-              const mediaItems = [];
-              if (product.images && product.images.length > 0) {
-                product.images.forEach((url, index) => {
-                  if (url) mediaItems.push({ type: 'image', url, index });
+              // Create combined media array - VIDEOS FIRST, then images
+              const mediaItems: Array<{type: 'video' | 'image', url: string, index: number}> = [];
+              
+              // Add videos first so they appear first in the gallery
+              if (product.videos && product.videos.length > 0) {
+                product.videos.forEach((url: string, index: number) => {
+                  if (url && url.trim()) mediaItems.push({ type: 'video', url, index });
                 });
               }
-              if (product.videos && product.videos.length > 0) {
-                product.videos.forEach((url, index) => {
-                  if (url) mediaItems.push({ type: 'video', url, index: product.images?.length + index || index });
+              
+              // Then add images
+              if (product.images && product.images.length > 0) {
+                product.images.forEach((url: string, index: number) => {
+                  if (url && url.trim()) mediaItems.push({ type: 'image', url, index: (product.videos?.length || 0) + index });
                 });
               }
               
@@ -113,15 +117,17 @@ export default function ProductDetail() {
               
               return (
                 <>
-                  <div className="aspect-square rounded-lg overflow-hidden bg-white">
+                  <div className="aspect-square rounded-lg overflow-hidden bg-white shadow-lg">
                     {currentMedia.type === 'video' ? (
                       <video
+                        key={currentMedia.url}
                         src={currentMedia.url}
                         autoPlay
                         muted
                         loop
                         controls
-                        className="w-full h-full object-cover"
+                        playsInline
+                        className="w-full h-full object-contain bg-black"
                       />
                     ) : (
                       <img
@@ -132,18 +138,21 @@ export default function ProductDetail() {
                     )}
                   </div>
                   {mediaItems.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto">
+                    <div className="flex gap-2 overflow-x-auto pb-2">
                       {mediaItems.map((media, index) => (
                         <button
                           key={index}
                           onClick={() => setSelectedImage(index)}
-                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                            selectedImage === index ? 'border-champagne' : 'border-transparent'
+                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                            selectedImage === index ? 'border-champagne ring-2 ring-champagne/30' : 'border-gray-200 hover:border-champagne/50'
                           }`}
                         >
                           {media.type === 'video' ? (
-                            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                              <span className="text-xs text-gray-600">Video</span>
+                            <div className="w-full h-full bg-gradient-to-br from-navy to-navy/80 flex flex-col items-center justify-center">
+                              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                              </svg>
+                              <span className="text-xs text-white/80 mt-1">Video</span>
                             </div>
                           ) : (
                             <img

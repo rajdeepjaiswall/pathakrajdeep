@@ -186,7 +186,7 @@ export class OTPService {
     }
   }
   
-  // Helper method to send order confirmation SMS
+  // Helper method to send order placement SMS
   async sendOrderConfirmation(phoneNumber: string, orderNumber: string, trackingLink: string): Promise<{ success: boolean; message: string }> {
     try {
       if (!fast2smsConfig.apiKey) {
@@ -202,7 +202,7 @@ export class OTPService {
         formattedPhone = formattedPhone.slice(2);
       }
 
-      const message = `Your Pathak Bhandar order ${orderNumber} has been confirmed! Track your order: ${trackingLink}`;
+      const message = `Your Pathak Bhandar order ${orderNumber} has been placed! Our executive will confirm it shortly. Track your order: https://pathakbhandar.in/customer/orders`;
       
       // For custom messages, Fast2SMS requires DLT template
       // For now, we'll use a simple notification approach
@@ -239,6 +239,93 @@ export class OTPService {
       return {
         success: false,
         message: 'Failed to send order confirmation SMS'
+      };
+    }
+  }
+
+  // Helper method to send order status update SMS
+  async sendOrderStatusUpdate(phoneNumber: string, orderNumber: string, status: string): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!fast2smsConfig.apiKey) {
+        return {
+          success: false,
+          message: 'SMS API not configured.'
+        };
+      }
+
+      // Format phone number
+      let formattedPhone = phoneNumber.replace(/\D/g, '');
+      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+        formattedPhone = formattedPhone.slice(2);
+      }
+
+      // Create appropriate message based on status
+      let message = '';
+      const trackingUrl = 'https://pathakbhandar.in/customer/orders';
+      
+      // Map status to friendly display name for the message
+      switch (status) {
+        case 'pending':
+          message = `Your Pathak Bhandar order ${orderNumber} is pending. Our executive will confirm it shortly. Track: ${trackingUrl}`;
+          break;
+        case 'order_received':
+          message = `Your Pathak Bhandar order ${orderNumber} has been received and confirmed! Our team is now processing it. Track: ${trackingUrl}`;
+          break;
+        case 'getting_ready':
+          message = `Good news! Your Pathak Bhandar order ${orderNumber} is getting ready with care. Track: ${trackingUrl}`;
+          break;
+        case 'preparing':
+          message = `Good news! Your Pathak Bhandar order ${orderNumber} is now being prepared with care. Track: ${trackingUrl}`;
+          break;
+        case 'dispatched':
+          message = `Your Pathak Bhandar order ${orderNumber} has been dispatched and is on its way! Track: ${trackingUrl}`;
+          break;
+        case 'out_for_delivery':
+          message = `Exciting! Your Pathak Bhandar order ${orderNumber} is out for delivery and will reach you soon. Track: ${trackingUrl}`;
+          break;
+        case 'delivered':
+          message = `Your Pathak Bhandar order ${orderNumber} has been delivered successfully! Thank you for shopping with us. Track: ${trackingUrl}`;
+          break;
+        case 'cancelled':
+          message = `Your Pathak Bhandar order ${orderNumber} has been cancelled. If you have any questions, please contact us. Track: ${trackingUrl}`;
+          break;
+        default:
+          message = `Your Pathak Bhandar order ${orderNumber} status has been updated to: ${status}. Track: ${trackingUrl}`;
+      }
+      
+      const response = await fetch(fast2smsConfig.baseUrl, {
+        method: 'POST',
+        headers: {
+          'authorization': fast2smsConfig.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender_id: 'PATHAK',
+          message: message,
+          route: 'q',
+          numbers: formattedPhone
+        })
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok && responseData.return) {
+        return {
+          success: true,
+          message: 'Order status update sent successfully'
+        };
+      } else {
+        console.error('Fast2SMS Order Status Update Error:', responseData);
+        return {
+          success: false,
+          message: 'Failed to send order status update SMS'
+        };
+      }
+    } catch (error) {
+      console.error('Order Status Update SMS Error:', error);
+      return {
+        success: false,
+        message: 'Failed to send order status update SMS'
       };
     }
   }

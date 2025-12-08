@@ -47,9 +47,12 @@ export function useWishlist() {
       if (error.message.includes('login')) {
         toast({
           title: 'Login Required',
-          description: 'Please login to add items to your wishlist.',
+          description: 'Please login to add items to your wishlist. Redirecting...',
           variant: 'destructive',
         });
+        setTimeout(() => {
+          window.location.assign('/auth');
+        }, 1500);
       } else {
         toast({
           title: 'Error',
@@ -76,9 +79,12 @@ export function useWishlist() {
       if (error.message.includes('login')) {
         toast({
           title: 'Login Required',
-          description: 'Please login to manage your wishlist.',
+          description: 'Please login to manage your wishlist. Redirecting...',
           variant: 'destructive',
         });
+        setTimeout(() => {
+          window.location.assign('/auth');
+        }, 1500);
       } else {
         toast({
           title: 'Error',

@@ -51,7 +51,7 @@ export function useWishlist() {
           variant: 'destructive',
         });
         setTimeout(() => {
-          window.location.assign('/auth');
+          window.location.assign('https://www.pathakbhandar.in/login');
         }, 1500);
       } else {
         toast({
@@ -83,7 +83,7 @@ export function useWishlist() {
           variant: 'destructive',
         });
         setTimeout(() => {
-          window.location.assign('/auth');
+          window.location.assign('https://www.pathakbhandar.in/login');
         }, 1500);
       } else {
         toast({

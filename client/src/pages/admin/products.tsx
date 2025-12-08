@@ -80,22 +80,28 @@ export default function AdminProducts() {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
       const method = editingProduct ? 'PUT' : 'POST';
       
-      // Filter out videos (too large) but keep images
-      // Only exclude very large base64 images (over 500KB) to avoid 413 errors
+      // Filter images - only exclude very large base64 images (over 500KB) to avoid 413 errors
       const filteredImages = (data.images || []).filter(img => {
         if (!img) return false;
-        // Allow URL-based images (Unsplash, etc.)
         if (!img.startsWith('data:')) return true;
-        // For base64, check size - limit to 500KB
         const base64Data = img.split(',')[1] || '';
         const sizeInBytes = Math.ceil(base64Data.length * 0.75);
         return sizeInBytes < 500 * 1024;
       });
       
+      // Filter videos - only keep valid non-empty URLs (allow base64 videos up to 5MB)
+      const filteredVideos = (data.videos || []).filter(vid => {
+        if (!vid || !vid.trim()) return false;
+        if (!vid.startsWith('data:')) return true;
+        const base64Data = vid.split(',')[1] || '';
+        const sizeInBytes = Math.ceil(base64Data.length * 0.75);
+        return sizeInBytes < 5 * 1024 * 1024; // 5MB limit for videos
+      });
+      
       const submitData = {
         ...data,
         images: filteredImages,
-        videos: [], // Videos are too large, exclude them
+        videos: filteredVideos,
       };
       
       const response = await apiRequest(method, url, submitData);

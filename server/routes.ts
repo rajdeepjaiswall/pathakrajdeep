@@ -1758,6 +1758,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ================= SUPER ADMIN ROUTES =================
+  
+  // Page Content (About Us, Contact Us) - Public read
+  app.get("/api/page-content/:pageType", async (req, res) => {
+    try {
+      const content = await storage.getPageContent(req.params.pageType);
+      res.json(content || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Page Content - Super Admin write
+  app.post("/api/super-admin/page-content", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const { pageType, title, sections, contactInfo } = req.body;
+      if (!pageType) {
+        return res.status(400).json({ message: "Page type is required" });
+      }
+      const content = await storage.upsertPageContent({
+        pageType,
+        title,
+        sections,
+        contactInfo,
+        updatedBy: req.user.id
+      });
+      res.json(content);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Popup Banners - Public read active only
+  app.get("/api/popup-banners/active", async (req, res) => {
+    try {
+      const banners = await storage.getPopupBanners(true);
+      res.json(banners);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Popup Banners - Super Admin management
+  app.get("/api/super-admin/popup-banners", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const banners = await storage.getPopupBanners();
+      res.json(banners);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/super-admin/popup-banners", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const banner = await storage.createPopupBanner({
+        ...req.body,
+        createdBy: req.user.id
+      });
+      res.json(banner);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/super-admin/popup-banners/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const banner = await storage.updatePopupBanner(id, req.body);
+      res.json(banner);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/super-admin/popup-banners/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deletePopupBanner(id);
+      res.json({ message: "Popup banner deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin Management - Super Admin only
+  app.get("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const admins = await storage.getAdminUsers();
+      res.json(admins);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const { username, email, password, role } = req.body;
+      if (!username || !email || !password) {
+        return res.status(400).json({ message: "Username, email, and password are required" });
+      }
+      if (role && !['admin', 'super_admin'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const admin = await storage.createUser({
+        username,
+        email,
+        password: hashedPassword,
+        role: role || 'admin',
+        isVerified: true
+      });
+      res.json(admin);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/super-admin/admins/:id/password", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { newPassword } = req.body;
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const admin = await storage.updateUserPassword(id, hashedPassword);
+      res.json({ message: "Password updated successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/super-admin/admins/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { role, isVerified } = req.body;
+      const admin = await storage.updateUser(id, { role, isVerified });
+      res.json(admin);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Reports - Super Admin only
+  app.get("/api/super-admin/reports/orders", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start and end dates are required" });
+      }
+      const orders = await storage.getOrdersReport(new Date(startDate as string), new Date(endDate as string));
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/super-admin/reports/customers", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start and end dates are required" });
+      }
+      const customers = await storage.getCustomersReport(new Date(startDate as string), new Date(endDate as string));
+      res.json(customers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/super-admin/reports/payments", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start and end dates are required" });
+      }
+      const payments = await storage.getPaymentsReport(new Date(startDate as string), new Date(endDate as string));
+      res.json(payments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);
 

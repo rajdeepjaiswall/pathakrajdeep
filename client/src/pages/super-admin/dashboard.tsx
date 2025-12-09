@@ -9,7 +9,11 @@ import {
   Activity,
   TrendingUp,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  FileText,
+  Bell,
+  BarChart3,
+  UserCog
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,7 +98,46 @@ export default function SuperAdminDashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => setLocation('/super-admin/admins')}
+            data-testid="button-admin-management"
+          >
+            <UserCog className="h-6 w-6" />
+            <span>Admin Management</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-green-300 text-green-700 hover:bg-green-50"
+            onClick={() => setLocation('/super-admin/pages')}
+            data-testid="button-page-editor"
+          >
+            <FileText className="h-6 w-6" />
+            <span>Page Editor</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+            onClick={() => setLocation('/super-admin/popup-banners')}
+            data-testid="button-popup-banners"
+          >
+            <Bell className="h-6 w-6" />
+            <span>Popup Banners</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col gap-2 border-purple-300 text-purple-700 hover:bg-purple-50"
+            onClick={() => setLocation('/super-admin/reports')}
+            data-testid="button-reports"
+          >
+            <BarChart3 className="h-6 w-6" />
+            <span>Reports & Export</span>
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Button 
             variant="outline" 
             className="h-20 flex-col gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
@@ -105,7 +148,7 @@ export default function SuperAdminDashboard() {
           </Button>
           <Button 
             variant="outline" 
-            className="h-20 flex-col gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+            className="h-20 flex-col gap-2 border-teal-300 text-teal-700 hover:bg-teal-50"
             onClick={() => setLocation('/super-admin/shopkeepers')}
           >
             <Users className="h-6 w-6" />
@@ -113,15 +156,7 @@ export default function SuperAdminDashboard() {
           </Button>
           <Button 
             variant="outline" 
-            className="h-20 flex-col gap-2 border-green-300 text-green-700 hover:bg-green-50"
-            onClick={() => setLocation('/super-admin/revenue')}
-          >
-            <TrendingUp className="h-6 w-6" />
-            <span>Revenue Analytics</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-20 flex-col gap-2 border-purple-300 text-purple-700 hover:bg-purple-50"
+            className="h-20 flex-col gap-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
             onClick={() => setLocation('/super-admin/products')}
           >
             <Package className="h-6 w-6" />
@@ -129,11 +164,11 @@ export default function SuperAdminDashboard() {
           </Button>
           <Button 
             variant="outline" 
-            className="h-20 flex-col gap-2 border-red-300 text-red-700 hover:bg-red-50"
-            onClick={() => setLocation('/super-admin/discounts')}
+            className="h-20 flex-col gap-2 border-rose-300 text-rose-700 hover:bg-rose-50"
+            onClick={() => setLocation('/admin/dashboard')}
           >
             <Activity className="h-6 w-6" />
-            <span>Discount Manager</span>
+            <span>Admin Dashboard</span>
           </Button>
         </div>
 

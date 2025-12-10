@@ -344,6 +344,94 @@ export class OTPService {
     }
   }
 
+  // Send SMS when order is placed - customized based on status and payment method
+  async sendOrderPlacedSMS(
+    phoneNumber: string,
+    orderNumber: string,
+    orderStatus: string,
+    paymentMethod: string,
+    customerName: string = 'Customer'
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!fast2smsConfig.apiKey) {
+        return {
+          success: false,
+          message: 'SMS API not configured.'
+        };
+      }
+
+      // Format phone number
+      let formattedPhone = phoneNumber.replace(/\D/g, '');
+      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+        formattedPhone = formattedPhone.slice(2);
+      }
+
+      // Extract first name from customer name
+      const firstName = customerName.split(' ')[0] || 'Customer';
+      const trackingUrl = 'https://pathakbhandar.in/customer/orders';
+      let message = '';
+
+      // Customize message based on order status and payment method
+      if (paymentMethod === 'gateway') {
+        // PhonePe/Online payment - status will be pending_payment initially
+        if (orderStatus === 'pending_payment') {
+          message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} has been received! Complete your payment to confirm the order. Track: ${trackingUrl}`;
+        } else if (orderStatus === 'payment_success' || orderStatus === 'pending') {
+          message = `Dear ${firstName}, thank you! Your payment for Pathak Bhandar order ${orderNumber} is successful. Our team will process it shortly. Track: ${trackingUrl}`;
+        } else if (orderStatus === 'payment_failed') {
+          message = `Dear ${firstName}, payment for your Pathak Bhandar order ${orderNumber} failed. Please try again or choose a different payment method. If money was deducted, it will be refunded within 3 days.`;
+        } else {
+          message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} status: ${orderStatus}. Track: ${trackingUrl}`;
+        }
+      } else if (paymentMethod === 'cod') {
+        // Cash on Delivery
+        message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} has been placed! Please keep exact change ready. Our executive will confirm your order soon. Track: ${trackingUrl}`;
+      } else if (paymentMethod === 'upi' || paymentMethod === 'qr') {
+        // UPI/QR payment
+        message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} has been recorded! Please update the UTR number at: ${trackingUrl} - Navigate to your order to complete payment verification.`;
+      } else {
+        // Default message
+        message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} has been placed! Our executive will confirm it shortly. Track: ${trackingUrl}`;
+      }
+
+      const response = await fetch(fast2smsConfig.baseUrl, {
+        method: 'POST',
+        headers: {
+          'authorization': fast2smsConfig.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender_id: 'PATHAK',
+          message: message,
+          route: 'q',
+          numbers: formattedPhone
+        })
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok && responseData.return) {
+        console.log(`Order placed SMS sent for ${paymentMethod} payment, status ${orderStatus}:`, orderNumber);
+        return {
+          success: true,
+          message: 'Order SMS sent successfully'
+        };
+      } else {
+        console.error('Fast2SMS Order Placed SMS Error:', responseData);
+        return {
+          success: false,
+          message: 'Failed to send order SMS'
+        };
+      }
+    } catch (error) {
+      console.error('Order Placed SMS Error:', error);
+      return {
+        success: false,
+        message: 'Failed to send order SMS'
+      };
+    }
+  }
+
   // Send PhonePe payment status SMS - only for payment gateway responses
   async sendPhonePePaymentSMS(
     phoneNumber: string, 

@@ -344,6 +344,79 @@ export class OTPService {
     }
   }
 
+  // Send PhonePe payment status SMS - only for payment gateway responses
+  async sendPhonePePaymentSMS(
+    phoneNumber: string, 
+    orderNumber: string, 
+    paymentStatus: 'success' | 'pending' | 'failed'
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!fast2smsConfig.apiKey) {
+        return {
+          success: false,
+          message: 'SMS API not configured.'
+        };
+      }
+
+      // Format phone number
+      let formattedPhone = phoneNumber.replace(/\D/g, '');
+      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+        formattedPhone = formattedPhone.slice(2);
+      }
+
+      const orderPageLink = `https://pathakbhandar.in/customer/orders`;
+      let message = '';
+
+      switch (paymentStatus) {
+        case 'success':
+          message = `Thank you for your payment! Your Pathak Bhandar order ${orderNumber} is placed and will be processed by our executive soon. Check your order status: ${orderPageLink}`;
+          break;
+        case 'pending':
+          message = `Your payment for Pathak Bhandar order ${orderNumber} is being processed. If payment is deducted from your account, please share the UTR number at: ${orderPageLink} - Navigate to your order to update payment details.`;
+          break;
+        case 'failed':
+          message = `Your payment for Pathak Bhandar order ${orderNumber} has failed. Please try again later. If money was deducted, it will be refunded to your account within 3 working days.`;
+          break;
+      }
+
+      const response = await fetch(fast2smsConfig.baseUrl, {
+        method: 'POST',
+        headers: {
+          'authorization': fast2smsConfig.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender_id: 'PATHAK',
+          message: message,
+          route: 'q',
+          numbers: formattedPhone
+        })
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok && responseData.return) {
+        console.log(`PhonePe payment ${paymentStatus} SMS sent for order:`, orderNumber);
+        return {
+          success: true,
+          message: `Payment ${paymentStatus} SMS sent successfully`
+        };
+      } else {
+        console.error('Fast2SMS PhonePe Payment SMS Error:', responseData);
+        return {
+          success: false,
+          message: 'Failed to send payment status SMS'
+        };
+      }
+    } catch (error) {
+      console.error('PhonePe Payment SMS Error:', error);
+      return {
+        success: false,
+        message: 'Failed to send payment status SMS'
+      };
+    }
+  }
+
   // Verify OTP
   async verifyOTP(identifier: string, inputOTP: string, type: 'email' | 'whatsapp' | 'sms'): Promise<{ success: boolean; message: string }> {
     try {

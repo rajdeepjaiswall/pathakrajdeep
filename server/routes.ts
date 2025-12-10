@@ -1928,26 +1928,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentState: webhookData.payload.state,
       });
 
-      // Update order based on payment status
+      // Get order details for SMS
+      const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
+      const orderPhone = transaction.phone || order[0]?.phone || '';
+      const orderNumber = order[0]?.orderNumber || '';
+      
+      // Update order based on payment status and send appropriate SMS
       if (status === 'payment_success') {
         // Payment successful - update order to confirmed/pending
         await storage.updateOrderStatus(transaction.orderId, 'pending');
         await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
         
-        // Send SMS confirmation for successful payment
-        try {
-          const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
-          if (order[0]?.orderNumber) {
-            const trackingLink = `https://pathakbhandar.in/track-order/${order[0].orderNumber}`;
-            await otpService.sendOrderConfirmation(
-              transaction.phone || order[0].phone || '',
-              order[0].orderNumber,
-              trackingLink
-            );
-            console.log('Order confirmation SMS sent after PhonePe payment success');
+        // Send SUCCESS SMS for PhonePe payment
+        if (orderPhone && orderNumber) {
+          try {
+            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'success');
+            console.log('PhonePe SUCCESS SMS sent for order:', orderNumber);
+          } catch (smsError) {
+            console.error('Failed to send success SMS:', smsError);
           }
-        } catch (smsError) {
-          console.error('Failed to send SMS after payment:', smsError);
         }
         
         console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as paid`);
@@ -1955,9 +1954,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Payment failed - update order status
         await storage.updateOrderStatus(transaction.orderId, 'payment_failed');
         await db.update(orders).set({ paymentStatus: 'failed' }).where(eq(orders.id, transaction.orderId));
+        
+        // Send FAILED SMS for PhonePe payment
+        if (orderPhone && orderNumber) {
+          try {
+            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'failed');
+            console.log('PhonePe FAILED SMS sent for order:', orderNumber);
+          } catch (smsError) {
+            console.error('Failed to send failed payment SMS:', smsError);
+          }
+        }
+        
         console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as payment failed`);
       } else {
-        // Payment pending - keep order in pending_payment status
+        // Payment pending/processing - send PENDING SMS
+        if (orderPhone && orderNumber) {
+          try {
+            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'pending');
+            console.log('PhonePe PENDING SMS sent for order:', orderNumber);
+          } catch (smsError) {
+            console.error('Failed to send pending payment SMS:', smsError);
+          }
+        }
+        
         console.log(`PhonePe Webhook: Order ${transaction.orderId} still pending`);
       }
 

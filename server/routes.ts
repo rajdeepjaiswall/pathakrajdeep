@@ -1118,9 +1118,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.createOrder(orderData);
       console.log('Order created successfully:', order.id, order.orderNumber);
       
-      // Send order confirmation SMS for ALL orders when they are created
-      // SMS is customized based on payment method and status
-      if (order.deliveryAddress && order.deliveryAddress.phone) {
+      // Send order confirmation SMS only for NON-GATEWAY payments when order is created
+      // Gateway payments will get SMS from webhook after payment confirmation
+      if (req.body.paymentMethod !== 'gateway' && order.deliveryAddress && order.deliveryAddress.phone) {
         const trackingLink = `https://pathakbhandar.in/customer/orders`;
         const customerName = order.deliveryAddress.fullName || 'Customer';
         const orderStatus = order.status || 'pending';

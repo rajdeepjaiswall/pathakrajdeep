@@ -311,11 +311,11 @@ export default function Checkout() {
           description: 'Please complete your UPI payment',
         });
       } else if (paymentMethod === 'gateway') {
-        setCurrentStep('waiting');
         toast({
           title: 'Order created!',
           description: 'Redirecting to payment gateway...',
         });
+        initiatePhonePeMutation.mutate(order.id);
       }
     },
     onError: (error: any) => {
@@ -345,6 +345,35 @@ export default function Checkout() {
       toast({
         title: 'Error',
         description: error.message || 'Failed to submit UTR',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const initiatePhonePeMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      const response = await apiRequest('POST', '/api/payments/phonepe/initiate', {
+        orderId,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success && data.redirectUrl) {
+        sessionStorage.setItem('phonepe_transaction_id', data.merchantTransactionId);
+        clearCart();
+        window.location.href = data.redirectUrl;
+      } else {
+        toast({
+          title: 'Payment Error',
+          description: data.message || 'Failed to initiate payment',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to initiate PhonePe payment',
         variant: 'destructive',
       });
     },

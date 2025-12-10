@@ -1,13 +1,14 @@
 import { 
   users, categories, products, addresses, orders, orderItems, cartItems, wishlistItems, coupons, reviews, banners, otps,
-  manualPaymentConfig, manualPaymentDetails, paymentGatewayConfig, pageContent, popupBanners,
+  manualPaymentConfig, manualPaymentDetails, paymentGatewayConfig, pageContent, popupBanners, phonePeTransactions,
   type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct,
   type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
   type CartItem, type InsertCartItem, type WishlistItem, type InsertWishlistItem, type Coupon, type InsertCoupon, type Review, type InsertReview,
   type Banner, type InsertBanner, type Otp, type InsertOtp,
   type ManualPaymentConfig, type InsertManualPaymentConfig, type ManualPaymentDetails, type InsertManualPaymentDetails,
   type PaymentGatewayConfig, type InsertPaymentGatewayConfig,
-  type PageContent, type InsertPageContent, type PopupBanner, type InsertPopupBanner
+  type PageContent, type InsertPageContent, type PopupBanner, type InsertPopupBanner,
+  type PhonePeTransaction, type InsertPhonePeTransaction
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, desc, asc, sql } from "drizzle-orm";
@@ -140,6 +141,13 @@ export interface IStorage {
   getOrdersReport(startDate: Date, endDate: Date): Promise<Order[]>;
   getCustomersReport(startDate: Date, endDate: Date): Promise<User[]>;
   getPaymentsReport(startDate: Date, endDate: Date): Promise<ManualPaymentDetails[]>;
+
+  // PhonePe Transaction methods
+  createPhonePeTransaction(transaction: InsertPhonePeTransaction): Promise<PhonePeTransaction>;
+  getPhonePeTransactionByMerchantId(merchantTransactionId: string): Promise<PhonePeTransaction | undefined>;
+  getPhonePeTransactionByOrderId(orderId: number): Promise<PhonePeTransaction | undefined>;
+  updatePhonePeTransaction(id: number, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction>;
+  updatePhonePeTransactionByMerchantId(merchantTransactionId: string, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1114,6 +1122,49 @@ export class DatabaseStorage implements IStorage {
         sql`${manualPaymentDetails.createdAt} <= ${endDate}`
       ))
       .orderBy(desc(manualPaymentDetails.createdAt));
+  }
+
+  // PhonePe Transaction methods
+  async createPhonePeTransaction(transaction: InsertPhonePeTransaction): Promise<PhonePeTransaction> {
+    const [created] = await db
+      .insert(phonePeTransactions)
+      .values(transaction)
+      .returning();
+    return created;
+  }
+
+  async getPhonePeTransactionByMerchantId(merchantTransactionId: string): Promise<PhonePeTransaction | undefined> {
+    const [txn] = await db
+      .select()
+      .from(phonePeTransactions)
+      .where(eq(phonePeTransactions.merchantTransactionId, merchantTransactionId));
+    return txn || undefined;
+  }
+
+  async getPhonePeTransactionByOrderId(orderId: number): Promise<PhonePeTransaction | undefined> {
+    const [txn] = await db
+      .select()
+      .from(phonePeTransactions)
+      .where(eq(phonePeTransactions.orderId, orderId));
+    return txn || undefined;
+  }
+
+  async updatePhonePeTransaction(id: number, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction> {
+    const [updated] = await db
+      .update(phonePeTransactions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(phonePeTransactions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updatePhonePeTransactionByMerchantId(merchantTransactionId: string, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction> {
+    const [updated] = await db
+      .update(phonePeTransactions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(phonePeTransactions.merchantTransactionId, merchantTransactionId))
+      .returning();
+    return updated;
   }
 }
 

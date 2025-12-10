@@ -283,6 +283,26 @@ export const popupBanners = pgTable("popup_banners", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// PhonePe Transactions table
+export const phonePeTransactions = pgTable("phonepe_transactions", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  merchantTransactionId: text("merchant_transaction_id").notNull().unique(),
+  merchantUserId: text("merchant_user_id"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("initiated"), // initiated, pending, success, failed
+  paymentState: text("payment_state"), // PhonePe payment state
+  transactionId: text("transaction_id"), // PhonePe transaction ID
+  paymentInstrumentType: text("payment_instrument_type"), // UPI, CARD, etc.
+  redirectUrl: text("redirect_url"),
+  callbackReceived: boolean("callback_received").default(false),
+  callbackData: jsonb("callback_data").$type<Record<string, any>>(),
+  errorCode: text("error_code"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   addresses: many(addresses),
@@ -500,6 +520,12 @@ export const insertPopupBannerSchema = createInsertSchema(popupBanners).omit({
   updatedAt: true,
 });
 
+export const insertPhonePeTransactionSchema = createInsertSchema(phonePeTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Select schemas
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -519,6 +545,7 @@ export type ManualPaymentDetails = typeof manualPaymentDetails.$inferSelect;
 export type PaymentGatewayConfig = typeof paymentGatewayConfig.$inferSelect;
 export type PageContent = typeof pageContent.$inferSelect;
 export type PopupBanner = typeof popupBanners.$inferSelect;
+export type PhonePeTransaction = typeof phonePeTransactions.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -539,3 +566,4 @@ export type InsertManualPaymentDetails = z.infer<typeof insertManualPaymentDetai
 export type InsertPaymentGatewayConfig = z.infer<typeof insertPaymentGatewayConfigSchema>;
 export type InsertPageContent = z.infer<typeof insertPageContentSchema>;
 export type InsertPopupBanner = z.infer<typeof insertPopupBannerSchema>;
+export type InsertPhonePeTransaction = z.infer<typeof insertPhonePeTransactionSchema>;

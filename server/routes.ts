@@ -6,9 +6,12 @@ import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { OAuth2Client } from "google-auth-library";
-import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
+import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
+import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig } from "./phonepe";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -1743,6 +1746,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer - Get active payment gateway (public for checkout)
   app.get("/api/payment-gateway", async (req, res) => {
     try {
+      // Check if PhonePe is configured via environment variables
+      const phonePeConfig = getPhonePeConfig();
+      if (phonePeConfig.isConfigured) {
+        return res.json({
+          provider: phonePeConfig.provider,
+          displayName: phonePeConfig.displayName,
+          isTestMode: phonePeConfig.isTestMode
+        });
+      }
+
       const gateway = await storage.getActivePaymentGateway();
       if (!gateway) {
         return res.status(404).json({ message: "No payment gateway configured" });
@@ -1752,6 +1765,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
         provider: gateway.provider, 
         displayName: gateway.displayName,
         isTestMode: gateway.isTestMode 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ================= PHONEPE PAYMENT ROUTES =================
+
+  // Initiate PhonePe payment
+  app.post("/api/payments/phonepe/initiate", authenticateUser, async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      
+      if (!orderId) {
+        return res.status(400).json({ message: "Order ID is required" });
+      }
+
+      // Get the order
+      const order = await storage.getOrder(orderId, req.user!.id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Check if PhonePe is configured
+      if (!isPhonePeConfigured()) {
+        return res.status(400).json({ message: "PhonePe payment gateway is not configured" });
+      }
+
+      // Generate unique merchant transaction ID
+      const merchantTransactionId = `PB${orderId}_${Date.now()}`;
+      
+      // Get callback URLs
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : 'http://localhost:5000';
+      
+      const redirectUrl = `${baseUrl}/phonepe-callback`;
+      const callbackUrl = `${baseUrl}/api/payments/phonepe/callback`;
+
+      // Create transaction record
+      await storage.createPhonePeTransaction({
+        orderId,
+        merchantTransactionId,
+        merchantUserId: `MUID${req.user!.id}`,
+        amount: order.total,
+        status: 'initiated',
+      });
+
+      // Initiate payment
+      const result = await initiatePhonePePayment({
+        orderId,
+        merchantTransactionId,
+        userId: req.user!.id,
+        amount: parseFloat(order.total),
+        phone: order.deliveryAddress?.phone,
+        redirectUrl,
+        callbackUrl,
+      });
+
+      if (result.success && result.redirectUrl) {
+        // Update transaction with redirect URL
+        await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
+          redirectUrl: result.redirectUrl,
+          status: 'pending',
+        });
+
+        res.json({
+          success: true,
+          redirectUrl: result.redirectUrl,
+          merchantTransactionId,
+        });
+      } else {
+        // Update transaction with error
+        await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
+          status: 'failed',
+          errorMessage: result.error,
+        });
+
+        res.status(400).json({
+          success: false,
+          message: result.error || 'Payment initiation failed',
+        });
+      }
+    } catch (error: any) {
+      console.error('PhonePe initiation error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // PhonePe payment callback (server-to-server)
+  app.post("/api/payments/phonepe/callback", async (req, res) => {
+    try {
+      console.log('PhonePe Callback received:', JSON.stringify(req.body, null, 2));
+      
+      const { merchantTransactionId, transactionId, code, message } = req.body;
+      
+      if (!merchantTransactionId) {
+        return res.status(400).json({ message: "Merchant transaction ID is required" });
+      }
+
+      // Get transaction
+      const transaction = await storage.getPhonePeTransactionByMerchantId(merchantTransactionId);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      // Update transaction
+      const status = code === 'PAYMENT_SUCCESS' ? 'success' : 
+                     code === 'PAYMENT_PENDING' ? 'pending' : 'failed';
+      
+      await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
+        status,
+        transactionId,
+        callbackReceived: true,
+        callbackData: req.body,
+        paymentState: code,
+      });
+
+      // Update order status
+      if (status === 'success') {
+        await storage.updateOrderStatus(transaction.orderId, 'pending');
+        const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
+        if (order[0]) {
+          await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
+        }
+      } else if (status === 'failed') {
+        await storage.updateOrderStatus(transaction.orderId, 'payment_failed');
+        await db.update(orders).set({ paymentStatus: 'failed' }).where(eq(orders.id, transaction.orderId));
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('PhonePe callback error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Check PhonePe payment status
+  app.get("/api/payments/phonepe/status/:merchantTransactionId", authenticateUser, async (req, res) => {
+    try {
+      const { merchantTransactionId } = req.params;
+      
+      // Get transaction from database
+      const transaction = await storage.getPhonePeTransactionByMerchantId(merchantTransactionId);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      // If already completed, return stored status
+      if (transaction.status === 'success' || transaction.status === 'failed') {
+        return res.json({
+          status: transaction.status,
+          transactionId: transaction.transactionId,
+          paymentInstrumentType: transaction.paymentInstrumentType,
+        });
+      }
+
+      // Check with PhonePe API
+      const result = await checkPhonePePaymentStatus(merchantTransactionId);
+      
+      if (result.success && result.status) {
+        const status = result.status === 'SUCCESS' ? 'success' : 
+                       result.status === 'FAILED' ? 'failed' : 'pending';
+        
+        // Update transaction
+        await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
+          status,
+          transactionId: result.transactionId,
+          paymentInstrumentType: result.paymentInstrumentType,
+          paymentState: result.data?.state,
+        });
+
+        // Update order if payment completed
+        if (status === 'success') {
+          await storage.updateOrderStatus(transaction.orderId, 'pending');
+          await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
+        } else if (status === 'failed') {
+          await storage.updateOrderStatus(transaction.orderId, 'payment_failed');
+          await db.update(orders).set({ paymentStatus: 'failed' }).where(eq(orders.id, transaction.orderId));
+        }
+
+        res.json({
+          status,
+          transactionId: result.transactionId,
+          paymentInstrumentType: result.paymentInstrumentType,
+        });
+      } else {
+        res.json({
+          status: 'pending',
+          error: result.error,
+        });
+      }
+    } catch (error: any) {
+      console.error('PhonePe status check error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get PhonePe transaction for order
+  app.get("/api/payments/phonepe/order/:orderId", authenticateUser, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const transaction = await storage.getPhonePeTransactionByOrderId(orderId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "No PhonePe transaction found for this order" });
+      }
+
+      res.json({
+        merchantTransactionId: transaction.merchantTransactionId,
+        status: transaction.status,
+        amount: transaction.amount,
+        transactionId: transaction.transactionId,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

@@ -350,6 +350,17 @@ export default function Header() {
                   </Link>
                 )}
 
+                {/* My Orders */}
+                <Link href="/customer/orders">
+                  <div 
+                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors"
+                    onClick={() => setIsDesktopMenuOpen(false)}
+                  >
+                    <Package className="h-6 w-6 text-navy" />
+                    <span className="text-navy font-medium">My Orders</span>
+                  </div>
+                </Link>
+
                 {/* Cart */}
                 <div 
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"

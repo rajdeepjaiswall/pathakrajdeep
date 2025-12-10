@@ -1932,6 +1932,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
       const orderPhone = transaction.phone || order[0]?.phone || '';
       const orderNumber = order[0]?.orderNumber || '';
+      // Get customer name from delivery address
+      const deliveryAddress = order[0]?.deliveryAddress as any;
+      const customerName = deliveryAddress?.name || 'Customer';
       
       // Update order based on payment status and send appropriate SMS
       if (status === 'payment_success') {
@@ -1942,7 +1945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Send SUCCESS SMS for PhonePe payment
         if (orderPhone && orderNumber) {
           try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'success');
+            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'success', customerName);
             console.log('PhonePe SUCCESS SMS sent for order:', orderNumber);
           } catch (smsError) {
             console.error('Failed to send success SMS:', smsError);
@@ -1958,7 +1961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Send FAILED SMS for PhonePe payment
         if (orderPhone && orderNumber) {
           try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'failed');
+            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'failed', customerName);
             console.log('PhonePe FAILED SMS sent for order:', orderNumber);
           } catch (smsError) {
             console.error('Failed to send failed payment SMS:', smsError);
@@ -1970,7 +1973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Payment pending/processing - send PENDING SMS
         if (orderPhone && orderNumber) {
           try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'pending');
+            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'pending', customerName);
             console.log('PhonePe PENDING SMS sent for order:', orderNumber);
           } catch (smsError) {
             console.error('Failed to send pending payment SMS:', smsError);

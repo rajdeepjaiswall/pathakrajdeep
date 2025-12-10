@@ -348,7 +348,8 @@ export class OTPService {
   async sendPhonePePaymentSMS(
     phoneNumber: string, 
     orderNumber: string, 
-    paymentStatus: 'success' | 'pending' | 'failed'
+    paymentStatus: 'success' | 'pending' | 'failed',
+    customerName: string = 'Customer'
   ): Promise<{ success: boolean; message: string }> {
     try {
       if (!fast2smsConfig.apiKey) {
@@ -364,18 +365,21 @@ export class OTPService {
         formattedPhone = formattedPhone.slice(2);
       }
 
+      // Extract first name from customer name
+      const firstName = customerName.split(' ')[0] || 'Customer';
+
       const orderPageLink = `https://pathakbhandar.in/customer/orders`;
       let message = '';
 
       switch (paymentStatus) {
         case 'success':
-          message = `Thank you for your payment! Your Pathak Bhandar order ${orderNumber} is placed and will be processed by our executive soon. Check your order status: ${orderPageLink}`;
+          message = `Dear ${firstName}, thank you for your payment! Your Pathak Bhandar order ${orderNumber} is placed and will be processed by our executive soon. Check your order status: ${orderPageLink}`;
           break;
         case 'pending':
-          message = `Your payment for Pathak Bhandar order ${orderNumber} is being processed. If payment is deducted from your account, please share the UTR number at: ${orderPageLink} - Navigate to your order to update payment details.`;
+          message = `Dear ${firstName}, your payment for Pathak Bhandar order ${orderNumber} is being processed. If payment is deducted from your account, please share the UTR number at: ${orderPageLink} - Navigate to your order to update payment details.`;
           break;
         case 'failed':
-          message = `Your payment for Pathak Bhandar order ${orderNumber} has failed. Please try again later. If money was deducted, it will be refunded to your account within 3 working days.`;
+          message = `Dear ${firstName}, your payment for Pathak Bhandar order ${orderNumber} has failed. Please try again later. If money was deducted, it will be refunded to your account within 3 working days.`;
           break;
       }
 

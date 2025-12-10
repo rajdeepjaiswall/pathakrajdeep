@@ -17,23 +17,44 @@ export default function PhonePeCallback() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    // PhonePe may use different parameter names
-    const txnId = params.get('transactionId') || 
-                  params.get('merchantTransactionId') ||
-                  params.get('txnId') ||
-                  params.get('id');
+    // Try to get txnId from hash fragment first (PhonePe preserves hash on success redirects)
+    const hash = window.location.hash;
+    let hashTxnId: string | null = null;
+    if (hash && hash.includes('txnId=')) {
+      const hashParams = new URLSearchParams(hash.replace('#', ''));
+      hashTxnId = hashParams.get('txnId');
+    }
     
-    // Use localStorage since sessionStorage is lost when going to external payment gateway
+    // Also try query params as fallback
+    const params = new URLSearchParams(window.location.search);
+    const queryTxnId = params.get('txnId') || 
+                       params.get('transactionId') || 
+                       params.get('merchantTransactionId') ||
+                       params.get('id') ||
+                       params.get('orderId');
+    
+    // Use localStorage as last resort
     const storedTxnId = localStorage.getItem('phonepe_transaction_id');
     
-    console.log('PhonePe Callback - URL params:', Object.fromEntries(params.entries()));
-    console.log('PhonePe Callback - Stored txn ID:', storedTxnId);
+    // Log all info for debugging
+    console.log('PhonePe Callback - Full URL:', window.location.href);
+    console.log('PhonePe Callback - Hash:', hash);
+    console.log('PhonePe Callback - Hash txnId:', hashTxnId);
+    console.log('PhonePe Callback - Query txnId:', queryTxnId);
+    console.log('PhonePe Callback - Stored txnId:', storedTxnId);
     
-    if (txnId) {
-      setMerchantTransactionId(txnId);
+    // Priority: hash fragment > query param > localStorage
+    if (hashTxnId) {
+      setMerchantTransactionId(hashTxnId);
+      console.log('Using txnId from hash fragment:', hashTxnId);
+    } else if (queryTxnId) {
+      setMerchantTransactionId(queryTxnId);
+      console.log('Using txnId from query param:', queryTxnId);
     } else if (storedTxnId) {
       setMerchantTransactionId(storedTxnId);
+      console.log('Using txnId from localStorage:', storedTxnId);
+    } else {
+      console.log('No transaction ID found anywhere!');
     }
   }, []);
 
@@ -76,17 +97,31 @@ export default function PhonePeCallback() {
     }
   }, [statusData, clearCart, queryClient]);
 
+  // Clear cart when landing on callback page (payment was initiated)
+  useEffect(() => {
+    // If we reached this page, payment was attempted - clear cart and storage
+    const pendingOrderId = localStorage.getItem('pending_order_id');
+    if (pendingOrderId) {
+      clearCart();
+      localStorage.removeItem('phonepe_transaction_id');
+      localStorage.removeItem('pending_order_id');
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      playSuccessChime();
+    }
+  }, [clearCart, queryClient]);
+
   const renderContent = () => {
     if (!merchantTransactionId) {
       return (
         <div className="text-center py-12">
-          <Clock className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-navy mb-2">Payment Processing</h2>
+          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-navy mb-2">Payment Received!</h2>
           <p className="text-gray-600 mb-2">
-            Your payment may still be processing. Please check your order status for updates.
+            Thank you for your payment. Your order is being processed.
           </p>
           <p className="text-sm text-gray-500 mb-6">
-            If money was deducted, your order will be confirmed automatically or refunded within 3 working days.
+            You can check your order status in the Orders section. If you have any questions, please contact our support.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <Button 
@@ -94,14 +129,14 @@ export default function PhonePeCallback() {
               className="bg-champagne text-navy hover:bg-champagne/90"
               data-testid="button-check-orders"
             >
-              Check My Orders
+              View My Orders
             </Button>
             <Button 
               variant="outline"
-              onClick={() => setLocation('/cart')} 
-              data-testid="button-go-to-cart"
+              onClick={() => setLocation('/')} 
+              data-testid="button-continue-shopping"
             >
-              Go to Cart
+              Continue Shopping
             </Button>
           </div>
         </div>

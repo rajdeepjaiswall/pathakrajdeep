@@ -1817,8 +1817,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use production domain for redirects to avoid Replit wake-up issues
       const baseUrl = process.env.NODE_ENV === 'production' ? productionDomain : (process.env.REPLIT_DOMAINS?.includes('pathakbhandar.in') ? productionDomain : devDomain);
       
-      // Include transaction ID in redirect URL so it persists through PhonePe redirect
-      const redirectUrl = `${productionDomain}/phonepe-callback?txnId=${merchantTransactionId}`;
+      // Use hash fragment instead of query param - PhonePe strips query params on successful redirects but preserves hash
+      const redirectUrl = `${productionDomain}/phonepe-callback#txnId=${merchantTransactionId}`;
       const callbackUrl = `${productionDomain}/api/payments/phonepe/webhook`;
 
       // Create transaction record

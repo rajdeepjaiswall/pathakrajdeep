@@ -151,11 +151,26 @@ export async function initiatePhonePePayment(params: {
     });
 
     console.log('PhonePe Payment Response Status:', response.status);
-    const data: PhonePePaymentResponse = await response.json();
-    console.log('PhonePe Payment Response:', JSON.stringify(data, null, 2));
+    let data: PhonePePaymentResponse;
+    
+    try {
+      data = await response.json();
+      console.log('PhonePe Payment Response:', JSON.stringify(data, null, 2));
+    } catch (e) {
+      const responseText = await response.text();
+      console.error('Failed to parse PhonePe response:', responseText);
+      return {
+        success: false,
+        error: `Invalid response from PhonePe: ${responseText}`,
+      };
+    }
 
     if (!response.ok) {
       console.error('PhonePe API Error:', response.status, JSON.stringify(data, null, 2));
+      return {
+        success: false,
+        error: data.message || `PhonePe API error: ${response.status}`,
+      };
     }
 
     if (data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
@@ -195,7 +210,7 @@ export async function checkPhonePePaymentStatus(merchantTransactionId: string): 
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `O-Bearer ${accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'X-MERCHANT-ID': PHONEPE_MERCHANT_ID || '',
         },
       }

@@ -67,8 +67,13 @@ export async function getPhonePeAccessToken(): Promise<string> {
     return cachedToken.token;
   }
 
+  console.log('Generating new PhonePe access token...');
+  console.log('Client ID configured:', !!PHONEPE_CLIENT_ID);
+  console.log('Client Secret configured:', !!PHONEPE_CLIENT_SECRET);
+  console.log('Merchant ID configured:', !!PHONEPE_MERCHANT_ID);
+
   if (!PHONEPE_CLIENT_ID || !PHONEPE_CLIENT_SECRET) {
-    throw new Error('PhonePe credentials not configured');
+    throw new Error('PhonePe credentials not configured. Check PHONEPE_CLIENT_ID and PHONEPE_CLIENT_SECRET');
   }
 
   const params = new URLSearchParams({
@@ -78,6 +83,7 @@ export async function getPhonePeAccessToken(): Promise<string> {
     grant_type: 'client_credentials',
   });
 
+  console.log('OAuth URL:', OAUTH_URL);
   const response = await fetch(OAUTH_URL, {
     method: 'POST',
     headers: {
@@ -86,13 +92,16 @@ export async function getPhonePeAccessToken(): Promise<string> {
     body: params.toString(),
   });
 
+  console.log('PhonePe OAuth Response Status:', response.status);
+  
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('PhonePe OAuth Error:', errorText);
-    throw new Error('Failed to get PhonePe access token');
+    console.error('PhonePe OAuth Error Response:', response.status, errorText);
+    throw new Error(`Failed to get PhonePe access token: ${response.status} ${errorText}`);
   }
 
   const data: PhonePeTokenResponse = await response.json();
+  console.log('PhonePe OAuth Success, token expires in:', data.expires_in, 'seconds');
   
   cachedToken = {
     token: data.access_token,
@@ -135,13 +144,19 @@ export async function initiatePhonePePayment(params: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `O-Bearer ${accessToken}`,
+        'Authorization': `Bearer ${accessToken}`,
+        'X-MERCHANT-ID': PHONEPE_MERCHANT_ID || '',
       },
       body: JSON.stringify(payload),
     });
 
+    console.log('PhonePe Payment Response Status:', response.status);
     const data: PhonePePaymentResponse = await response.json();
     console.log('PhonePe Payment Response:', JSON.stringify(data, null, 2));
+
+    if (!response.ok) {
+      console.error('PhonePe API Error:', response.status, JSON.stringify(data, null, 2));
+    }
 
     if (data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
       return {

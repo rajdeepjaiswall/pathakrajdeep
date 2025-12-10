@@ -1,18 +1,20 @@
-import crypto from 'crypto';
-
 const PHONEPE_CLIENT_ID = process.env.PHONEPE_CLIENT_ID;
 const PHONEPE_CLIENT_SECRET = process.env.PHONEPE_CLIENT_SECRET;
 const PHONEPE_CLIENT_VERSION = process.env.PHONEPE_CLIENT_VERSION || '1';
 const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
 
 const IS_TEST_MODE = true;
-const BASE_URL = IS_TEST_MODE
-  ? 'https://api-preprod.phonepe.com/apis/pg-sandbox'
-  : 'https://api.phonepe.com/apis/hermes';
 
-const OAUTH_URL = IS_TEST_MODE
-  ? 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token'
-  : 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token';
+// Sandbox URLs
+const SANDBOX_BASE_URL = 'https://api-preprod.phonepe.com/apis/pg-sandbox';
+const SANDBOX_OAUTH_URL = 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token';
+
+// Production URLs
+const PROD_BASE_URL = 'https://api.phonepe.com/apis/pg';
+const PROD_OAUTH_URL = 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token';
+
+const BASE_URL = IS_TEST_MODE ? SANDBOX_BASE_URL : PROD_BASE_URL;
+const OAUTH_URL = IS_TEST_MODE ? SANDBOX_OAUTH_URL : PROD_OAUTH_URL;
 
 interface PhonePeTokenResponse {
   access_token: string;
@@ -21,53 +23,51 @@ interface PhonePeTokenResponse {
   issued_at: number;
   expires_at: number;
   session_expires_at: number;
-  token_type: string;
+  token_type: string; // Will be "O-Bearer"
 }
 
 interface PhonePePaymentResponse {
-  success: boolean;
-  code: string;
-  message: string;
-  data?: {
-    merchantId: string;
-    merchantTransactionId: string;
-    instrumentResponse?: {
-      type: string;
-      redirectInfo?: {
-        url: string;
-        method: string;
-      };
-    };
-  };
+  orderId?: string;
+  state?: string;
+  expireAt?: number;
+  redirectUrl?: string;
+  code?: string;
+  message?: string;
 }
 
 interface PhonePeStatusResponse {
-  success: boolean;
-  code: string;
-  message: string;
-  data?: {
-    merchantId: string;
-    merchantTransactionId: string;
-    transactionId: string;
-    amount: number;
-    state: string;
-    responseCode: string;
-    paymentInstrument?: {
-      type: string;
+  orderId?: string;
+  merchantOrderId?: string;
+  state?: string;
+  amount?: number;
+  expireAt?: number;
+  metaInfo?: any;
+  paymentDetails?: Array<{
+    transactionId?: string;
+    paymentMode?: string;
+    timestamp?: number;
+    amount?: number;
+    state?: string;
+    rail?: {
+      type?: string;
       utr?: string;
-      cardNetwork?: string;
+      rrn?: string;
     };
-  };
+  }>;
+  code?: string;
+  message?: string;
 }
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 export async function getPhonePeAccessToken(): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt - 60000) {
+    console.log('Using cached PhonePe access token');
     return cachedToken.token;
   }
 
   console.log('Generating new PhonePe access token...');
+  console.log('OAuth URL:', OAUTH_URL);
   console.log('Client ID configured:', !!PHONEPE_CLIENT_ID);
   console.log('Client Secret configured:', !!PHONEPE_CLIENT_SECRET);
   console.log('Merchant ID configured:', !!PHONEPE_MERCHANT_ID);
@@ -83,7 +83,7 @@ export async function getPhonePeAccessToken(): Promise<string> {
     grant_type: 'client_credentials',
   });
 
-  console.log('OAuth URL:', OAUTH_URL);
+  console.log('Sending OAuth request to PhonePe...');
   const response = await fetch(OAUTH_URL, {
     method: 'POST',
     headers: {
@@ -101,7 +101,7 @@ export async function getPhonePeAccessToken(): Promise<string> {
   }
 
   const data: PhonePeTokenResponse = await response.json();
-  console.log('PhonePe OAuth Success, token expires in:', data.expires_in, 'seconds');
+  console.log('PhonePe OAuth Success, token type:', data.token_type, 'expires_at:', data.expires_at);
   
   cachedToken = {
     token: data.access_token,
@@ -119,46 +119,56 @@ export async function initiatePhonePePayment(params: {
   phone?: string;
   redirectUrl: string;
   callbackUrl: string;
-}): Promise<{ success: boolean; redirectUrl?: string; error?: string }> {
+}): Promise<{ success: boolean; redirectUrl?: string; orderId?: string; error?: string }> {
   try {
     const accessToken = await getPhonePeAccessToken();
 
+    // According to PhonePe documentation, the payload structure is:
+    // - merchantOrderId: unique order ID
+    // - amount: in paisa (₹10 = 1000)
+    // - paymentFlow.type: "PG_CHECKOUT"
+    // - paymentFlow.merchantUrls.redirectUrl: where to redirect after payment
     const payload = {
-      merchantId: PHONEPE_MERCHANT_ID,
-      merchantTransactionId: params.merchantTransactionId,
-      merchantOrderId: `ORD${params.orderId}`,
-      merchantUserId: `MUID${params.userId}`,
-      amount: Math.round(params.amount * 100),
-      redirectUrl: params.redirectUrl,
-      redirectMode: 'POST',
-      callbackUrl: params.callbackUrl,
-      mobileNumber: params.phone || '9999999999',
-      paymentInstrument: {
-        type: 'PAY_PAGE',
+      merchantOrderId: params.merchantTransactionId,
+      amount: Math.round(params.amount * 100), // Convert to paisa
+      expireAfter: 1200, // 20 minutes
+      paymentFlow: {
+        type: 'PG_CHECKOUT',
+        message: `Payment for Order #${params.orderId}`,
+        merchantUrls: {
+          redirectUrl: params.redirectUrl,
+        },
+      },
+      metaInfo: {
+        udf1: `order_${params.orderId}`,
+        udf2: `user_${params.userId}`,
       },
     };
 
     console.log('PhonePe Payment Payload:', JSON.stringify(payload, null, 2));
+    console.log('Payment API URL:', `${BASE_URL}/checkout/v2/pay`);
 
+    // According to docs, Authorization header uses "O-Bearer" token type
     const response = await fetch(`${BASE_URL}/checkout/v2/pay`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-        'X-MERCHANT-ID': PHONEPE_MERCHANT_ID || '',
+        'Authorization': `O-Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
     });
 
     console.log('PhonePe Payment Response Status:', response.status);
-    let data: PhonePePaymentResponse;
     
+    const responseText = await response.text();
+    console.log('PhonePe Payment Response Raw:', responseText);
+    
+    let data: PhonePePaymentResponse;
     try {
-      data = await response.json();
-      console.log('PhonePe Payment Response:', JSON.stringify(data, null, 2));
+      data = JSON.parse(responseText);
+      console.log('PhonePe Payment Response Parsed:', JSON.stringify(data, null, 2));
     } catch (e) {
-      const responseText = await response.text();
-      console.error('Failed to parse PhonePe response:', responseText);
+      console.error('Failed to parse PhonePe response as JSON');
       return {
         success: false,
         error: `Invalid response from PhonePe: ${responseText}`,
@@ -166,23 +176,28 @@ export async function initiatePhonePePayment(params: {
     }
 
     if (!response.ok) {
-      console.error('PhonePe API Error:', response.status, JSON.stringify(data, null, 2));
+      console.error('PhonePe API Error:', response.status, data);
       return {
         success: false,
         error: data.message || `PhonePe API error: ${response.status}`,
       };
     }
 
-    if (data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
+    // According to docs, successful response has:
+    // - orderId: PhonePe's internal order ID
+    // - state: "PENDING"
+    // - redirectUrl: URL to redirect user for payment
+    if (data.redirectUrl) {
       return {
         success: true,
-        redirectUrl: data.data.instrumentResponse.redirectInfo.url,
+        redirectUrl: data.redirectUrl,
+        orderId: data.orderId,
       };
     }
 
     return {
       success: false,
-      error: data.message || 'Payment initiation failed',
+      error: data.message || 'Payment initiation failed - no redirect URL received',
     };
   } catch (error) {
     console.error('PhonePe Payment Error:', error);
@@ -193,54 +208,72 @@ export async function initiatePhonePePayment(params: {
   }
 }
 
-export async function checkPhonePePaymentStatus(merchantTransactionId: string): Promise<{
+export async function checkPhonePePaymentStatus(merchantOrderId: string): Promise<{
   success: boolean;
   status?: 'SUCCESS' | 'PENDING' | 'FAILED';
   transactionId?: string;
-  paymentInstrumentType?: string;
+  paymentMode?: string;
   data?: any;
   error?: string;
 }> {
   try {
     const accessToken = await getPhonePeAccessToken();
 
-    const response = await fetch(
-      `${BASE_URL}/pg/v1/status/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-          'X-MERCHANT-ID': PHONEPE_MERCHANT_ID || '',
-        },
-      }
-    );
+    // According to docs: GET /checkout/v2/order/{merchantOrderId}/status
+    const statusUrl = `${BASE_URL}/checkout/v2/order/${merchantOrderId}/status`;
+    console.log('Checking payment status:', statusUrl);
 
-    const data: PhonePeStatusResponse = await response.json();
-    console.log('PhonePe Status Response:', JSON.stringify(data, null, 2));
+    const response = await fetch(statusUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `O-Bearer ${accessToken}`,
+      },
+    });
 
-    if (data.success && data.data) {
-      let status: 'SUCCESS' | 'PENDING' | 'FAILED' = 'PENDING';
-      
-      if (data.code === 'PAYMENT_SUCCESS' || data.data.state === 'COMPLETED') {
-        status = 'SUCCESS';
-      } else if (data.code === 'PAYMENT_ERROR' || data.code === 'PAYMENT_DECLINED' || data.data.state === 'FAILED') {
-        status = 'FAILED';
-      }
-
+    console.log('PhonePe Status Response Status:', response.status);
+    
+    const responseText = await response.text();
+    console.log('PhonePe Status Response Raw:', responseText);
+    
+    let data: PhonePeStatusResponse;
+    try {
+      data = JSON.parse(responseText);
+      console.log('PhonePe Status Response Parsed:', JSON.stringify(data, null, 2));
+    } catch (e) {
+      console.error('Failed to parse PhonePe status response as JSON');
       return {
-        success: true,
-        status,
-        transactionId: data.data.transactionId,
-        paymentInstrumentType: data.data.paymentInstrument?.type,
-        data: data.data,
+        success: false,
+        error: `Invalid response from PhonePe: ${responseText}`,
       };
     }
 
+    if (!response.ok) {
+      console.error('PhonePe Status API Error:', response.status, data);
+      return {
+        success: false,
+        error: data.message || `PhonePe API error: ${response.status}`,
+      };
+    }
+
+    // Parse state from response
+    let status: 'SUCCESS' | 'PENDING' | 'FAILED' = 'PENDING';
+    
+    if (data.state === 'COMPLETED') {
+      status = 'SUCCESS';
+    } else if (data.state === 'FAILED' || data.state === 'CANCELLED') {
+      status = 'FAILED';
+    }
+
+    // Get transaction details if available
+    const paymentDetail = data.paymentDetails?.[0];
+    
     return {
-      success: false,
-      status: 'PENDING',
-      error: data.message || 'Status check failed',
+      success: true,
+      status,
+      transactionId: paymentDetail?.transactionId,
+      paymentMode: paymentDetail?.paymentMode,
+      data: data,
     };
   } catch (error) {
     console.error('PhonePe Status Check Error:', error);

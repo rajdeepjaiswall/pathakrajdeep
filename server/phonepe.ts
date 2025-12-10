@@ -286,7 +286,7 @@ export async function checkPhonePePaymentStatus(merchantOrderId: string): Promis
 
 // Webhook credentials - set these in your environment
 const PHONEPE_WEBHOOK_USERNAME = process.env.PHONEPE_WEBHOOK_USERNAME || 'pathakbhandar';
-const PHONEPE_WEBHOOK_PASSWORD = process.env.PHONEPE_WEBHOOK_PASSWORD || 'webhook_secret_123';
+const PHONEPE_WEBHOOK_PASSWORD = process.env.PHONEPE_WEBHOOK_PASSWORD || 'webhooksecret123';
 
 // PhonePe webhook payload interfaces
 export interface PhonePeWebhookPayload {

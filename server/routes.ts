@@ -1808,13 +1808,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate unique merchant transaction ID
       const merchantTransactionId = `PB${orderId}_${Date.now()}`;
       
-      // Get callback URLs
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      // Get callback URLs - use production domain for PhonePe redirects
+      const productionDomain = 'https://pathakbhandar.in';
+      const devDomain = process.env.REPLIT_DEV_DOMAIN 
         ? `https://${process.env.REPLIT_DEV_DOMAIN}`
         : 'http://localhost:5000';
       
-      const redirectUrl = `${baseUrl}/phonepe-callback`;
-      const callbackUrl = `${baseUrl}/api/payments/phonepe/callback`;
+      // Use production domain for redirects to avoid Replit wake-up issues
+      const baseUrl = process.env.NODE_ENV === 'production' ? productionDomain : (process.env.REPLIT_DOMAINS?.includes('pathakbhandar.in') ? productionDomain : devDomain);
+      
+      const redirectUrl = `${productionDomain}/phonepe-callback`;
+      const callbackUrl = `${productionDomain}/api/payments/phonepe/webhook`;
 
       // Create transaction record
       await storage.createPhonePeTransaction({

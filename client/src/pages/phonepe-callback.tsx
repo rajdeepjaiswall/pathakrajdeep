@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { playSuccessChime } from '@/lib/sounds';
+import { useCart } from '@/hooks/use-cart';
 
 export default function PhonePeCallback() {
   const [, setLocation] = useLocation();
   const [merchantTransactionId, setMerchantTransactionId] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
+  const { clearCart } = useCart();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -57,9 +60,13 @@ export default function PhonePeCallback() {
     }
     if (statusData?.status === 'success') {
       playSuccessChime();
+      clearCart();
       sessionStorage.removeItem('phonepe_transaction_id');
+      sessionStorage.removeItem('pending_order_id');
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
     }
-  }, [statusData]);
+  }, [statusData, clearCart, queryClient]);
 
   const renderContent = () => {
     if (!merchantTransactionId) {

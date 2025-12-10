@@ -360,7 +360,7 @@ export default function Checkout() {
     onSuccess: (data) => {
       if (data.success && data.redirectUrl) {
         sessionStorage.setItem('phonepe_transaction_id', data.merchantTransactionId);
-        clearCart();
+        sessionStorage.setItem('pending_order_id', createdOrderId?.toString() || '');
         window.location.href = data.redirectUrl;
       } else {
         toast({

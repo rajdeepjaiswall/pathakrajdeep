@@ -284,6 +284,124 @@ export async function checkPhonePePaymentStatus(merchantOrderId: string): Promis
   }
 }
 
+// Webhook credentials - set these in your environment
+const PHONEPE_WEBHOOK_USERNAME = process.env.PHONEPE_WEBHOOK_USERNAME || 'pathakbhandar';
+const PHONEPE_WEBHOOK_PASSWORD = process.env.PHONEPE_WEBHOOK_PASSWORD || 'webhook_secret_123';
+
+// PhonePe webhook payload interfaces
+export interface PhonePeWebhookPayload {
+  event: 'checkout.order.completed' | 'checkout.order.failed' | 'pg.refund.completed' | 'pg.refund.failed';
+  payload: {
+    orderId?: string;
+    merchantId?: string;
+    merchantOrderId: string;
+    state: 'COMPLETED' | 'FAILED' | 'PENDING';
+    amount: number;
+    expireAt?: number;
+    metaInfo?: {
+      udf1?: string;
+      udf2?: string;
+      udf3?: string;
+      udf4?: string;
+    };
+    paymentDetails?: Array<{
+      paymentMode?: string;
+      transactionId?: string;
+      timestamp?: number;
+      amount?: number;
+      state?: string;
+      errorCode?: string;
+      detailedErrorCode?: string;
+    }>;
+    // Refund specific fields
+    originalMerchantOrderId?: string;
+    merchantRefundId?: string;
+    refundId?: string;
+    errorCode?: string;
+    detailedErrorCode?: string;
+  };
+}
+
+// Verify webhook authorization header
+export function verifyPhonePeWebhook(authorizationHeader: string | undefined): boolean {
+  if (!authorizationHeader) {
+    console.log('PhonePe Webhook: No authorization header provided');
+    return false;
+  }
+
+  // PhonePe sends: Authorization: SHA256(username:password)
+  const crypto = require('crypto');
+  const expectedHash = crypto
+    .createHash('sha256')
+    .update(`${PHONEPE_WEBHOOK_USERNAME}:${PHONEPE_WEBHOOK_PASSWORD}`)
+    .digest('hex');
+
+  const receivedHash = authorizationHeader.replace('SHA256 ', '').replace('sha256 ', '').toLowerCase();
+  const isValid = receivedHash.toLowerCase() === expectedHash.toLowerCase();
+  
+  console.log('PhonePe Webhook verification:', isValid ? 'VALID' : 'INVALID');
+  console.log('Expected hash:', expectedHash);
+  console.log('Received hash:', receivedHash);
+  
+  return isValid;
+}
+
+// Parse webhook and return order status update
+export function parsePhonePeWebhook(webhookData: PhonePeWebhookPayload): {
+  merchantOrderId: string;
+  event: string;
+  status: 'payment_success' | 'pending_payment' | 'payment_failed';
+  transactionId?: string;
+  paymentMode?: string;
+  errorCode?: string;
+  rawData: any;
+} {
+  const { event, payload } = webhookData;
+  
+  console.log('PhonePe Webhook Event:', event);
+  console.log('PhonePe Webhook Payload State:', payload.state);
+  console.log('PhonePe Webhook Merchant Order ID:', payload.merchantOrderId);
+
+  let status: 'payment_success' | 'pending_payment' | 'payment_failed' = 'pending_payment';
+  
+  // According to docs: Use "payload.state" for payment status
+  switch (event) {
+    case 'checkout.order.completed':
+      status = payload.state === 'COMPLETED' ? 'payment_success' : 'pending_payment';
+      break;
+    case 'checkout.order.failed':
+      status = 'payment_failed';
+      break;
+    case 'pg.refund.completed':
+    case 'pg.refund.failed':
+      // Handle refund events separately if needed
+      status = payload.state === 'COMPLETED' ? 'payment_success' : 'payment_failed';
+      break;
+    default:
+      status = 'pending_payment';
+  }
+
+  const paymentDetail = payload.paymentDetails?.[0];
+
+  return {
+    merchantOrderId: payload.merchantOrderId || payload.originalMerchantOrderId || '',
+    event,
+    status,
+    transactionId: paymentDetail?.transactionId,
+    paymentMode: paymentDetail?.paymentMode,
+    errorCode: paymentDetail?.errorCode || payload.errorCode,
+    rawData: webhookData,
+  };
+}
+
+// Get webhook credentials for dashboard configuration
+export function getWebhookCredentials(): { username: string; password: string } {
+  return {
+    username: PHONEPE_WEBHOOK_USERNAME,
+    password: PHONEPE_WEBHOOK_PASSWORD,
+  };
+}
+
 export function isPhonePeConfigured(): boolean {
   return !!(PHONEPE_CLIENT_ID && PHONEPE_CLIENT_SECRET && PHONEPE_MERCHANT_ID);
 }

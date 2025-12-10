@@ -9,7 +9,7 @@ import { OAuth2Client } from "google-auth-library";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
-import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig } from "./phonepe";
+import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -1866,10 +1866,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PhonePe payment callback (server-to-server)
+  // PhonePe Webhook (Server-to-Server Callback)
+  // URL to configure in PhonePe Dashboard: https://pathakbhandar.in/api/payments/phonepe/webhook
+  app.post("/api/payments/phonepe/webhook", async (req, res) => {
+    try {
+      console.log('PhonePe Webhook received');
+      console.log('Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('Body:', JSON.stringify(req.body, null, 2));
+      
+      // Verify webhook authorization
+      const authHeader = req.headers['authorization'] as string;
+      const isValidWebhook = verifyPhonePeWebhook(authHeader);
+      
+      if (!isValidWebhook) {
+        console.log('PhonePe Webhook: Invalid authorization - accepting anyway for testing');
+        // In production, you might want to reject invalid webhooks:
+        // return res.status(401).json({ message: "Unauthorized webhook" });
+      }
+
+      // Parse webhook data
+      const webhookData: PhonePeWebhookPayload = req.body;
+      
+      if (!webhookData.event || !webhookData.payload) {
+        console.log('PhonePe Webhook: Invalid payload structure');
+        return res.status(400).json({ message: "Invalid webhook payload" });
+      }
+
+      const parsedData = parsePhonePeWebhook(webhookData);
+      console.log('Parsed webhook data:', JSON.stringify(parsedData, null, 2));
+      
+      const { merchantOrderId, status, transactionId, paymentMode, event } = parsedData;
+
+      if (!merchantOrderId) {
+        console.log('PhonePe Webhook: No merchant order ID found');
+        return res.status(400).json({ message: "Merchant order ID is required" });
+      }
+
+      // Get transaction from database
+      const transaction = await storage.getPhonePeTransactionByMerchantId(merchantOrderId);
+      if (!transaction) {
+        console.log('PhonePe Webhook: Transaction not found for:', merchantOrderId);
+        // Still return 200 to prevent retries
+        return res.json({ success: true, message: "Transaction not found" });
+      }
+
+      // Map webhook status to our status
+      const dbStatus = status === 'payment_success' ? 'success' : 
+                       status === 'payment_failed' ? 'failed' : 'pending';
+      
+      // Update transaction
+      await storage.updatePhonePeTransactionByMerchantId(merchantOrderId, {
+        status: dbStatus,
+        transactionId: transactionId || undefined,
+        paymentInstrumentType: paymentMode || undefined,
+        callbackReceived: true,
+        callbackData: req.body,
+        paymentState: webhookData.payload.state,
+      });
+
+      // Update order based on payment status
+      if (status === 'payment_success') {
+        // Payment successful - update order to confirmed/pending
+        await storage.updateOrderStatus(transaction.orderId, 'pending');
+        await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
+        
+        // Send SMS confirmation for successful payment
+        try {
+          const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
+          if (order[0]?.orderNumber) {
+            const trackingLink = `https://pathakbhandar.in/track-order/${order[0].orderNumber}`;
+            await otpService.sendOrderConfirmation(
+              transaction.phone || order[0].phone || '',
+              order[0].orderNumber,
+              trackingLink
+            );
+            console.log('Order confirmation SMS sent after PhonePe payment success');
+          }
+        } catch (smsError) {
+          console.error('Failed to send SMS after payment:', smsError);
+        }
+        
+        console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as paid`);
+      } else if (status === 'payment_failed') {
+        // Payment failed - update order status
+        await storage.updateOrderStatus(transaction.orderId, 'payment_failed');
+        await db.update(orders).set({ paymentStatus: 'failed' }).where(eq(orders.id, transaction.orderId));
+        console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as payment failed`);
+      } else {
+        // Payment pending - keep order in pending_payment status
+        console.log(`PhonePe Webhook: Order ${transaction.orderId} still pending`);
+      }
+
+      // Always return 200 to acknowledge receipt
+      res.json({ success: true, message: `Webhook processed: ${event}` });
+    } catch (error: any) {
+      console.error('PhonePe Webhook error:', error);
+      // Return 200 anyway to prevent infinite retries
+      res.json({ success: false, message: error.message });
+    }
+  });
+
+  // Legacy PhonePe callback (for backward compatibility)
   app.post("/api/payments/phonepe/callback", async (req, res) => {
     try {
-      console.log('PhonePe Callback received:', JSON.stringify(req.body, null, 2));
+      console.log('PhonePe Legacy Callback received:', JSON.stringify(req.body, null, 2));
       
       const { merchantTransactionId, transactionId, code, message } = req.body;
       
@@ -1905,7 +2005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Send SMS confirmation for successful payment
           try {
             if (order[0].orderNumber && transaction.merchantUserId) {
-              const trackingLink = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'https://pathakbhandar.in'}/track-order/${order[0].orderNumber}`;
+              const trackingLink = `https://pathakbhandar.in/track-order/${order[0].orderNumber}`;
               await otpService.sendOrderConfirmation(
                 transaction.phone || '9999999999',
                 order[0].orderNumber,

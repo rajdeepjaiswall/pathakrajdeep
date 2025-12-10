@@ -902,13 +902,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Wishlist routes
-  app.get("/api/wishlist", async (req, res) => {
+  app.get("/api/wishlist", optionalAuth, async (req, res) => {
     try {
-      // For now, return empty array if not authenticated
-      if (!req.user) {
+      // Check session auth first for Google OAuth users
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        userId = req.user.id;
+      } else if (req.user) {
+        userId = req.user.id;
+      }
+      
+      if (!userId) {
         return res.json([]);
       }
-      const wishlistItems = await storage.getWishlistItems(req.user.id);
+      const wishlistItems = await storage.getWishlistItems(userId);
       res.json(wishlistItems);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

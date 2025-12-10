@@ -359,8 +359,9 @@ export default function Checkout() {
     },
     onSuccess: (data) => {
       if (data.success && data.redirectUrl) {
-        sessionStorage.setItem('phonepe_transaction_id', data.merchantTransactionId);
-        sessionStorage.setItem('pending_order_id', createdOrderId?.toString() || '');
+        // Use localStorage instead of sessionStorage - persists when redirecting to external payment gateway
+        localStorage.setItem('phonepe_transaction_id', data.merchantTransactionId);
+        localStorage.setItem('pending_order_id', createdOrderId?.toString() || '');
         window.location.href = data.redirectUrl;
       } else {
         toast({

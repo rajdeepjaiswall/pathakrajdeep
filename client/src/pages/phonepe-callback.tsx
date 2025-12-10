@@ -18,9 +18,17 @@ export default function PhonePeCallback() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const txnId = params.get('transactionId') || params.get('merchantTransactionId');
+    // PhonePe may use different parameter names
+    const txnId = params.get('transactionId') || 
+                  params.get('merchantTransactionId') ||
+                  params.get('txnId') ||
+                  params.get('id');
     
-    const storedTxnId = sessionStorage.getItem('phonepe_transaction_id');
+    // Use localStorage since sessionStorage is lost when going to external payment gateway
+    const storedTxnId = localStorage.getItem('phonepe_transaction_id');
+    
+    console.log('PhonePe Callback - URL params:', Object.fromEntries(params.entries()));
+    console.log('PhonePe Callback - Stored txn ID:', storedTxnId);
     
     if (txnId) {
       setMerchantTransactionId(txnId);
@@ -61,8 +69,8 @@ export default function PhonePeCallback() {
     if (statusData?.status === 'success') {
       playSuccessChime();
       clearCart();
-      sessionStorage.removeItem('phonepe_transaction_id');
-      sessionStorage.removeItem('pending_order_id');
+      localStorage.removeItem('phonepe_transaction_id');
+      localStorage.removeItem('pending_order_id');
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
     }
@@ -72,14 +80,30 @@ export default function PhonePeCallback() {
     if (!merchantTransactionId) {
       return (
         <div className="text-center py-12">
-          <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-navy mb-2">Transaction Not Found</h2>
-          <p className="text-gray-600 mb-6">
-            We couldn't find your payment transaction. Please try again.
+          <Clock className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-navy mb-2">Payment Processing</h2>
+          <p className="text-gray-600 mb-2">
+            Your payment may still be processing. Please check your order status for updates.
           </p>
-          <Button onClick={() => setLocation('/cart')} data-testid="button-go-to-cart">
-            Go to Cart
-          </Button>
+          <p className="text-sm text-gray-500 mb-6">
+            If money was deducted, your order will be confirmed automatically or refunded within 3 working days.
+          </p>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Button 
+              onClick={() => setLocation('/customer/orders')} 
+              className="bg-champagne text-navy hover:bg-champagne/90"
+              data-testid="button-check-orders"
+            >
+              Check My Orders
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setLocation('/cart')} 
+              data-testid="button-go-to-cart"
+            >
+              Go to Cart
+            </Button>
+          </div>
         </div>
       );
     }

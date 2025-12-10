@@ -186,8 +186,8 @@ export class OTPService {
     }
   }
   
-  // Helper method to send order placement SMS
-  async sendOrderConfirmation(phoneNumber: string, orderNumber: string, trackingLink: string): Promise<{ success: boolean; message: string }> {
+  // Helper method to send order placement SMS with customized message based on payment method
+  async sendOrderConfirmation(phoneNumber: string, orderNumber: string, trackingLink: string, paymentMethod?: string): Promise<{ success: boolean; message: string }> {
     try {
       if (!fast2smsConfig.apiKey) {
         return {
@@ -202,7 +202,20 @@ export class OTPService {
         formattedPhone = formattedPhone.slice(2);
       }
 
-      const message = `Your Pathak Bhandar order ${orderNumber} has been placed! Our executive will confirm it shortly. Track your order: https://pathakbhandar.in/customer/orders`;
+      // Create customized message based on payment method
+      let message = '';
+      const trackingUrl = 'https://pathakbhandar.in/customer/orders';
+      
+      if (paymentMethod === 'cod') {
+        // Cash on Delivery - sent instantly
+        message = `Your Pathak Bhandar order ${orderNumber} has been placed! Please keep exact change ready for our delivery partner. If you wish to pay online, use the QR code they provide. Track: ${trackingUrl}`;
+      } else if (paymentMethod === 'upi' || paymentMethod === 'qr') {
+        // UPI/QR payment - sent after order placement
+        message = `Your Pathak Bhandar order ${orderNumber} has been recorded! Help us update the payment process by providing the UTR number at: ${trackingUrl} - Navigate to your order and update payment details. Thank you!`;
+      } else {
+        // Default message for other payment methods
+        message = `Your Pathak Bhandar order ${orderNumber} has been placed! Our executive will confirm it shortly. Track your order: ${trackingUrl}`;
+      }
       
       // For custom messages, Fast2SMS requires DLT template
       // For now, we'll use a simple notification approach
@@ -223,6 +236,7 @@ export class OTPService {
       const responseData = await response.json();
 
       if (response.ok && responseData.return) {
+        console.log(`Order confirmation SMS sent for ${paymentMethod || 'default'} payment:`, orderNumber);
         return {
           success: true,
           message: 'Order confirmation sent successfully'

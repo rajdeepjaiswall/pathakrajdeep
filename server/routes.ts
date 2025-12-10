@@ -1111,17 +1111,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.createOrder(orderData);
       console.log('Order created successfully:', order.id, order.orderNumber);
       
-      // Send order confirmation SMS only for COD and QR payments, NOT for gateway payments
+      // Send order confirmation SMS only for COD and QR/UPI payments, NOT for gateway payments
       // Gateway payments will get SMS after successful payment
+      // Each payment method gets customized SMS content
       if (req.body.paymentMethod !== 'gateway' && order.deliveryAddress && order.deliveryAddress.phone) {
-        const trackingLink = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'https://pathakbhandar.in'}/track-order/${order.orderNumber}`;
+        const trackingLink = `https://pathakbhandar.in/customer/orders`;
         try {
           await otpService.sendOrderConfirmation(
             order.deliveryAddress.phone,
             order.orderNumber,
-            trackingLink
+            trackingLink,
+            req.body.paymentMethod // Pass payment method for customized message
           );
-          console.log('Order confirmation SMS sent to:', order.deliveryAddress.phone);
+          console.log('Order confirmation SMS sent to:', order.deliveryAddress.phone, 'Payment method:', req.body.paymentMethod);
         } catch (smsError) {
           console.error('Failed to send order confirmation SMS:', smsError);
           // Don't fail the order if SMS fails

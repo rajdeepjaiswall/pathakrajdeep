@@ -117,6 +117,7 @@ export async function initiatePhonePePayment(params: {
     const payload = {
       merchantId: PHONEPE_MERCHANT_ID,
       merchantTransactionId: params.merchantTransactionId,
+      merchantOrderId: `ORD${params.orderId}`,
       merchantUserId: `MUID${params.userId}`,
       amount: Math.round(params.amount * 100),
       redirectUrl: params.redirectUrl,

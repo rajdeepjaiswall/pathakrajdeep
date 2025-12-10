@@ -1105,12 +1105,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderData = insertOrderSchema.parse({
         ...req.body,
         user_id: userId,
+        // Set status to pending_payment for gateway payments, pending for others
+        status: req.body.paymentMethod === 'gateway' ? 'pending_payment' : req.body.status || 'pending'
       });
       const order = await storage.createOrder(orderData);
       console.log('Order created successfully:', order.id, order.orderNumber);
       
-      // Send order confirmation SMS if phone is verified
-      if (order.deliveryAddress && order.deliveryAddress.phone) {
+      // Send order confirmation SMS only for COD and QR payments, NOT for gateway payments
+      // Gateway payments will get SMS after successful payment
+      if (req.body.paymentMethod !== 'gateway' && order.deliveryAddress && order.deliveryAddress.phone) {
         const trackingLink = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'https://pathakbhandar.in'}/track-order/${order.orderNumber}`;
         try {
           await otpService.sendOrderConfirmation(
@@ -1889,6 +1892,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
         if (order[0]) {
           await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
+          
+          // Send SMS confirmation for successful payment
+          try {
+            if (order[0].orderNumber && transaction.merchantUserId) {
+              const trackingLink = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'https://pathakbhandar.in'}/track-order/${order[0].orderNumber}`;
+              await otpService.sendOrderConfirmation(
+                transaction.phone || '9999999999',
+                order[0].orderNumber,
+                trackingLink
+              );
+              console.log('Order confirmation SMS sent after payment');
+            }
+          } catch (smsError) {
+            console.error('Failed to send SMS after payment:', smsError);
+          }
         }
       } else if (status === 'failed') {
         await storage.updateOrderStatus(transaction.orderId, 'payment_failed');

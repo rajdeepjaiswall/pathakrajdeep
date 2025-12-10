@@ -284,6 +284,13 @@ export default function AdminOrders() {
                             {getStatusIcon(order.status)}
                             <span className="ml-1">{getStatusDisplay(order.status)}</span>
                           </Badge>
+                          {/* Red dot for pending payment */}
+                          {order.paymentStatus === 'pending' && order.paymentMethod === 'gateway' && (
+                            <div className="relative">
+                              <span className="inline-block h-3 w-3 bg-red-500 rounded-full" data-testid="payment-pending-indicator"></span>
+                              <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full animate-pulse"></span>
+                            </div>
+                          )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm text-gray-600">
                           <div>

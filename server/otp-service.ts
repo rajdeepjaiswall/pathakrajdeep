@@ -30,7 +30,7 @@ const fast2smsConfig: Fast2SMSConfig = {
   senderId: 'GETDWN',
   otpTemplateId: '148245', // SMS template ID
     whatsappTemplateId: process.env.FAST2SMS_WHATSAPP_TEMPLATE_ID || '1709460170014791', // WhatsApp template ID
-    whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID || 'GETDWN' // WhatsApp sender ID
+    whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID || '15558471512' // WhatsApp sender ID phone number
 };
 
 export class OTPService {

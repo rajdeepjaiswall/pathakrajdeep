@@ -174,12 +174,22 @@ export default function Checkout() {
   });
 
   const sendOTPMutation = useMutation({
-    mutationFn: async ({phoneNumber, customerName}: {phoneNumber: string, customerName: string}) => {
+    mutationFn: async ({
+      phoneNumber,
+      customerName,
+      type = 'sms',
+      purpose = 'verification'
+    }: {
+      phoneNumber: string;
+      customerName: string;
+      type?: 'sms' | 'whatsapp' | 'email';
+      purpose?: string;
+    }) => {
       const response = await apiRequest('POST', '/api/otp/send-otp', {
         identifier: phoneNumber,
-        type: 'whatsapp',
+        type: type,
         customerName: customerName,
-        purpose: 'verification',
+        purpose: purpose,
       });
       return response.json();
     },
@@ -391,7 +401,7 @@ export default function Checkout() {
     const address = addresses.find((a) => a.id === verifyingAddressId);
     if (address) {
       sendOTPMutation.mutate({
-        identifier: address.phone,
+        phoneNumber: address.phone,
         type: type,
         customerName: address.name || user?.username || 'Customer',
         purpose: 'verification',

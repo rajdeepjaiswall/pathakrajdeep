@@ -387,31 +387,20 @@ export default function Checkout() {
     setOtpValue('');
   };
 
-  const handleSendOTP = () => {
-    const address = addresses.find(a => a.id === verifyingAddressId);
+  const handleSendOTP = (type: 'sms' | 'whatsapp' = 'sms') => {
+    const address = addresses.find((a) => a.id === verifyingAddressId);
     if (address) {
       sendOTPMutation.mutate({
-        phoneNumber: address.phone,
-        customerName: address.name || user?.username || 'Customer'
+        identifier: address.phone,
+        type: type,
+        customerName: address.name || user?.username || 'Customer',
+        purpose: 'verification',
       });
-    }
-  };
-
-  const handleVerifyOTP = () => {
-    const address = addresses.find(a => a.id === verifyingAddressId);
-    if (address && otpValue.length === 6) {
-      verifyOTPMutation.mutate({ phoneNumber: address.phone, otp: otpValue });
     }
   };
 
   const handleResendOTP = () => {
-    const address = addresses.find(a => a.id === verifyingAddressId);
-    if (address && countdown === 0) {
-      sendOTPMutation.mutate({
-        phoneNumber: address.phone,
-        customerName: address.name || user?.username || 'Customer'
-      });
-    }
+    handleSendOTP('sms');
   };
 
   const handleContinueToPayment = () => {
@@ -1142,73 +1131,79 @@ export default function Checkout() {
       <Dialog open={isVerifyingPhone} onOpenChange={setIsVerifyingPhone}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-green-600" />
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+              <Smartphone className="h-6 w-6 text-green-600" />
               Verify Phone Number
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-4">
+          
+          <div className="py-8 text-center space-y-8">
             {!otpSent ? (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600 text-center">
-                  We'll send a verification code to{' '}
-                  <span className="font-semibold">
-                    {addresses.find(a => a.id === verifyingAddressId)?.phone}
-                  </span>
+              <div className="space-y-6">
+                <p className="text-lg text-gray-600">
+                  We'll send a verification code to <span className="font-bold text-navy">{addresses.find(a => a.id === verifyingAddressId)?.phone}</span>
                 </p>
-                <Button
-                  onClick={handleSendOTP}
-                  disabled={sendOTPMutation.isPending}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
-                  data-testid="button-send-otp"
-                >
-                  {sendOTPMutation.isPending ? 'Sending...' : 'Send OTP'}
-                </Button>
+                <div className="grid grid-cols-1 gap-4">
+                  <Button 
+                    onClick={() => handleSendOTP('sms')}
+                    disabled={sendOTPMutation.isPending || countdown > 0}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-8 text-xl font-bold rounded-xl shadow-lg transition-all hover:scale-[1.02]"
+                    data-testid="button-verify-sms"
+                  >
+                    <Smartphone className="h-6 w-6 mr-3" />
+                    Verify via SMS
+                  </Button>
+                  <Button 
+                    onClick={() => handleSendOTP('whatsapp')}
+                    disabled={sendOTPMutation.isPending || countdown > 0}
+                    className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-8 text-xl font-bold rounded-xl shadow-lg transition-all hover:scale-[1.02]"
+                    data-testid="button-verify-whatsapp"
+                  >
+                    <MessageCircle className="h-6 w-6 mr-3" />
+                    Verify via WhatsApp
+                  </Button>
+                </div>
+                {countdown > 0 && (
+                  <p className="text-sm font-medium text-orange-600 bg-orange-50 py-2 rounded-full">
+                    Resend available in {countdown} seconds
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">
-                    Enter the 6-digit code sent to
-                  </p>
-                  <p className="font-semibold">
-                    {addresses.find(a => a.id === verifyingAddressId)?.phone}
-                  </p>
-                </div>
-
-                <div>
+                <p className="text-gray-600">
+                  Enter the 6-digit code sent to your phone
+                </p>
+                <div className="flex justify-center scale-110 py-4">
                   <OTPInput
                     value={otpValue}
                     onChange={setOtpValue}
+                    data-testid="input-otp"
                     disabled={verifyOTPMutation.isPending}
                   />
                 </div>
-
-                <Button
-                  onClick={handleVerifyOTP}
-                  disabled={otpValue.length !== 6 || verifyOTPMutation.isPending}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
-                  data-testid="button-verify-otp"
-                >
-                  {verifyOTPMutation.isPending ? 'Verifying...' : 'Verify OTP'}
-                </Button>
-
-                <div className="text-center">
-                  {countdown > 0 ? (
-                    <p className="text-sm text-gray-500">
-                      Resend code in {countdown}s
-                    </p>
-                  ) : (
-                    <Button
-                      variant="link"
-                      onClick={handleResendOTP}
-                      disabled={sendOTPMutation.isPending}
-                      className="text-sm text-blue-600"
-                      data-testid="button-resend-otp"
-                    >
-                      {sendOTPMutation.isPending ? 'Sending...' : 'Resend OTP'}
-                    </Button>
-                  )}
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => {
+                      const address = addresses.find(a => a.id === verifyingAddressId);
+                      if (address && otpValue.length === 6) {
+                        verifyOTPMutation.mutate({ phoneNumber: address.phone, otp: otpValue });
+                      }
+                    }}
+                    className="w-full bg-navy text-white hover:bg-navy/90 py-6 text-lg font-bold rounded-xl"
+                    disabled={otpValue.length !== 6 || verifyOTPMutation.isPending}
+                    data-testid="button-confirm-otp"
+                  >
+                    {verifyOTPMutation.isPending ? 'Verifying...' : 'Verify & Continue'}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="text-gray-500 hover:text-navy"
+                    onClick={() => setOtpSent(false)}
+                    disabled={verifyOTPMutation.isPending}
+                  >
+                    Try another method
+                  </Button>
                 </div>
               </div>
             )}

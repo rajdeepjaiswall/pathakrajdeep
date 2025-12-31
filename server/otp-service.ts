@@ -29,8 +29,8 @@ const fast2smsConfig: Fast2SMSConfig = {
   baseUrl: 'https://www.fast2sms.com/dev/bulkV2',
   senderId: 'GETDWN',
   otpTemplateId: '148245', // SMS template ID
-  whatsappTemplateId: process.env.FAST2SMS_WHATSAPP_TEMPLATE_ID, // WhatsApp template ID
-  whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID // WhatsApp sender ID
+    whatsappTemplateId: process.env.FAST2SMS_WHATSAPP_TEMPLATE_ID || '1709460170014791', // WhatsApp template ID
+    whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID || 'GETDWN' // WhatsApp sender ID
 };
 
 export class OTPService {
@@ -144,7 +144,8 @@ export class OTPService {
           formattedPhone = formattedPhone.slice(2);
         }
 
-        // WhatsApp template variables (customize based on your template)
+        // WhatsApp template variables (pathak_bhandar_number_verification)
+        // Variable 1: {{name}}, Variable 2: {{offer_code}}
         const variablesValues = `${customerName}|${otpCode}|`;
         
         // Build request for WhatsApp

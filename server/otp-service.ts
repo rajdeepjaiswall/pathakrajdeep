@@ -20,13 +20,17 @@ interface Fast2SMSConfig {
   baseUrl: string;
   senderId: string;
   otpTemplateId: string;
+  whatsappTemplateId?: string;
+  whatsappSenderId?: string;
 }
 
 const fast2smsConfig: Fast2SMSConfig = {
   apiKey: process.env.FAST2SMS_API_KEY || '',
   baseUrl: 'https://www.fast2sms.com/dev/bulkV2',
   senderId: 'GETDWN',
-  otpTemplateId: '148245'
+  otpTemplateId: '148245', // SMS template ID
+  whatsappTemplateId: process.env.FAST2SMS_WHATSAPP_TEMPLATE_ID, // WhatsApp template ID
+  whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID // WhatsApp sender ID
 };
 
 export class OTPService {
@@ -119,9 +123,73 @@ export class OTPService {
     }
   }
 
-  // Send SMS OTP via Fast2SMS using DLT template (for WhatsApp tab - legacy)
+  // Send WhatsApp OTP via Fast2SMS (uses WhatsApp template if configured)
   async sendWhatsAppOTP(phoneNumber: string, customerName: string = 'Customer', purpose: string = 'verification'): Promise<{ success: boolean; message: string }> {
-    return this.sendSMSOTP(phoneNumber, customerName, purpose, 'whatsapp');
+    try {
+      if (!fast2smsConfig.apiKey) {
+        return {
+          success: false,
+          message: 'SMS API not configured. Please contact administrator.'
+        };
+      }
+
+      // If WhatsApp template is configured, use it; otherwise fall back to SMS
+      if (fast2smsConfig.whatsappTemplateId) {
+        // Use WhatsApp template
+        const otpCode = await this.createOTP(phoneNumber, 'whatsapp', purpose);
+        
+        // Format phone number
+        let formattedPhone = phoneNumber.replace(/\D/g, '');
+        if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+          formattedPhone = formattedPhone.slice(2);
+        }
+
+        // WhatsApp template variables (customize based on your template)
+        const variablesValues = `${customerName}|${otpCode}|`;
+        
+        // Build request for WhatsApp
+        const params = new URLSearchParams({
+          authorization: fast2smsConfig.apiKey,
+          route: 'dlt_whatsapp',
+          sender_id: fast2smsConfig.whatsappSenderId || 'GETDWN',
+          message: fast2smsConfig.whatsappTemplateId,
+          variables_values: variablesValues,
+          flash: '0',
+          numbers: formattedPhone
+        });
+        
+        const url = `${fast2smsConfig.baseUrl}?${params.toString()}`;
+        const response = await fetch(url, {
+          method: 'GET'
+        });
+
+        const responseData = await response.json();
+
+        if (response.ok && responseData.return) {
+          console.log('Fast2SMS WhatsApp OTP sent successfully:', responseData);
+          return {
+            success: true,
+            message: 'OTP sent successfully via WhatsApp'
+          };
+        } else {
+          console.error('Fast2SMS WhatsApp API Error:', responseData);
+          return {
+            success: false,
+            message: 'Failed to send OTP via WhatsApp. Please try again.'
+          };
+        }
+      } else {
+        // Fall back to SMS template if WhatsApp not configured
+        console.log('WhatsApp template not configured, using SMS template');
+        return this.sendSMSOTP(phoneNumber, customerName, purpose, 'whatsapp');
+      }
+    } catch (error) {
+      console.error('WhatsApp OTP Error:', error);
+      return {
+        success: false,
+        message: 'Failed to send OTP via WhatsApp. Please try again.'
+      };
+    }
   }
 
   // Send SMS OTP via Fast2SMS using DLT template

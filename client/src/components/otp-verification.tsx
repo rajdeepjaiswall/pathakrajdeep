@@ -49,6 +49,7 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
     setMessage('');
 
     try {
+      const methodText = activeTab === 'email' ? 'Email' : activeTab === 'whatsapp' ? 'WhatsApp' : 'SMS';
       const response = await fetch('/api/otp/send-otp', {
         method: 'POST',
         headers: {
@@ -64,12 +65,12 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
       const data = await response.json();
 
       if (data.success) {
-        setMessage(data.message);
+        setMessage(`OTP sent successfully via ${methodText}`);
         setMessageType('success');
         setStep('verify');
         toast({
           title: "OTP Sent Successfully",
-          description: data.message,
+          description: `Your OTP has been sent via ${methodText}. It will expire in 5 minutes.`,
         });
       } else {
         setMessage(data.message);

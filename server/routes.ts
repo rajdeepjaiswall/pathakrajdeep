@@ -1729,7 +1729,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         provider: gateway.provider, 
         displayName: gateway.displayName,
-        merchantId: gateway.merchantId,
         isTestMode: gateway.isTestMode 
       });
     } catch (error: any) {

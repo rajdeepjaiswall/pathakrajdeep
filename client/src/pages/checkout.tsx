@@ -768,11 +768,17 @@ export default function Checkout() {
               >
                 <RadioGroupItem value="gateway" />
                 <div className="flex items-center gap-2 flex-1">
-                  <Wallet className="h-5 w-5 text-purple-600" />
+                  {gatewayConfig.provider === 'phonepe' ? (
+                    <Smartphone className="h-5 w-5 text-purple-600" />
+                  ) : (
+                    <Wallet className="h-5 w-5 text-purple-600" />
+                  )}
                   <div>
-                    <span className="font-semibold text-purple-800">Pay via {gatewayConfig.displayName}</span>
+                    <span className="font-semibold text-purple-800">
+                      Pay via {gatewayConfig.displayName}
+                    </span>
                     <p className="text-sm text-gray-600">
-                      Cards, UPI, Net Banking & more
+                      {gatewayConfig.provider === 'phonepe' ? 'UPI, Wallet & more' : 'Cards, UPI, Net Banking & more'}
                       {gatewayConfig.isTestMode && <span className="ml-1 text-orange-500">(Test Mode)</span>}
                     </p>
                   </div>

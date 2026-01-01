@@ -76,25 +76,8 @@ export default function AdminProducts() {
     mutationFn: async (data: z.infer<typeof productFormSchema>) => {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
       const method = editingProduct ? 'PUT' : 'POST';
-      
-      // Filter out videos (too large) but keep images
-      // Only exclude very large base64 images (over 500KB) to avoid 413 errors
-      const filteredImages = (data.images || []).filter(img => {
-        if (!img) return false;
-        // Allow URL-based images (Unsplash, etc.)
-        if (!img.startsWith('data:')) return true;
-        // For base64, check size - limit to 500KB
-        const base64Data = img.split(',')[1] || '';
-        const sizeInBytes = Math.ceil(base64Data.length * 0.75);
-        return sizeInBytes < 500 * 1024;
-      });
-      
-      const submitData = {
-        ...data,
-        images: filteredImages,
-        videos: [], // Videos are too large, exclude them
-      };
-      
+      // Don't send images/videos as base64 to avoid 413 payload too large errors
+      const { images, videos, ...submitData } = data;
       const response = await apiRequest(method, url, submitData);
       return response.json();
     },
@@ -375,57 +358,23 @@ export default function AdminProducts() {
                                         accept="image/*"
                                         className="hidden"
                                         id={`image-${index}`}
-                                        onChange={async (e) => {
+                                        onChange={(e) => {
                                           const file = e.target.files?.[0];
                                           if (file) {
-                                            // Compress image before converting to base64
-                                            const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.7): Promise<string> => {
-                                              return new Promise((resolve, reject) => {
-                                                const reader = new FileReader();
-                                                reader.onload = (e) => {
-                                                  const img = new Image();
-                                                  img.onload = () => {
-                                                    const canvas = document.createElement('canvas');
-                                                    let { width, height } = img;
-                                                    
-                                                    if (width > maxWidth) {
-                                                      height = (height * maxWidth) / width;
-                                                      width = maxWidth;
-                                                    }
-                                                    
-                                                    canvas.width = width;
-                                                    canvas.height = height;
-                                                    const ctx = canvas.getContext('2d');
-                                                    ctx?.drawImage(img, 0, 0, width, height);
-                                                    
-                                                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                                                    resolve(compressedDataUrl);
-                                                  };
-                                                  img.onerror = reject;
-                                                  img.src = e.target?.result as string;
-                                                };
-                                                reader.onerror = reject;
-                                                reader.readAsDataURL(file);
-                                              });
-                                            };
-                                            
-                                            try {
-                                              const compressedImage = await compressImage(file);
+                                            // Convert file to base64 data URL for persistence
+                                            const reader = new FileReader();
+                                            reader.onload = (event) => {
+                                              const imageUrl = event.target?.result as string;
                                               const newImages = [...field.value];
-                                              newImages[index] = compressedImage;
+                                              newImages[index] = imageUrl;
                                               field.onChange(newImages);
                                               
                                               toast({
                                                 title: "Photo uploaded",
-                                                description: `Photo ${index + 1} has been compressed and added`,
+                                                description: `Photo ${index + 1} has been added successfully`,
                                               });
-                                            } catch (error) {
-                                              toast({
-                                                title: "Error",
-                                                description: "Failed to process image",
-                                                variant: "destructive",
-                                              });
-                                            }
+                                            };
+                                            reader.readAsDataURL(file);
                                           }
                                         }}
                                       />

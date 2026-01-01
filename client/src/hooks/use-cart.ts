@@ -105,17 +105,6 @@ export function CartProvider({ children }: CartProviderProps) {
   });
 
   const addToCart = (productId: number, quantity: number) => {
-    if (!isAuthenticated) {
-      toast({
-        title: 'Login required',
-        description: 'Please login to add items to your cart. Redirecting...',
-        variant: 'destructive',
-      });
-      setTimeout(() => {
-        window.location.assign('/auth');
-      }, 1500);
-      return;
-    }
     addToCartMutation.mutate({ productId, quantity });
   };
 

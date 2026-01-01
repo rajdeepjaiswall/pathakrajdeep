@@ -49,7 +49,6 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
     setMessage('');
 
     try {
-      const methodText = activeTab === 'email' ? 'Email' : activeTab === 'whatsapp' ? 'WhatsApp' : 'SMS';
       const response = await fetch('/api/otp/send', {
         method: 'POST',
         headers: {
@@ -58,7 +57,8 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
         body: JSON.stringify({
           phone: identifier.trim(),
           type: activeTab,
-          name: 'Customer'
+          name: 'Customer',
+          identifier: identifier.trim() // Support both naming conventions
         }),
       });
 
@@ -148,7 +148,8 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
         body: JSON.stringify({
           phone: identifier.trim(),
           type: activeTab,
-          name: 'Customer'
+          name: 'Customer',
+          identifier: identifier.trim() // Support both naming conventions
         }),
       });
 

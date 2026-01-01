@@ -60,7 +60,7 @@ export class OTPService {
       purpose,
       attempts: 0,
       isVerified: false,
-      expiresAt
+      expiresAt,
     };
 
     await db.insert(otps).values(otpData);
@@ -212,7 +212,7 @@ export class OTPService {
       }
       
       // DLT template variables: Name|OTP|
-      const variablesValues = `\${customerName}|\${otpCode}|`;
+      const variablesValues = `${customerName}|${otpCode}|`;
       
       // Build query parameters for DLT template
       const params = new URLSearchParams({
@@ -226,7 +226,9 @@ export class OTPService {
       });
       
       // Fast2SMS DLT API request (GET)
-      const url = `\${fast2smsConfig.baseUrl}?\${params.toString()}`;
+      const url = `${fast2smsConfig.baseUrl}?${params.toString()}`;
+      console.log(`Sending SMS OTP via Fast2SMS: URL=${url.replace(fast2smsConfig.apiKey, 'HIDDEN')}`);
+      
       const response = await fetch(url, {
         method: 'GET'
       });

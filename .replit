@@ -68,7 +68,7 @@ localPort = 46591
 externalPort = 3002
 
 [agent]
-integrations = ["javascript_websocket==1.0.0"]
+integrations = ["javascript_websocket:1.0.0"]
 
 [userenv]
 

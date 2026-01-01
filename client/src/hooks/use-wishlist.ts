@@ -44,14 +44,14 @@ export function useWishlist() {
       });
     },
     onError: (error: Error) => {
-      if (error.message.includes('login')) {
+      if (error.message.includes('login') || error.message.includes('Unauthorized')) {
         toast({
           title: 'Login Required',
-          description: 'Please login to add items to your wishlist. Redirecting...',
+          description: 'Please login to add items to your wishlist.',
           variant: 'destructive',
         });
         setTimeout(() => {
-          window.location.assign('/auth');
+          window.location.href = '/login';
         }, 1500);
       } else {
         toast({
@@ -76,14 +76,14 @@ export function useWishlist() {
       });
     },
     onError: (error: Error) => {
-      if (error.message.includes('login')) {
+      if (error.message.includes('login') || error.message.includes('Unauthorized')) {
         toast({
           title: 'Login Required',
-          description: 'Please login to manage your wishlist. Redirecting...',
+          description: 'Please login to manage your wishlist.',
           variant: 'destructive',
         });
         setTimeout(() => {
-          window.location.assign('/auth');
+          window.location.href = '/login';
         }, 1500);
       } else {
         toast({

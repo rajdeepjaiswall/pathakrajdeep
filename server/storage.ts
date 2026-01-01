@@ -1,12 +1,14 @@
 import { 
   users, categories, products, addresses, orders, orderItems, cartItems, wishlistItems, coupons, reviews, banners, otps,
-  manualPaymentConfig, manualPaymentDetails, paymentGatewayConfig,
+  manualPaymentConfig, manualPaymentDetails, paymentGatewayConfig, pageContent, popupBanners, phonePeTransactions,
   type User, type InsertUser, type Category, type InsertCategory, type Product, type InsertProduct,
   type Address, type InsertAddress, type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
   type CartItem, type InsertCartItem, type WishlistItem, type InsertWishlistItem, type Coupon, type InsertCoupon, type Review, type InsertReview,
   type Banner, type InsertBanner, type Otp, type InsertOtp,
   type ManualPaymentConfig, type InsertManualPaymentConfig, type ManualPaymentDetails, type InsertManualPaymentDetails,
-  type PaymentGatewayConfig, type InsertPaymentGatewayConfig
+  type PaymentGatewayConfig, type InsertPaymentGatewayConfig,
+  type PageContent, type InsertPageContent, type PopupBanner, type InsertPopupBanner,
+  type PhonePeTransaction, type InsertPhonePeTransaction
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, desc, asc, sql } from "drizzle-orm";
@@ -119,6 +121,33 @@ export interface IStorage {
   getPaymentGatewayConfig(provider: string): Promise<PaymentGatewayConfig | undefined>;
   getActivePaymentGateway(): Promise<PaymentGatewayConfig | undefined>;
   upsertPaymentGatewayConfig(config: InsertPaymentGatewayConfig): Promise<PaymentGatewayConfig>;
+
+  // Page Content methods
+  getPageContent(pageType: string): Promise<PageContent | undefined>;
+  upsertPageContent(content: InsertPageContent): Promise<PageContent>;
+
+  // Popup Banner methods
+  getPopupBanners(activeOnly?: boolean): Promise<PopupBanner[]>;
+  getPopupBanner(id: number): Promise<PopupBanner | undefined>;
+  createPopupBanner(banner: InsertPopupBanner): Promise<PopupBanner>;
+  updatePopupBanner(id: number, banner: Partial<InsertPopupBanner>): Promise<PopupBanner>;
+  deletePopupBanner(id: number): Promise<void>;
+
+  // Admin management methods
+  getAdminUsers(): Promise<User[]>;
+  updateUserPassword(id: number, newPassword: string): Promise<User>;
+
+  // Reports methods
+  getOrdersReport(startDate: Date, endDate: Date): Promise<Order[]>;
+  getCustomersReport(startDate: Date, endDate: Date): Promise<User[]>;
+  getPaymentsReport(startDate: Date, endDate: Date): Promise<ManualPaymentDetails[]>;
+
+  // PhonePe Transaction methods
+  createPhonePeTransaction(transaction: InsertPhonePeTransaction): Promise<PhonePeTransaction>;
+  getPhonePeTransactionByMerchantId(merchantTransactionId: string): Promise<PhonePeTransaction | undefined>;
+  getPhonePeTransactionByOrderId(orderId: number): Promise<PhonePeTransaction | undefined>;
+  updatePhonePeTransaction(id: number, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction>;
+  updatePhonePeTransactionByMerchantId(merchantTransactionId: string, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -971,6 +1000,171 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // Page Content methods
+  async getPageContent(pageType: string): Promise<PageContent | undefined> {
+    const [content] = await db
+      .select()
+      .from(pageContent)
+      .where(eq(pageContent.pageType, pageType));
+    return content || undefined;
+  }
+
+  async upsertPageContent(content: InsertPageContent): Promise<PageContent> {
+    const existing = await this.getPageContent(content.pageType);
+    if (existing) {
+      const [updated] = await db
+        .update(pageContent)
+        .set({ ...content, updatedAt: new Date() })
+        .where(eq(pageContent.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(pageContent)
+        .values(content)
+        .returning();
+      return created;
+    }
+  }
+
+  // Popup Banner methods
+  async getPopupBanners(activeOnly: boolean = false): Promise<PopupBanner[]> {
+    if (activeOnly) {
+      const now = new Date();
+      return db
+        .select()
+        .from(popupBanners)
+        .where(eq(popupBanners.isActive, true))
+        .orderBy(desc(popupBanners.createdAt));
+    }
+    return db.select().from(popupBanners).orderBy(desc(popupBanners.createdAt));
+  }
+
+  async getPopupBanner(id: number): Promise<PopupBanner | undefined> {
+    const [banner] = await db
+      .select()
+      .from(popupBanners)
+      .where(eq(popupBanners.id, id));
+    return banner || undefined;
+  }
+
+  async createPopupBanner(banner: InsertPopupBanner): Promise<PopupBanner> {
+    const [created] = await db
+      .insert(popupBanners)
+      .values(banner)
+      .returning();
+    return created;
+  }
+
+  async updatePopupBanner(id: number, banner: Partial<InsertPopupBanner>): Promise<PopupBanner> {
+    const [updated] = await db
+      .update(popupBanners)
+      .set({ ...banner, updatedAt: new Date() })
+      .where(eq(popupBanners.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePopupBanner(id: number): Promise<void> {
+    await db.delete(popupBanners).where(eq(popupBanners.id, id));
+  }
+
+  // Admin management methods
+  async getAdminUsers(): Promise<User[]> {
+    return db
+      .select()
+      .from(users)
+      .where(sql`${users.role} IN ('admin', 'super_admin')`)
+      .orderBy(desc(users.createdAt));
+  }
+
+  async updateUserPassword(id: number, newPassword: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ password: newPassword, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Reports methods
+  async getOrdersReport(startDate: Date, endDate: Date): Promise<Order[]> {
+    return db
+      .select()
+      .from(orders)
+      .where(and(
+        sql`${orders.orderDate} >= ${startDate}`,
+        sql`${orders.orderDate} <= ${endDate}`
+      ))
+      .orderBy(desc(orders.orderDate));
+  }
+
+  async getCustomersReport(startDate: Date, endDate: Date): Promise<User[]> {
+    return db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.role, 'customer'),
+        sql`${users.createdAt} >= ${startDate}`,
+        sql`${users.createdAt} <= ${endDate}`
+      ))
+      .orderBy(desc(users.createdAt));
+  }
+
+  async getPaymentsReport(startDate: Date, endDate: Date): Promise<ManualPaymentDetails[]> {
+    return db
+      .select()
+      .from(manualPaymentDetails)
+      .where(and(
+        sql`${manualPaymentDetails.createdAt} >= ${startDate}`,
+        sql`${manualPaymentDetails.createdAt} <= ${endDate}`
+      ))
+      .orderBy(desc(manualPaymentDetails.createdAt));
+  }
+
+  // PhonePe Transaction methods
+  async createPhonePeTransaction(transaction: InsertPhonePeTransaction): Promise<PhonePeTransaction> {
+    const [created] = await db
+      .insert(phonePeTransactions)
+      .values(transaction)
+      .returning();
+    return created;
+  }
+
+  async getPhonePeTransactionByMerchantId(merchantTransactionId: string): Promise<PhonePeTransaction | undefined> {
+    const [txn] = await db
+      .select()
+      .from(phonePeTransactions)
+      .where(eq(phonePeTransactions.merchantTransactionId, merchantTransactionId));
+    return txn || undefined;
+  }
+
+  async getPhonePeTransactionByOrderId(orderId: number): Promise<PhonePeTransaction | undefined> {
+    const [txn] = await db
+      .select()
+      .from(phonePeTransactions)
+      .where(eq(phonePeTransactions.orderId, orderId));
+    return txn || undefined;
+  }
+
+  async updatePhonePeTransaction(id: number, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction> {
+    const [updated] = await db
+      .update(phonePeTransactions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(phonePeTransactions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updatePhonePeTransactionByMerchantId(merchantTransactionId: string, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction> {
+    const [updated] = await db
+      .update(phonePeTransactions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(phonePeTransactions.merchantTransactionId, merchantTransactionId))
+      .returning();
+    return updated;
   }
 }
 

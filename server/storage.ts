@@ -64,13 +64,10 @@ export interface IStorage {
   // Order methods
   getOrders(userId: number): Promise<Order[]>;
   getOrder(id: number, userId: number): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined>;
-  getOrderById(id: number): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
   updateOrderRider(id: number, riderName: string, riderPhone: string): Promise<Order>;
-  updateOrderPaymentTransaction(id: number, transactionId: string): Promise<Order>;
-  clearCartForUser(userId: number): Promise<void>;
   getAllOrders(status?: string): Promise<Order[]>;
 
   // Review methods
@@ -496,14 +493,6 @@ export class DatabaseStorage implements IStorage {
     return { ...order, orderItems: items };
   }
 
-  async getOrderById(id: number): Promise<Order | undefined> {
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, id));
-    return order;
-  }
-
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     const [order] = await db
       .insert(orders)
@@ -550,21 +539,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.id, id))
       .returning();
     return order;
-  }
-
-  async updateOrderPaymentTransaction(id: number, transactionId: string): Promise<Order> {
-    const [order] = await db
-      .update(orders)
-      .set({ notes: `PhonePe TXN: ${transactionId}` })
-      .where(eq(orders.id, id))
-      .returning();
-    return order;
-  }
-
-  async clearCartForUser(userId: number): Promise<void> {
-    await db
-      .delete(cartItems)
-      .where(eq(cartItems.user_id, userId));
   }
 
   async getAllOrders(status?: string): Promise<Order[]> {

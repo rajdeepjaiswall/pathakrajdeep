@@ -311,11 +311,11 @@ export default function Checkout() {
           description: 'Please complete your UPI payment',
         });
       } else if (paymentMethod === 'gateway') {
+        setCurrentStep('waiting');
         toast({
           title: 'Order created!',
-          description: 'Redirecting to PhonePe...',
+          description: 'Redirecting to payment gateway...',
         });
-        initiatePhonePePayment(order.id);
       }
     },
     onError: (error: any) => {
@@ -433,42 +433,6 @@ export default function Checkout() {
   const handleWhatsAppSupport = () => {
     const message = encodeURIComponent(`Hi, I need help with my payment for order. My UTR is: ${utrInput}`);
     window.open(`https://wa.me/918931014976?text=${message}`, '_blank');
-  };
-
-  const initiatePhonePePayment = async (orderId: number) => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/phonepe/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ orderId }),
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.redirectUrl) {
-        window.location.href = data.redirectUrl;
-      } else {
-        toast({
-          title: 'Payment Error',
-          description: data.message || 'Failed to initiate PhonePe payment. Please try UPI/QR instead.',
-          variant: 'destructive',
-        });
-        setCurrentStep('waiting');
-      }
-    } catch (error: any) {
-      console.error('PhonePe initiation error:', error);
-      toast({
-        title: 'Payment Error',
-        description: 'Failed to connect to payment gateway. Please try UPI/QR instead.',
-        variant: 'destructive',
-      });
-      setCurrentStep('waiting');
-    }
   };
 
   const getStepProgress = () => {
@@ -775,7 +739,7 @@ export default function Checkout() {
               </div>
             </div>
 
-            {paymentConfig?.isActive && (
+            {paymentConfig && (
               <div 
                 className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                   paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
@@ -794,7 +758,7 @@ export default function Checkout() {
               </div>
             )}
 
-            {gatewayConfig?.isActive && (
+            {gatewayConfig && (
               <div 
                 className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                   paymentMethod === 'gateway' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'

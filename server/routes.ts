@@ -209,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { phone, type, name, identifier } = req.body;
       const targetPhone = phone || identifier;
-      console.log(`Sending OTP: phone=${targetPhone}, type=${type}, name=${name}`);
+      console.log(`Sending OTP request: targetPhone=${targetPhone}, type=${type}, name=${name}`);
       
       if (!targetPhone) {
         return res.status(400).json({ success: false, message: 'Phone number is required' });
@@ -222,14 +222,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         result = await otpService.sendSMSOTP(targetPhone, name || 'Customer');
       }
       
+      console.log(`OTP send result for ${targetPhone}:`, result);
+
       if (result.success) {
         res.json(result);
       } else {
         res.status(400).json(result);
       }
     } catch (error: any) {
-      console.error('Send OTP error:', error);
-      res.status(500).json({ success: false, message: 'Failed to send OTP. Please try again.' });
+      console.error('Detailed Send OTP error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to send OTP. Please try again.',
+        error: error.message 
+      });
     }
   });
 

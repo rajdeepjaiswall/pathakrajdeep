@@ -1724,13 +1724,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const gateway = await storage.getActivePaymentGateway();
       if (!gateway) {
-        return res.status(404).json({ message: "No payment gateway configured" });
+        return res.json(null);
       }
       // Don't expose secrets to customers
       res.json({ 
         provider: gateway.provider, 
         displayName: gateway.displayName,
-        isTestMode: gateway.isTestMode 
+        isTestMode: gateway.isTestMode,
+        isActive: gateway.isActive
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

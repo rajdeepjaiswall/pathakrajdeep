@@ -775,7 +775,7 @@ export default function Checkout() {
               </div>
             </div>
 
-            {paymentConfig && (
+            {paymentConfig?.isActive && (
               <div 
                 className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                   paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
@@ -794,7 +794,7 @@ export default function Checkout() {
               </div>
             )}
 
-            {gatewayConfig && (
+            {gatewayConfig?.isActive && (
               <div 
                 className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                   paymentMethod === 'gateway' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'

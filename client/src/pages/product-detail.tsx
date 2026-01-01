@@ -291,15 +291,6 @@ export default function ProductDetail() {
                 {product.featured && (
                   <Badge className="bg-champagne text-navy">Bestseller</Badge>
                 )}
-                <div className="flex items-center">
-                  {[...Array(5)].map((_, i) => (
-                    <Star 
-                      key={i} 
-                      className={`h-4 w-4 ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                    />
-                  ))}
-                  <span className="ml-2 text-sm text-gray-600">({reviews.length} reviews)</span>
-                </div>
               </div>
               <h1 className="text-3xl font-bold text-navy mb-4">{product.name}</h1>
               <p className="text-gray-600 text-lg">{product.description}</p>

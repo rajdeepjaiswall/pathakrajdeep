@@ -169,15 +169,6 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
                 Featured
               </Badge>
             )}
-            <div className="flex items-center text-yellow-400">
-              {[...Array(5)].map((_, i) => (
-                <Star 
-                  key={i} 
-                  className={`h-2.5 w-2.5 ${i < Math.floor(rating) ? 'fill-current' : ''}`} 
-                />
-              ))}
-              <span className="text-gray-500 text-xs ml-1">({reviewCount})</span>
-            </div>
           </div>
           
           <h3 className="font-semibold text-navy mb-1 text-sm">{product.name}</h3>

@@ -5,9 +5,12 @@ import path from "path";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { OAuth2Client } from "google-auth-library";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const JWT_SECRET = process.env.JWT_SECRET || "pathak-bakery-secret-key";
 
@@ -31,7 +34,7 @@ function authenticateToken(req: any, res: any, next: any) {
   }
 
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
+    if (err) return res.status(401).json({ message: 'Session expired. Please login again.', requireLogin: true });
     req.user = user;
     next();
   });
@@ -763,9 +766,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Product image upload endpoint - accepts base64 and returns a data URL for storage
+  app.post("/api/products/upload-image", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { imageData } = req.body;
+      
+      if (!imageData) {
+        return res.status(400).json({ message: 'No image data provided' });
+      }
+
+      // Validate it's a base64 image
+      if (!imageData.startsWith('data:image/')) {
+        return res.status(400).json({ message: 'Invalid image format' });
+      }
+
+      // Check size - limit to 500KB compressed
+      const base64Data = imageData.split(',')[1];
+      const sizeInBytes = Buffer.from(base64Data, 'base64').length;
+      const maxSize = 500 * 1024; // 500KB
+      
+      if (sizeInBytes > maxSize) {
+        return res.status(400).json({ 
+          message: `Image too large (${Math.round(sizeInBytes / 1024)}KB). Please use an image under 500KB.` 
+        });
+      }
+
+      // Return the image URL (stored as base64 data URL)
+      res.json({ 
+        imageUrl: imageData,
+        message: 'Image uploaded successfully'
+      });
+    } catch (error: any) {
+      console.error('Product image upload error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/products", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
+      
+      // Validate and filter images - reject base64 images over 200KB
+      if (productData.images && Array.isArray(productData.images)) {
+        const maxImageSize = 200 * 1024; // 200KB per image
+        const validImages = productData.images.filter((img: string) => {
+          if (!img) return false;
+          // Allow URL-based images
+          if (!img.startsWith('data:')) return true;
+          // Check base64 size
+          const base64Data = img.split(',')[1] || '';
+          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
+          return sizeInBytes < maxImageSize;
+        });
+        productData.images = validImages;
+      }
+      
       const product = await storage.createProduct(productData);
       res.json(product);
     } catch (error: any) {
@@ -776,6 +831,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/products/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
+      
+      // Validate and filter images - reject base64 images over 200KB
+      if (productData.images && Array.isArray(productData.images)) {
+        const maxImageSize = 200 * 1024; // 200KB per image
+        const validImages = productData.images.filter((img: string) => {
+          if (!img) return false;
+          // Allow URL-based images
+          if (!img.startsWith('data:')) return true;
+          // Check base64 size
+          const base64Data = img.split(',')[1] || '';
+          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
+          return sizeInBytes < maxImageSize;
+        });
+        productData.images = validImages;
+      }
+      
       const product = await storage.updateProduct(parseInt(req.params.id), productData);
       res.json(product);
     } catch (error: any) {
@@ -832,7 +903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify token
       jwt.verify(token, JWT_SECRET, async (err: any, user: any) => {
         if (err) {
-          return res.status(403).json({ message: 'Please login to add items to wishlist' });
+          return res.status(401).json({ message: 'Please login to add items to wishlist', requireLogin: true });
         }
         
         try {
@@ -864,7 +935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify token
       jwt.verify(token, JWT_SECRET, async (err: any, user: any) => {
         if (err) {
-          return res.status(403).json({ message: 'Please login to manage wishlist' });
+          return res.status(401).json({ message: 'Please login to manage wishlist', requireLogin: true });
         }
         
         try {
@@ -1206,16 +1277,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No credential provided' });
       }
 
-      // Decode the JWT token from Google
-      const decoded = jwt.decode(credential, { complete: true });
-      if (!decoded || !decoded.payload) {
+      // Verify the Google token with Google's public keys
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
         return res.status(400).json({ message: 'Invalid credential' });
       }
 
-      const payload = decoded.payload as any;
       const email = payload.email;
       const name = payload.name;
       const googleId = payload.sub;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email not provided by Google' });
+      }
 
       // Check if user exists
       let user = await storage.getUserByEmail(email);
@@ -1255,7 +1334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error: any) {
       console.error('Google verification error:', error);
-      res.status(500).json({ message: 'Authentication failed' });
+      res.status(500).json({ message: 'Authentication failed: ' + (error.message || 'Unknown error') });
     }
   });
 

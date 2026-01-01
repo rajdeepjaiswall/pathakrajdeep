@@ -205,15 +205,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/send-otp", async (req, res) => {
+  app.post("/api/otp/send", async (req, res) => {
     try {
-      const { phone } = req.body;
+      const { phone, type, name, identifier } = req.body;
+      const targetPhone = phone || identifier;
+      console.log(`Sending OTP: phone=${targetPhone}, type=${type}, name=${name}`);
       
-      // In a real implementation, you would send OTP via SMS service
-      // For now, we'll just return success
-      res.json({ message: 'OTP sent successfully' });
+      if (!targetPhone) {
+        return res.status(400).json({ success: false, message: 'Phone number is required' });
+      }
+
+      let result;
+      if (type === 'whatsapp') {
+        result = await otpService.sendWhatsAppOTP(targetPhone, name || 'Customer');
+      } else {
+        result = await otpService.sendSMSOTP(targetPhone, name || 'Customer');
+      }
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      console.error('Send OTP error:', error);
+      res.status(500).json({ success: false, message: 'Failed to send OTP. Please try again.' });
     }
   });
 
@@ -304,13 +320,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/verify-phone", authenticateUser, async (req, res) => {
     try {
-      const { phone, otp, type } = req.body;
+      const { phone, otp, type, identifier } = req.body;
+      const targetPhone = phone || identifier;
       const userId = req.user.id;
       
-      console.log(`Verifying phone OTP: ${phone}, OTP: ${otp}, Type: ${type || 'whatsapp'}`);
+      console.log(`Verifying phone OTP: ${targetPhone}, OTP: ${otp}, Type: ${type || 'whatsapp'}`);
+
+      if (!targetPhone) {
+        return res.status(400).json({ success: false, message: 'Phone number is required' });
+      }
 
       // Verify OTP using otpService for consistency
-      const result = await otpService.verifyOTP(phone, otp, type || 'whatsapp');
+      const result = await otpService.verifyOTP(targetPhone, otp, type || 'whatsapp');
       
       if (!result.success) {
         return res.status(400).json({ 
@@ -322,7 +343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update user phone and verification status
       const updatedUser = await storage.updateUser(userId, {
-        phone,
+        phone: targetPhone,
         isVerified: true,
       });
       

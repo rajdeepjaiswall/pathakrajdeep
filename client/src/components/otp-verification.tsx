@@ -50,15 +50,15 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
 
     try {
       const methodText = activeTab === 'email' ? 'Email' : activeTab === 'whatsapp' ? 'WhatsApp' : 'SMS';
-      const response = await fetch('/api/otp/send-otp', {
+      const response = await fetch('/api/otp/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          identifier: identifier.trim(),
+          phone: identifier.trim(),
           type: activeTab,
-          purpose
+          name: 'Customer'
         }),
       });
 
@@ -95,13 +95,13 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
     setMessage('');
 
     try {
-      const response = await fetch('/api/otp/verify-otp', {
+      const response = await fetch('/api/auth/verify-phone', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          identifier: identifier.trim(),
+          phone: identifier.trim(),
           otp: otp.trim(),
           type: activeTab
         }),
@@ -140,15 +140,15 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
     setMessage('');
 
     try {
-      const response = await fetch('/api/otp/resend-otp', {
+      const response = await fetch('/api/otp/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          identifier: identifier.trim(),
+          phone: identifier.trim(),
           type: activeTab,
-          purpose
+          name: 'Customer'
         }),
       });
 

@@ -9,6 +9,7 @@ import { OAuth2Client } from "google-auth-library";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
+import { phonePeService } from "./phonepe-service";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -1738,6 +1739,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);
+
+  // PhonePe Payment Gateway Routes
+  app.post("/api/phonepe/initiate", authenticateUser, async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      
+      if (!orderId) {
+        return res.status(400).json({ message: "Order ID is required" });
+      }
+
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      if (order.user_id !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized access to order" });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      const address = order.deliveryAddress as any;
+
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.REPLIT_DOMAINS 
+          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+          : 'http://localhost:5000';
+
+      const result = await phonePeService.initiatePayment({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        amount: parseFloat(order.total),
+        customerName: address?.name || user?.username || 'Customer',
+        customerPhone: address?.phone || user?.phone || '',
+        customerEmail: user?.email || undefined,
+        redirectUrl: `${baseUrl}/phonepe-callback`,
+        callbackUrl: `${baseUrl}/api/phonepe/webhook`,
+      });
+
+      if (result.success && result.redirectUrl) {
+        await storage.updateOrderPaymentTransaction(orderId, result.merchantTransactionId || '');
+        res.json({
+          success: true,
+          redirectUrl: result.redirectUrl,
+          merchantTransactionId: result.merchantTransactionId,
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.error || 'Failed to initiate payment',
+        });
+      }
+    } catch (error: any) {
+      console.error("PhonePe initiate error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/phonepe/verify/:txnId", async (req, res) => {
+    try {
+      const { txnId } = req.params;
+      const { orderId } = req.body;
+
+      const result = await phonePeService.checkPaymentStatus(txnId);
+
+      if (orderId) {
+        const orderIdNum = parseInt(orderId);
+        
+        if (result.success && result.status === 'SUCCESS') {
+          await storage.updateOrderStatus(orderIdNum, 'order_received');
+          await storage.updateOrderPaymentTransaction(orderIdNum, txnId);
+          
+          const order = await storage.getOrderById(orderIdNum);
+          if (order) {
+            await storage.clearCartForUser(order.user_id);
+          }
+        } else if (result.status === 'PENDING') {
+          await storage.updateOrderStatus(orderIdNum, 'pending_payment');
+        } else if (result.status === 'FAILED') {
+          await storage.updateOrderStatus(orderIdNum, 'payment_failed');
+        }
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("PhonePe verify error:", error);
+      res.status(500).json({ 
+        success: false, 
+        status: 'PAYMENT_ERROR',
+        message: error.message 
+      });
+    }
+  });
+
+  app.post("/api/phonepe/webhook", async (req, res) => {
+    try {
+      console.log("PhonePe webhook received:", JSON.stringify(req.body, null, 2));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("PhonePe webhook error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

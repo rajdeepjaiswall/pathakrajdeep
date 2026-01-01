@@ -40,6 +40,7 @@ import OTPTest from "@/pages/otp-test";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import CompleteProfile from "@/pages/complete-profile";
+import PhonePeCallback from "@/pages/phonepe-callback";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -80,6 +81,7 @@ function Router() {
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/complete-profile" component={CompleteProfile} />
+      <Route path="/phonepe-callback" component={PhonePeCallback} />
       <Route component={NotFound} />
     </Switch>
   );

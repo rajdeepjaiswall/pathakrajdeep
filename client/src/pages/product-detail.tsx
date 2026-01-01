@@ -381,10 +381,9 @@ export default function ProductDetail() {
         {/* Product Details Tabs */}
         <div className="mt-16">
           <Tabs defaultValue="description" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="description">Description</TabsTrigger>
               <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-4">
               <Card>
@@ -410,37 +409,6 @@ export default function ProductDetail() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="reviews" className="mt-4">
-              <div className="space-y-6">
-                {reviews.length === 0 ? (
-                  <Card>
-                    <CardContent className="p-6 text-center">
-                      <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  reviews.map((review: any) => (
-                    <Card key={review.id}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`h-4 w-4 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                              />
-                            ))}
-                          </div>
-                          <span className="font-medium text-navy">{review.user?.username}</span>
-                        </div>
-                        <p className="text-gray-600">{review.comment}</p>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
             </TabsContent>
           </Tabs>
         </div>

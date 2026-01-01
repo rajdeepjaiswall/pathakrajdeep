@@ -604,7 +604,7 @@ export class OTPService {
         )
         .limit(1);
 
-      console.log(`Found OTP record for ${identifier} (${type}):`, otpRecord ? 'Yes' : 'No');
+      console.log(`Verifying OTP for ${identifier} (${type}): Record found? ${otpRecord ? 'Yes' : 'No'}`);
 
       if (!otpRecord) {
         return {
@@ -613,8 +613,12 @@ export class OTPService {
         };
       }
 
+      // Detailed logging for expiration check
+      const now = new Date();
+      console.log(`Checking expiration: Now=${now.toISOString()}, ExpiresAt=${otpRecord.expiresAt.toISOString()}`);
+
       // Check if OTP is expired
-      if (new Date() > otpRecord.expiresAt) {
+      if (now > otpRecord.expiresAt) {
         // Delete expired OTP
         await db.delete(otps).where(eq(otps.id, otpRecord.id));
         return {

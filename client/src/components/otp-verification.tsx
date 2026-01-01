@@ -95,13 +95,14 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
     setMessage('');
 
     try {
-      const response = await fetch('/api/auth/verify-phone', {
+      const response = await fetch('/api/otp/verify-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: identifier.trim(),
+          identifier: identifier.trim(),
+          phone: identifier.trim(), // Send both for compatibility
           otp: otp.trim(),
           type: activeTab
         }),

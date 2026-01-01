@@ -171,37 +171,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/verify-otp", async (req, res) => {
+  app.post("/api/otp/verify-otp", async (req, res) => {
     try {
-      const { phone, otp } = req.body;
+      const { identifier, phone, otp, type } = req.body;
+      const targetIdentifier = identifier || phone;
+      console.log(`Verifying OTP: targetIdentifier=${targetIdentifier}, otp=${otp}, type=${type}`);
       
-      // In a real implementation, you would verify the OTP with your SMS service
-      // For now, we'll accept any 6-digit OTP
-      if (!/^\d{6}$/.test(otp)) {
-        return res.status(400).json({ message: 'Invalid OTP format' });
+      if (!targetIdentifier || !otp || !type) {
+        return res.status(400).json({ success: false, message: 'Identifier/Phone, OTP and type are required' });
       }
 
-      // Find or create user with phone number
-      let user = await storage.getUserByPhone(phone);
-      if (!user) {
-        user = await storage.createUser({
-          username: phone,
-          phone,
-          password: await bcrypt.hash('temp-password', 10),
-          role: 'customer',
-          isVerified: true,
-        });
+      // Special case for 'whatsapp' type which might actually be 'sms' in the database
+      // If we can't find it as 'whatsapp', we might want to check 'sms' or just rely on the service
+      const result = await otpService.verifyOTP(targetIdentifier, otp, type);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        // Fallback for cases where type might be mismatched (sms vs whatsapp)
+        if (type === 'whatsapp' || type === 'sms') {
+          const alternateType = type === 'whatsapp' ? 'sms' : 'whatsapp';
+          console.log(`Trying alternate OTP type: ${alternateType}`);
+          const fallbackResult = await otpService.verifyOTP(targetIdentifier, otp, alternateType);
+          if (fallbackResult.success) {
+            return res.json(fallbackResult);
+          }
+        }
+        res.status(400).json(result);
       }
-
-      const token = jwt.sign(
-        { id: user.id, username: user.username, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      console.error('Verify OTP error:', error);
+      res.status(500).json({ success: false, message: 'Failed to verify OTP. Please try again.' });
     }
   });
 

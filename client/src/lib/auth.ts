@@ -62,9 +62,6 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
   localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
   
-  // Set flag to trigger popup banner after login
-  sessionStorage.setItem('just_logged_in', 'true');
-  
   return data;
 }
 

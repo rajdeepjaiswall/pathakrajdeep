@@ -36,18 +36,10 @@ import SuperAdminDashboard from "@/pages/super-admin/dashboard";
 import LogoManager from "@/pages/super-admin/logo-manager";
 import ShopkeeperManager from "@/pages/super-admin/shopkeepers";
 import ProductManager from "@/pages/super-admin/products";
-import AdminManagement from "@/pages/super-admin/admin-management";
-import PageEditor from "@/pages/super-admin/page-editor";
-import PopupBannersManager from "@/pages/super-admin/popup-banners";
-import Reports from "@/pages/super-admin/reports";
-import AboutUs from "@/pages/about-us";
-import ContactUs from "@/pages/contact-us";
-import PopupBanner from "@/components/PopupBanner";
 import OTPTest from "@/pages/otp-test";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import CompleteProfile from "@/pages/complete-profile";
-import PhonePeCallback from "@/pages/phonepe-callback";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -84,17 +76,10 @@ function Router() {
       <Route path="/super-admin/logo-manager" component={LogoManager} />
       <Route path="/super-admin/shopkeepers" component={ShopkeeperManager} />
       <Route path="/super-admin/products" component={ProductManager} />
-      <Route path="/super-admin/admins" component={AdminManagement} />
-      <Route path="/super-admin/pages" component={PageEditor} />
-      <Route path="/super-admin/popup-banners" component={PopupBannersManager} />
-      <Route path="/super-admin/reports" component={Reports} />
-      <Route path="/about-us" component={AboutUs} />
-      <Route path="/contact-us" component={ContactUs} />
       <Route path="/otp-test" component={OTPTest} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/complete-profile" component={CompleteProfile} />
-      <Route path="/phonepe-callback" component={PhonePeCallback} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -131,7 +116,6 @@ function AppContent() {
     <>
       <PWAInstaller />
       <GoogleOneTap />
-      <PopupBanner />
       <Router />
     </>
   );

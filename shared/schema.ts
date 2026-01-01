@@ -50,7 +50,6 @@ export const products = pgTable("products", {
   category_id: integer("category_id").references(() => categories.id),
   images: jsonb("images").$type<string[]>().default([]),
   videos: jsonb("videos").$type<string[]>().default([]),
-  ingredients: jsonb("ingredients").$type<string[]>().default([]),
   stock: integer("stock").default(0),
   isActive: boolean("is_active").default(true),
   hsnCode: text("hsn_code"),
@@ -239,68 +238,6 @@ export const paymentGatewayConfig = pgTable("payment_gateway_config", {
   updatedBy: integer("updated_by").references(() => users.id),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Page Content table for About Us and Contact Us pages
-export const pageContent = pgTable("page_content", {
-  id: serial("id").primaryKey(),
-  pageType: text("page_type").notNull(), // about_us, contact_us
-  title: text("title"),
-  sections: jsonb("sections").$type<{
-    id: string;
-    type: "heading" | "subheading" | "text" | "image";
-    content: string;
-    order: number;
-  }[]>().default([]),
-  contactInfo: jsonb("contact_info").$type<{
-    phone?: string;
-    email?: string;
-    address?: string;
-    mapUrl?: string;
-    whatsapp?: string;
-    businessHours?: string;
-    socialLinks?: { platform: string; url: string }[];
-  }>(),
-  isActive: boolean("is_active").default(true),
-  updatedBy: integer("updated_by").references(() => users.id),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Popup Banners table for dismissible popups
-export const popupBanners = pgTable("popup_banners", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  imageUrl: text("image_url"),
-  linkUrl: text("link_url"),
-  triggerType: text("trigger_type").notNull().default("login"), // login, page_load, timed
-  showOnce: boolean("show_once").default(true),
-  isActive: boolean("is_active").default(true),
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
-  createdBy: integer("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// PhonePe Transactions table
-export const phonePeTransactions = pgTable("phonepe_transactions", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
-  merchantTransactionId: text("merchant_transaction_id").notNull().unique(),
-  merchantUserId: text("merchant_user_id"),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("initiated"), // initiated, pending, success, failed
-  paymentState: text("payment_state"), // PhonePe payment state
-  transactionId: text("transaction_id"), // PhonePe transaction ID
-  paymentInstrumentType: text("payment_instrument_type"), // UPI, CARD, etc.
-  redirectUrl: text("redirect_url"),
-  callbackReceived: boolean("callback_received").default(false),
-  callbackData: jsonb("callback_data").$type<Record<string, any>>(),
-  errorCode: text("error_code"),
-  errorMessage: text("error_message"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Relations
@@ -508,24 +445,6 @@ export const insertPaymentGatewayConfigSchema = createInsertSchema(paymentGatewa
   updatedAt: true,
 });
 
-export const insertPageContentSchema = createInsertSchema(pageContent).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertPopupBannerSchema = createInsertSchema(popupBanners).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertPhonePeTransactionSchema = createInsertSchema(phonePeTransactions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 // Select schemas
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -543,9 +462,6 @@ export type Otp = typeof otps.$inferSelect;
 export type ManualPaymentConfig = typeof manualPaymentConfig.$inferSelect;
 export type ManualPaymentDetails = typeof manualPaymentDetails.$inferSelect;
 export type PaymentGatewayConfig = typeof paymentGatewayConfig.$inferSelect;
-export type PageContent = typeof pageContent.$inferSelect;
-export type PopupBanner = typeof popupBanners.$inferSelect;
-export type PhonePeTransaction = typeof phonePeTransactions.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -564,6 +480,3 @@ export type InsertOtp = z.infer<typeof insertOtpSchema>;
 export type InsertManualPaymentConfig = z.infer<typeof insertManualPaymentConfigSchema>;
 export type InsertManualPaymentDetails = z.infer<typeof insertManualPaymentDetailsSchema>;
 export type InsertPaymentGatewayConfig = z.infer<typeof insertPaymentGatewayConfigSchema>;
-export type InsertPageContent = z.infer<typeof insertPageContentSchema>;
-export type InsertPopupBanner = z.infer<typeof insertPopupBannerSchema>;
-export type InsertPhonePeTransaction = z.infer<typeof insertPhonePeTransactionSchema>;

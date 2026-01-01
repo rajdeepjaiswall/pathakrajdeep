@@ -6,12 +6,9 @@ import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { OAuth2Client } from "google-auth-library";
-import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders } from "@shared/schema";
+import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
-import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
-import { db } from "./db";
-import { eq } from "drizzle-orm";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -205,37 +202,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/otp/send", async (req, res) => {
+  app.post("/api/auth/send-otp", async (req, res) => {
     try {
-      const { phone, type, name, identifier } = req.body;
-      const targetPhone = phone || identifier;
-      console.log(`Sending OTP request: targetPhone=${targetPhone}, type=${type}, name=${name}`);
+      const { phone } = req.body;
       
-      if (!targetPhone) {
-        return res.status(400).json({ success: false, message: 'Phone number is required' });
-      }
-
-      let result;
-      if (type === 'whatsapp') {
-        result = await otpService.sendWhatsAppOTP(targetPhone, name || 'Customer');
-      } else {
-        result = await otpService.sendSMSOTP(targetPhone, name || 'Customer');
-      }
-      
-      console.log(`OTP send result for ${targetPhone}:`, result);
-
-      if (result.success) {
-        res.json(result);
-      } else {
-        res.status(400).json(result);
-      }
+      // In a real implementation, you would send OTP via SMS service
+      // For now, we'll just return success
+      res.json({ message: 'OTP sent successfully' });
     } catch (error: any) {
-      console.error('Detailed Send OTP error:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to send OTP. Please try again.',
-        error: error.message 
-      });
+      res.status(400).json({ message: error.message });
     }
   });
 
@@ -326,41 +301,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/verify-phone", authenticateUser, async (req, res) => {
     try {
-      const { phone, otp, type, identifier } = req.body;
-      const targetPhone = phone || identifier;
+      const { phone, otp } = req.body;
       const userId = req.user.id;
       
-      console.log(`Verifying phone OTP: ${targetPhone}, OTP: ${otp}, Type: ${type || 'whatsapp'}`);
-
-      if (!targetPhone) {
-        return res.status(400).json({ success: false, message: 'Phone number is required' });
-      }
-
-      // Verify OTP using otpService for consistency
-      const result = await otpService.verifyOTP(targetPhone, otp, type || 'whatsapp');
+      // Verify OTP
+      const isValid = await storage.verifyOtp(phone, otp, 'whatsapp');
       
-      if (!result.success) {
-        return res.status(400).json({ 
-          success: false, 
-          message: result.message,
-          verified: false 
-        });
+      if (!isValid) {
+        return res.status(400).json({ message: 'Invalid or expired OTP' });
       }
       
       // Update user phone and verification status
       const updatedUser = await storage.updateUser(userId, {
-        phone: targetPhone,
+        phone,
         isVerified: true,
       });
       
-      res.json({
-        ...updatedUser,
-        success: true,
-        message: 'Phone verified successfully'
-      });
+      res.json(updatedUser);
     } catch (error: any) {
-      console.error('Verify phone error:', error);
-      res.status(400).json({ success: false, message: error.message });
+      res.status(400).json({ message: error.message });
     }
   });
 
@@ -847,30 +806,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const productData = insertProductSchema.parse(req.body);
       
-      // Validate and filter images - reject base64 images over 500KB
+      // Validate and filter images - reject base64 images over 200KB
       if (productData.images && Array.isArray(productData.images)) {
-        const maxImageSize = 500 * 1024; // 500KB per image
+        const maxImageSize = 200 * 1024; // 200KB per image
         const validImages = productData.images.filter((img: string) => {
           if (!img) return false;
+          // Allow URL-based images
           if (!img.startsWith('data:')) return true;
+          // Check base64 size
           const base64Data = img.split(',')[1] || '';
           const sizeInBytes = Math.ceil(base64Data.length * 0.75);
           return sizeInBytes < maxImageSize;
         });
         productData.images = validImages;
-      }
-      
-      // Validate and filter videos - allow base64 videos up to 10MB
-      if (productData.videos && Array.isArray(productData.videos)) {
-        const maxVideoSize = 10 * 1024 * 1024; // 10MB per video
-        const validVideos = productData.videos.filter((vid: string) => {
-          if (!vid || !vid.trim()) return false;
-          if (!vid.startsWith('data:')) return true;
-          const base64Data = vid.split(',')[1] || '';
-          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
-          return sizeInBytes < maxVideoSize;
-        });
-        productData.videos = validVideos;
       }
       
       const product = await storage.createProduct(productData);
@@ -884,30 +832,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const productData = insertProductSchema.parse(req.body);
       
-      // Validate and filter images - reject base64 images over 500KB
+      // Validate and filter images - reject base64 images over 200KB
       if (productData.images && Array.isArray(productData.images)) {
-        const maxImageSize = 500 * 1024; // 500KB per image
+        const maxImageSize = 200 * 1024; // 200KB per image
         const validImages = productData.images.filter((img: string) => {
           if (!img) return false;
+          // Allow URL-based images
           if (!img.startsWith('data:')) return true;
+          // Check base64 size
           const base64Data = img.split(',')[1] || '';
           const sizeInBytes = Math.ceil(base64Data.length * 0.75);
           return sizeInBytes < maxImageSize;
         });
         productData.images = validImages;
-      }
-      
-      // Validate and filter videos - allow base64 videos up to 10MB
-      if (productData.videos && Array.isArray(productData.videos)) {
-        const maxVideoSize = 10 * 1024 * 1024; // 10MB per video
-        const validVideos = productData.videos.filter((vid: string) => {
-          if (!vid || !vid.trim()) return false;
-          if (!vid.startsWith('data:')) return true;
-          const base64Data = vid.split(',')[1] || '';
-          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
-          return sizeInBytes < maxVideoSize;
-        });
-        productData.videos = validVideos;
       }
       
       const product = await storage.updateProduct(parseInt(req.params.id), productData);
@@ -940,20 +877,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Wishlist routes
-  app.get("/api/wishlist", optionalAuth, async (req, res) => {
+  app.get("/api/wishlist", async (req, res) => {
     try {
-      // Check session auth first for Google OAuth users
-      let userId = null;
-      if (req.isAuthenticated && req.isAuthenticated()) {
-        userId = req.user.id;
-      } else if (req.user) {
-        userId = req.user.id;
-      }
-      
-      if (!userId) {
+      // For now, return empty array if not authenticated
+      if (!req.user) {
         return res.json([]);
       }
-      const wishlistItems = await storage.getWishlistItems(userId);
+      const wishlistItems = await storage.getWishlistItems(req.user.id);
       res.json(wishlistItems);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1150,31 +1080,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderData = insertOrderSchema.parse({
         ...req.body,
         user_id: userId,
-        // Set status to pending_payment for gateway payments, pending for others
-        status: req.body.paymentMethod === 'gateway' ? 'pending_payment' : req.body.status || 'pending'
       });
       const order = await storage.createOrder(orderData);
       console.log('Order created successfully:', order.id, order.orderNumber);
       
-      // Send order confirmation SMS only for NON-GATEWAY payments when order is created
-      // Gateway payments will get SMS from webhook after payment confirmation
-      if (req.body.paymentMethod !== 'gateway' && order.deliveryAddress && order.deliveryAddress.phone) {
-        const trackingLink = `https://pathakbhandar.in/customer/orders`;
-        const customerName = order.deliveryAddress.fullName || 'Customer';
-        const orderStatus = order.status || 'pending';
-        
+      // Send order confirmation SMS if phone is verified
+      if (order.deliveryAddress && order.deliveryAddress.phone) {
+        const trackingLink = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'https://pathakbhandar.in'}/track-order/${order.orderNumber}`;
         try {
-          // Send SMS based on order status and payment method
-          await otpService.sendOrderPlacedSMS(
+          await otpService.sendOrderConfirmation(
             order.deliveryAddress.phone,
             order.orderNumber,
-            orderStatus,
-            req.body.paymentMethod,
-            customerName
+            trackingLink
           );
-          console.log('Order SMS sent to:', order.deliveryAddress.phone, 'Status:', orderStatus, 'Payment method:', req.body.paymentMethod);
+          console.log('Order confirmation SMS sent to:', order.deliveryAddress.phone);
         } catch (smsError) {
-          console.error('Failed to send order SMS:', smsError);
+          console.error('Failed to send order confirmation SMS:', smsError);
           // Don't fail the order if SMS fails
         }
       }
@@ -1800,16 +1721,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer - Get active payment gateway (public for checkout)
   app.get("/api/payment-gateway", async (req, res) => {
     try {
-      // Check if PhonePe is configured via environment variables
-      const phonePeConfig = getPhonePeConfig();
-      if (phonePeConfig.isConfigured) {
-        return res.json({
-          provider: phonePeConfig.provider,
-          displayName: phonePeConfig.displayName,
-          isTestMode: phonePeConfig.isTestMode
-        });
-      }
-
       const gateway = await storage.getActivePaymentGateway();
       if (!gateway) {
         return res.status(404).json({ message: "No payment gateway configured" });
@@ -1820,544 +1731,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         displayName: gateway.displayName,
         isTestMode: gateway.isTestMode 
       });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // ================= PHONEPE PAYMENT ROUTES =================
-
-  // Initiate PhonePe payment
-  app.post("/api/payments/phonepe/initiate", authenticateUser, async (req, res) => {
-    try {
-      const { orderId } = req.body;
-      
-      if (!orderId) {
-        return res.status(400).json({ message: "Order ID is required" });
-      }
-
-      // Get the order
-      const order = await storage.getOrder(orderId, req.user!.id);
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-
-      // Check if PhonePe is configured
-      if (!isPhonePeConfigured()) {
-        return res.status(400).json({ message: "PhonePe payment gateway is not configured" });
-      }
-
-      // Generate unique merchant transaction ID
-      const merchantTransactionId = `PB${orderId}_${Date.now()}`;
-      
-      // Get callback URLs - use production domain for PhonePe redirects
-      const productionDomain = 'https://pathakbhandar.in';
-      const devDomain = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : 'http://localhost:5000';
-      
-      // Use production domain for redirects to avoid Replit wake-up issues
-      const baseUrl = process.env.NODE_ENV === 'production' ? productionDomain : (process.env.REPLIT_DOMAINS?.includes('pathakbhandar.in') ? productionDomain : devDomain);
-      
-      // Use hash fragment instead of query param - PhonePe strips query params on successful redirects but preserves hash
-      const redirectUrl = `${productionDomain}/phonepe-callback#txnId=${merchantTransactionId}`;
-      const callbackUrl = `${productionDomain}/api/payments/phonepe/webhook`;
-
-      // Create transaction record
-      await storage.createPhonePeTransaction({
-        orderId,
-        merchantTransactionId,
-        merchantUserId: `MUID${req.user!.id}`,
-        amount: order.total,
-        status: 'initiated',
-      });
-
-      // Initiate payment
-      const result = await initiatePhonePePayment({
-        orderId,
-        merchantTransactionId,
-        userId: req.user!.id,
-        amount: parseFloat(order.total),
-        phone: order.deliveryAddress?.phone,
-        redirectUrl,
-        callbackUrl,
-      });
-
-      if (result.success && result.redirectUrl) {
-        // Update transaction with redirect URL
-        await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
-          redirectUrl: result.redirectUrl,
-          status: 'pending',
-        });
-
-        res.json({
-          success: true,
-          redirectUrl: result.redirectUrl,
-          merchantTransactionId,
-        });
-      } else {
-        // Update transaction with error
-        await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
-          status: 'failed',
-          errorMessage: result.error,
-        });
-
-        res.status(400).json({
-          success: false,
-          message: result.error || 'Payment initiation failed',
-        });
-      }
-    } catch (error: any) {
-      console.error('PhonePe initiation error:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // PhonePe Webhook (Server-to-Server Callback)
-  // URL to configure in PhonePe Dashboard: https://pathakbhandar.in/api/payments/phonepe/webhook
-  app.post("/api/payments/phonepe/webhook", async (req, res) => {
-    try {
-      console.log('PhonePe Webhook received');
-      console.log('Headers:', JSON.stringify(req.headers, null, 2));
-      console.log('Body:', JSON.stringify(req.body, null, 2));
-      
-      // Verify webhook authorization
-      const authHeader = req.headers['authorization'] as string;
-      const isValidWebhook = verifyPhonePeWebhook(authHeader);
-      
-      if (!isValidWebhook) {
-        console.log('PhonePe Webhook: Invalid authorization - accepting anyway for testing');
-        // In production, you might want to reject invalid webhooks:
-        // return res.status(401).json({ message: "Unauthorized webhook" });
-      }
-
-      // Parse webhook data
-      const webhookData: PhonePeWebhookPayload = req.body;
-      
-      if (!webhookData.event || !webhookData.payload) {
-        console.log('PhonePe Webhook: Invalid payload structure');
-        return res.status(400).json({ message: "Invalid webhook payload" });
-      }
-
-      const parsedData = parsePhonePeWebhook(webhookData);
-      console.log('Parsed webhook data:', JSON.stringify(parsedData, null, 2));
-      
-      const { merchantOrderId, status, transactionId, paymentMode, event } = parsedData;
-
-      if (!merchantOrderId) {
-        console.log('PhonePe Webhook: No merchant order ID found');
-        return res.status(400).json({ message: "Merchant order ID is required" });
-      }
-
-      // Get transaction from database
-      const transaction = await storage.getPhonePeTransactionByMerchantId(merchantOrderId);
-      if (!transaction) {
-        console.log('PhonePe Webhook: Transaction not found for:', merchantOrderId);
-        // Still return 200 to prevent retries
-        return res.json({ success: true, message: "Transaction not found" });
-      }
-
-      // Map webhook status to our status
-      const dbStatus = status === 'payment_success' ? 'success' : 
-                       status === 'payment_failed' ? 'failed' : 'pending';
-      
-      // Update transaction
-      await storage.updatePhonePeTransactionByMerchantId(merchantOrderId, {
-        status: dbStatus,
-        transactionId: transactionId || undefined,
-        paymentInstrumentType: paymentMode || undefined,
-        callbackReceived: true,
-        callbackData: req.body,
-        paymentState: webhookData.payload.state,
-      });
-
-      // Get order details for SMS
-      const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
-      const orderPhone = transaction.phone || order[0]?.phone || '';
-      const orderNumber = order[0]?.orderNumber || '';
-      // Get customer name from delivery address
-      const deliveryAddress = order[0]?.deliveryAddress as any;
-      const customerName = deliveryAddress?.name || 'Customer';
-      
-      // Update order based on payment status and send appropriate SMS
-      if (status === 'payment_success') {
-        // Payment successful - update order to confirmed/pending
-        await storage.updateOrderStatus(transaction.orderId, 'pending');
-        await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
-        
-        // Send SUCCESS SMS for PhonePe payment
-        if (orderPhone && orderNumber) {
-          try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'success', customerName);
-            console.log('PhonePe SUCCESS SMS sent for order:', orderNumber);
-          } catch (smsError) {
-            console.error('Failed to send success SMS:', smsError);
-          }
-        }
-        
-        console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as paid`);
-      } else if (status === 'payment_failed') {
-        // Payment failed - update order status
-        await storage.updateOrderStatus(transaction.orderId, 'payment_failed');
-        await db.update(orders).set({ paymentStatus: 'failed' }).where(eq(orders.id, transaction.orderId));
-        
-        // Send FAILED SMS for PhonePe payment
-        if (orderPhone && orderNumber) {
-          try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'failed', customerName);
-            console.log('PhonePe FAILED SMS sent for order:', orderNumber);
-          } catch (smsError) {
-            console.error('Failed to send failed payment SMS:', smsError);
-          }
-        }
-        
-        console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as payment failed`);
-      } else {
-        // Payment pending/processing - send PENDING SMS
-        if (orderPhone && orderNumber) {
-          try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'pending', customerName);
-            console.log('PhonePe PENDING SMS sent for order:', orderNumber);
-          } catch (smsError) {
-            console.error('Failed to send pending payment SMS:', smsError);
-          }
-        }
-        
-        console.log(`PhonePe Webhook: Order ${transaction.orderId} still pending`);
-      }
-
-      // Always return 200 to acknowledge receipt
-      res.json({ success: true, message: `Webhook processed: ${event}` });
-    } catch (error: any) {
-      console.error('PhonePe Webhook error:', error);
-      // Return 200 anyway to prevent infinite retries
-      res.json({ success: false, message: error.message });
-    }
-  });
-
-  // Legacy PhonePe callback (for backward compatibility)
-  app.post("/api/payments/phonepe/callback", async (req, res) => {
-    try {
-      console.log('PhonePe Legacy Callback received:', JSON.stringify(req.body, null, 2));
-      
-      const { merchantTransactionId, transactionId, code, message } = req.body;
-      
-      if (!merchantTransactionId) {
-        return res.status(400).json({ message: "Merchant transaction ID is required" });
-      }
-
-      // Get transaction
-      const transaction = await storage.getPhonePeTransactionByMerchantId(merchantTransactionId);
-      if (!transaction) {
-        return res.status(404).json({ message: "Transaction not found" });
-      }
-
-      // Update transaction
-      const status = code === 'PAYMENT_SUCCESS' ? 'success' : 
-                     code === 'PAYMENT_PENDING' ? 'pending' : 'failed';
-      
-      await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
-        status,
-        transactionId,
-        callbackReceived: true,
-        callbackData: req.body,
-        paymentState: code,
-      });
-
-      // Update order status
-      if (status === 'success') {
-        await storage.updateOrderStatus(transaction.orderId, 'pending');
-        const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
-        if (order[0]) {
-          await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
-          
-          // Send SMS confirmation for successful payment
-          try {
-            if (order[0].orderNumber && transaction.merchantUserId) {
-              const trackingLink = `https://pathakbhandar.in/track-order/${order[0].orderNumber}`;
-              await otpService.sendOrderConfirmation(
-                transaction.phone || '9999999999',
-                order[0].orderNumber,
-                trackingLink
-              );
-              console.log('Order confirmation SMS sent after payment');
-            }
-          } catch (smsError) {
-            console.error('Failed to send SMS after payment:', smsError);
-          }
-        }
-      } else if (status === 'failed') {
-        await storage.updateOrderStatus(transaction.orderId, 'payment_failed');
-        await db.update(orders).set({ paymentStatus: 'failed' }).where(eq(orders.id, transaction.orderId));
-      }
-
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error('PhonePe callback error:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Check PhonePe payment status
-  app.get("/api/payments/phonepe/status/:merchantTransactionId", authenticateUser, async (req, res) => {
-    try {
-      const { merchantTransactionId } = req.params;
-      
-      // Get transaction from database
-      const transaction = await storage.getPhonePeTransactionByMerchantId(merchantTransactionId);
-      if (!transaction) {
-        return res.status(404).json({ message: "Transaction not found" });
-      }
-
-      // If already completed, return stored status
-      if (transaction.status === 'success' || transaction.status === 'failed') {
-        return res.json({
-          status: transaction.status,
-          transactionId: transaction.transactionId,
-          paymentInstrumentType: transaction.paymentInstrumentType,
-        });
-      }
-
-      // Check with PhonePe API
-      const result = await checkPhonePePaymentStatus(merchantTransactionId);
-      
-      if (result.success && result.status) {
-        const status = result.status === 'SUCCESS' ? 'success' : 
-                       result.status === 'FAILED' ? 'failed' : 'pending';
-        
-        // Update transaction
-        await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
-          status,
-          transactionId: result.transactionId,
-          paymentInstrumentType: result.paymentInstrumentType,
-          paymentState: result.data?.state,
-        });
-
-        // Update order if payment completed
-        if (status === 'success') {
-          await storage.updateOrderStatus(transaction.orderId, 'pending');
-          await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
-        } else if (status === 'failed') {
-          await storage.updateOrderStatus(transaction.orderId, 'payment_failed');
-          await db.update(orders).set({ paymentStatus: 'failed' }).where(eq(orders.id, transaction.orderId));
-        }
-
-        res.json({
-          status,
-          transactionId: result.transactionId,
-          paymentInstrumentType: result.paymentInstrumentType,
-        });
-      } else {
-        res.json({
-          status: 'pending',
-          error: result.error,
-        });
-      }
-    } catch (error: any) {
-      console.error('PhonePe status check error:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get PhonePe transaction for order
-  app.get("/api/payments/phonepe/order/:orderId", authenticateUser, async (req, res) => {
-    try {
-      const orderId = parseInt(req.params.orderId);
-      const transaction = await storage.getPhonePeTransactionByOrderId(orderId);
-      
-      if (!transaction) {
-        return res.status(404).json({ message: "No PhonePe transaction found for this order" });
-      }
-
-      res.json({
-        merchantTransactionId: transaction.merchantTransactionId,
-        status: transaction.status,
-        amount: transaction.amount,
-        transactionId: transaction.transactionId,
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // ================= SUPER ADMIN ROUTES =================
-  
-  // Page Content (About Us, Contact Us) - Public read
-  app.get("/api/page-content/:pageType", async (req, res) => {
-    try {
-      const content = await storage.getPageContent(req.params.pageType);
-      res.json(content || null);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Page Content - Super Admin write
-  app.post("/api/super-admin/page-content", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const { pageType, title, sections, contactInfo } = req.body;
-      if (!pageType) {
-        return res.status(400).json({ message: "Page type is required" });
-      }
-      const content = await storage.upsertPageContent({
-        pageType,
-        title,
-        sections,
-        contactInfo,
-        updatedBy: req.user.id
-      });
-      res.json(content);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Popup Banners - Public read active only
-  app.get("/api/popup-banners/active", async (req, res) => {
-    try {
-      const banners = await storage.getPopupBanners(true);
-      res.json(banners);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Popup Banners - Super Admin management
-  app.get("/api/super-admin/popup-banners", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const banners = await storage.getPopupBanners();
-      res.json(banners);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/super-admin/popup-banners", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const banner = await storage.createPopupBanner({
-        ...req.body,
-        createdBy: req.user.id
-      });
-      res.json(banner);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.put("/api/super-admin/popup-banners/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const banner = await storage.updatePopupBanner(id, req.body);
-      res.json(banner);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.delete("/api/super-admin/popup-banners/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      await storage.deletePopupBanner(id);
-      res.json({ message: "Popup banner deleted successfully" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Admin Management - Super Admin only
-  app.get("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const admins = await storage.getAdminUsers();
-      res.json(admins);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const { username, email, password, role } = req.body;
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: "Username, email, and password are required" });
-      }
-      if (role && !['admin', 'super_admin'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
-      }
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const admin = await storage.createUser({
-        username,
-        email,
-        password: hashedPassword,
-        role: role || 'admin',
-        isVerified: true
-      });
-      res.json(admin);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.put("/api/super-admin/admins/:id/password", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { newPassword } = req.body;
-      if (!newPassword || newPassword.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      const admin = await storage.updateUserPassword(id, hashedPassword);
-      res.json({ message: "Password updated successfully" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.put("/api/super-admin/admins/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { role, isVerified } = req.body;
-      const admin = await storage.updateUser(id, { role, isVerified });
-      res.json(admin);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Reports - Super Admin only
-  app.get("/api/super-admin/reports/orders", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const { startDate, endDate } = req.query;
-      if (!startDate || !endDate) {
-        return res.status(400).json({ message: "Start and end dates are required" });
-      }
-      const orders = await storage.getOrdersReport(new Date(startDate as string), new Date(endDate as string));
-      res.json(orders);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/super-admin/reports/customers", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const { startDate, endDate } = req.query;
-      if (!startDate || !endDate) {
-        return res.status(400).json({ message: "Start and end dates are required" });
-      }
-      const customers = await storage.getCustomersReport(new Date(startDate as string), new Date(endDate as string));
-      res.json(customers);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/super-admin/reports/payments", authenticateUser, requireSuperAdmin, async (req, res) => {
-    try {
-      const { startDate, endDate } = req.query;
-      if (!startDate || !endDate) {
-        return res.status(400).json({ message: "Start and end dates are required" });
-      }
-      const payments = await storage.getPaymentsReport(new Date(startDate as string), new Date(endDate as string));
-      res.json(payments);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -49,28 +49,27 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
     setMessage('');
 
     try {
-      const methodText = activeTab === 'email' ? 'Email' : activeTab === 'whatsapp' ? 'WhatsApp' : 'SMS';
-      const response = await fetch('/api/otp/send', {
+      const response = await fetch('/api/otp/send-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: identifier.trim(),
+          identifier: identifier.trim(),
           type: activeTab,
-          name: 'Customer'
+          purpose
         }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        setMessage(`OTP sent successfully via ${methodText}`);
+        setMessage(data.message);
         setMessageType('success');
         setStep('verify');
         toast({
           title: "OTP Sent Successfully",
-          description: `Your OTP has been sent via ${methodText}. It will expire in 5 minutes.`,
+          description: data.message,
         });
       } else {
         setMessage(data.message);
@@ -95,13 +94,13 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
     setMessage('');
 
     try {
-      const response = await fetch('/api/auth/verify-phone', {
+      const response = await fetch('/api/otp/verify-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: identifier.trim(),
+          identifier: identifier.trim(),
           otp: otp.trim(),
           type: activeTab
         }),
@@ -140,15 +139,15 @@ export function OTPVerification({ onVerificationSuccess, purpose = "verification
     setMessage('');
 
     try {
-      const response = await fetch('/api/otp/send', {
+      const response = await fetch('/api/otp/resend-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: identifier.trim(),
+          identifier: identifier.trim(),
           type: activeTab,
-          name: 'Customer'
+          purpose
         }),
       });
 

@@ -20,17 +20,13 @@ interface Fast2SMSConfig {
   baseUrl: string;
   senderId: string;
   otpTemplateId: string;
-  whatsappTemplateId?: string;
-  whatsappSenderId?: string;
 }
 
 const fast2smsConfig: Fast2SMSConfig = {
   apiKey: process.env.FAST2SMS_API_KEY || '',
   baseUrl: 'https://www.fast2sms.com/dev/bulkV2',
   senderId: 'GETDWN',
-  otpTemplateId: '148245', // SMS template ID
-  whatsappTemplateId: process.env.FAST2SMS_WHATSAPP_TEMPLATE_ID || '1709460170014791', // WhatsApp template ID
-  whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID || '15558471512' // WhatsApp sender ID phone number
+  otpTemplateId: '148245'
 };
 
 export class OTPService {
@@ -89,12 +85,12 @@ export class OTPService {
             <p style="color: #666; font-size: 16px;">Your OTP verification code is:</p>
             
             <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-              <h1 style="color: #2563eb; font-size: 32px; margin: 0; letter-spacing: 8px; font-weight: bold;">\${otpCode}</h1>
+              <h1 style="color: #2563eb; font-size: 32px; margin: 0; letter-spacing: 8px; font-weight: bold;">${otpCode}</h1>
             </div>
             
             <p style="color: #666; font-size: 14px;">
               • This code will expire in <strong>5 minutes</strong><br>
-              • Use this code to complete your \${purpose} process<br>
+              • Use this code to complete your ${purpose} process<br>
               • If you didn't request this code, please ignore this email
             </p>
             
@@ -123,74 +119,9 @@ export class OTPService {
     }
   }
 
-  // Send WhatsApp OTP via Fast2SMS (uses WhatsApp template if configured)
+  // Send SMS OTP via Fast2SMS using DLT template (for WhatsApp tab - legacy)
   async sendWhatsAppOTP(phoneNumber: string, customerName: string = 'Customer', purpose: string = 'verification'): Promise<{ success: boolean; message: string }> {
-    try {
-      if (!fast2smsConfig.apiKey) {
-        return {
-          success: false,
-          message: 'SMS API not configured. Please contact administrator.'
-        };
-      }
-
-      // If WhatsApp template is configured, use it; otherwise fall back to SMS
-      if (fast2smsConfig.whatsappTemplateId) {
-        // Use WhatsApp template
-        const otpCode = await this.createOTP(phoneNumber, 'whatsapp', purpose);
-        
-        // Format phone number
-        let formattedPhone = phoneNumber.replace(/\D/g, '');
-        if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
-          formattedPhone = formattedPhone.slice(2);
-        }
-
-        // WhatsApp template variables (pathak_bhandar_number_verification)
-        // Variable 1: {{name}}, Variable 2: {{offer_code}}
-        const variablesValues = `\${customerName}|\${otpCode}`;
-        
-        // Build request for WhatsApp
-        const params = new URLSearchParams({
-          authorization: fast2smsConfig.apiKey,
-          route: 'dlt_whatsapp',
-          sender_id: '15558471512',
-          message: '1709460170014791',
-          variables_values: variablesValues,
-          flash: '0',
-          numbers: formattedPhone
-        });
-        
-        const url = `\${fast2smsConfig.baseUrl}?\${params.toString()}`;
-        const response = await fetch(url, {
-          method: 'GET'
-        });
-
-        const responseData = await response.json();
-
-        if (response.ok && responseData.return) {
-          console.log('Fast2SMS WhatsApp OTP sent successfully:', responseData);
-          return {
-            success: true,
-            message: 'OTP sent successfully via WhatsApp'
-          };
-        } else {
-          console.error('Fast2SMS WhatsApp API Error:', responseData);
-          return {
-            success: false,
-            message: 'Failed to send OTP via WhatsApp. Please try again.'
-          };
-        }
-      } else {
-        // Fall back to SMS template if WhatsApp not configured
-        console.log('WhatsApp template not configured, using SMS template');
-        return this.sendSMSOTP(phoneNumber, customerName, purpose, 'whatsapp');
-      }
-    } catch (error) {
-      console.error('WhatsApp OTP Error:', error);
-      return {
-        success: false,
-        message: 'Failed to send OTP via WhatsApp. Please try again.'
-      };
-    }
+    return this.sendSMSOTP(phoneNumber, customerName, purpose, 'whatsapp');
   }
 
   // Send SMS OTP via Fast2SMS using DLT template
@@ -212,7 +143,7 @@ export class OTPService {
       }
       
       // DLT template variables: Name|OTP|
-      const variablesValues = `\${customerName}|\${otpCode}|`;
+      const variablesValues = `${customerName}|${otpCode}|`;
       
       // Build query parameters for DLT template
       const params = new URLSearchParams({
@@ -226,7 +157,7 @@ export class OTPService {
       });
       
       // Fast2SMS DLT API request (GET)
-      const url = `\${fast2smsConfig.baseUrl}?\${params.toString()}`;
+      const url = `${fast2smsConfig.baseUrl}?${params.toString()}`;
       const response = await fetch(url, {
         method: 'GET'
       });
@@ -255,8 +186,8 @@ export class OTPService {
     }
   }
   
-  // Helper method to send order placement SMS with customized message based on payment method
-  async sendOrderConfirmation(phoneNumber: string, orderNumber: string, trackingLink: string, paymentMethod?: string): Promise<{ success: boolean; message: string }> {
+  // Helper method to send order placement SMS
+  async sendOrderConfirmation(phoneNumber: string, orderNumber: string, trackingLink: string): Promise<{ success: boolean; message: string }> {
     try {
       if (!fast2smsConfig.apiKey) {
         return {
@@ -271,20 +202,7 @@ export class OTPService {
         formattedPhone = formattedPhone.slice(2);
       }
 
-      // Create customized message based on payment method
-      let message = '';
-      const trackingUrl = 'https://pathakbhandar.in/customer/orders';
-      
-      if (paymentMethod === 'cod') {
-        // Cash on Delivery - sent instantly
-        message = `Your Pathak Bhandar order ${orderNumber} has been placed! Please keep exact change ready for our delivery partner. If you wish to pay online, use the QR code they provide. Track: ${trackingUrl}`;
-      } else if (paymentMethod === 'upi' || paymentMethod === 'qr') {
-        // UPI/QR payment - sent after order placement
-        message = `Your Pathak Bhandar order ${orderNumber} has been recorded! Help us update the payment process by providing the UTR number at: ${trackingUrl} - Navigate to your order and update payment details. Thank you!`;
-      } else {
-        // Default message for other payment methods
-        message = `Your Pathak Bhandar order ${orderNumber} has been placed! Our executive will confirm it shortly. Track your order: ${trackingUrl}`;
-      }
+      const message = `Your Pathak Bhandar order ${orderNumber} has been placed! Our executive will confirm it shortly. Track your order: https://pathakbhandar.in/customer/orders`;
       
       // For custom messages, Fast2SMS requires DLT template
       // For now, we'll use a simple notification approach
@@ -305,7 +223,6 @@ export class OTPService {
       const responseData = await response.json();
 
       if (response.ok && responseData.return) {
-        console.log(`Order confirmation SMS sent for ${paymentMethod || 'default'} payment:`, orderNumber);
         return {
           success: true,
           message: 'Order confirmation sent successfully'
@@ -413,171 +330,6 @@ export class OTPService {
     }
   }
 
-  // Send SMS when order is placed - customized based on status and payment method
-  async sendOrderPlacedSMS(
-    phoneNumber: string,
-    orderNumber: string,
-    orderStatus: string,
-    paymentMethod: string,
-    customerName: string = 'Customer'
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      if (!fast2smsConfig.apiKey) {
-        return {
-          success: false,
-          message: 'SMS API not configured.'
-        };
-      }
-
-      // Format phone number
-      let formattedPhone = phoneNumber.replace(/\D/g, '');
-      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
-        formattedPhone = formattedPhone.slice(2);
-      }
-
-      // Extract first name from customer name
-      const firstName = customerName.split(' ')[0] || 'Customer';
-      const trackingUrl = 'https://pathakbhandar.in/customer/orders';
-      let message = '';
-
-      // Customize message based on order status and payment method
-      if (paymentMethod === 'gateway') {
-        // PhonePe/Online payment - status will be pending_payment initially
-        if (orderStatus === 'pending_payment') {
-          message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} has been received! Complete your payment to confirm the order. Track: ${trackingUrl}`;
-        } else if (orderStatus === 'payment_success' || orderStatus === 'pending') {
-          message = `Dear ${firstName}, thank you! Your payment for Pathak Bhandar order ${orderNumber} is successful. Our team will process it shortly. Track: ${trackingUrl}`;
-        } else if (orderStatus === 'payment_failed') {
-          message = `Dear ${firstName}, payment for your Pathak Bhandar order ${orderNumber} failed. Please try again or choose a different payment method. If money was deducted, it will be refunded within 3 days.`;
-        } else {
-          message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} status: ${orderStatus}. Track: ${trackingUrl}`;
-        }
-      } else if (paymentMethod === 'cod') {
-        // Cash on Delivery
-        message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} has been placed! Please keep exact change ready. Our executive will confirm your order soon. Track: ${trackingUrl}`;
-      } else if (paymentMethod === 'upi' || paymentMethod === 'qr') {
-        // UPI/QR payment
-        message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} has been recorded! Please update the UTR number at: ${trackingUrl} - Navigate to your order to complete payment verification.`;
-      } else {
-        // Default message
-        message = `Dear ${firstName}, your Pathak Bhandar order ${orderNumber} has been placed! Our executive will confirm it shortly. Track: ${trackingUrl}`;
-      }
-
-      const response = await fetch(fast2smsConfig.baseUrl, {
-        method: 'POST',
-        headers: {
-          'authorization': fast2smsConfig.apiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sender_id: 'PATHAK',
-          message: message,
-          route: 'q',
-          numbers: formattedPhone
-        })
-      });
-
-      const responseData = await response.json();
-
-      if (response.ok && responseData.return) {
-        console.log(`Order placed SMS sent for ${paymentMethod} payment, status ${orderStatus}:`, orderNumber);
-        return {
-          success: true,
-          message: 'Order SMS sent successfully'
-        };
-      } else {
-        console.error('Fast2SMS Order Placed SMS Error:', responseData);
-        return {
-          success: false,
-          message: 'Failed to send order SMS'
-        };
-      }
-    } catch (error) {
-      console.error('Order Placed SMS Error:', error);
-      return {
-        success: false,
-        message: 'Failed to send order SMS'
-      };
-    }
-  }
-
-  // Send PhonePe payment status SMS - only for payment gateway responses
-  async sendPhonePePaymentSMS(
-    phoneNumber: string, 
-    orderNumber: string, 
-    paymentStatus: 'success' | 'pending' | 'failed',
-    customerName: string = 'Customer'
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      if (!fast2smsConfig.apiKey) {
-        return {
-          success: false,
-          message: 'SMS API not configured.'
-        };
-      }
-
-      // Format phone number
-      let formattedPhone = phoneNumber.replace(/\D/g, '');
-      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
-        formattedPhone = formattedPhone.slice(2);
-      }
-
-      // Extract first name from customer name
-      const firstName = customerName.split(' ')[0] || 'Customer';
-
-      const orderPageLink = `https://pathakbhandar.in/customer/orders`;
-      let message = '';
-
-      switch (paymentStatus) {
-        case 'success':
-          message = `Dear ${firstName}, thank you for your payment! Your Pathak Bhandar order ${orderNumber} is placed and will be processed by our executive soon. Check your order status: ${orderPageLink}`;
-          break;
-        case 'pending':
-          message = `Dear ${firstName}, your payment for Pathak Bhandar order ${orderNumber} is being processed. If payment is deducted from your account, please share the UTR number at: ${orderPageLink} - Navigate to your order to update payment details.`;
-          break;
-        case 'failed':
-          message = `Dear ${firstName}, your payment for Pathak Bhandar order ${orderNumber} has failed. Please try again later. If money was deducted, it will be refunded to your account within 3 working days.`;
-          break;
-      }
-
-      const response = await fetch(fast2smsConfig.baseUrl, {
-        method: 'POST',
-        headers: {
-          'authorization': fast2smsConfig.apiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sender_id: 'PATHAK',
-          message: message,
-          route: 'q',
-          numbers: formattedPhone
-        })
-      });
-
-      const responseData = await response.json();
-
-      if (response.ok && responseData.return) {
-        console.log(`PhonePe payment ${paymentStatus} SMS sent for order:`, orderNumber);
-        return {
-          success: true,
-          message: `Payment ${paymentStatus} SMS sent successfully`
-        };
-      } else {
-        console.error('Fast2SMS PhonePe Payment SMS Error:', responseData);
-        return {
-          success: false,
-          message: 'Failed to send payment status SMS'
-        };
-      }
-    } catch (error) {
-      console.error('PhonePe Payment SMS Error:', error);
-      return {
-        success: false,
-        message: 'Failed to send payment status SMS'
-      };
-    }
-  }
-
   // Verify OTP
   async verifyOTP(identifier: string, inputOTP: string, type: 'email' | 'whatsapp' | 'sms'): Promise<{ success: boolean; message: string }> {
     try {
@@ -602,8 +354,6 @@ export class OTPService {
         )
         .limit(1);
 
-      console.log(`Found OTP record for ${identifier} (${type}):`, otpRecord ? 'Yes' : 'No');
-
       if (!otpRecord) {
         return {
           success: false,
@@ -613,7 +363,6 @@ export class OTPService {
 
       // Check if OTP is expired
       if (new Date() > otpRecord.expiresAt) {
-        // Delete expired OTP
         await db.delete(otps).where(eq(otps.id, otpRecord.id));
         return {
           success: false,
@@ -621,36 +370,32 @@ export class OTPService {
         };
       }
 
-      // Check if OTP matches
-      if (otpRecord.otp !== inputOTP) {
-        const remainingAttempts = Math.max(0, 3 - (otpRecord.attempts + 1));
-        
-        // Increment attempts
-        await db
-          .update(otps)
-          .set({ attempts: otpRecord.attempts + 1 })
-          .where(eq(otps.id, otpRecord.id));
-
-        if (remainingAttempts === 0) {
-          // Delete exhausted OTP
-          await db.delete(otps).where(eq(otps.id, otpRecord.id));
-          return {
-            success: false,
-            message: 'Maximum attempts reached. Please request a new OTP.'
-          };
-        }
-
+      // Check attempts limit
+      const attempts = otpRecord.attempts || 0;
+      if (attempts >= 3) {
+        await db.delete(otps).where(eq(otps.id, otpRecord.id));
         return {
           success: false,
-          message: `Invalid OTP. ${remainingAttempts} attempts remaining.`
+          message: 'Too many incorrect attempts. Please request a new OTP.'
         };
       }
 
-      // Mark as verified
-      await db
-        .update(otps)
-        .set({ isVerified: true })
-        .where(eq(otps.id, otpRecord.id));
+      // Verify OTP
+      if (otpRecord.otp !== inputOTP) {
+        // Increment attempts
+        await db
+          .update(otps)
+          .set({ attempts: attempts + 1 })
+          .where(eq(otps.id, otpRecord.id));
+
+        return {
+          success: false,
+          message: `Invalid OTP. ${3 - (attempts + 1)} attempts remaining.`
+        };
+      }
+
+      // OTP is correct - mark as verified and clean up
+      await db.delete(otps).where(eq(otps.id, otpRecord.id));
 
       return {
         success: true,
@@ -660,7 +405,7 @@ export class OTPService {
       console.error('Verify OTP Error:', error);
       return {
         success: false,
-        message: 'An error occurred during verification. Please try again.'
+        message: 'Failed to verify OTP. Please try again.'
       };
     }
   }

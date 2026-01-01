@@ -112,7 +112,7 @@ export function CartProvider({ children }: CartProviderProps) {
         variant: 'destructive',
       });
       setTimeout(() => {
-        window.location.assign('https://www.pathakbhandar.in/login');
+        window.location.assign('/auth');
       }, 1500);
       return;
     }

@@ -89,12 +89,12 @@ export class OTPService {
             <p style="color: #666; font-size: 16px;">Your OTP verification code is:</p>
             
             <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-              <h1 style="color: #2563eb; font-size: 32px; margin: 0; letter-spacing: 8px; font-weight: bold;">${otpCode}</h1>
+              <h1 style="color: #2563eb; font-size: 32px; margin: 0; letter-spacing: 8px; font-weight: bold;">\${otpCode}</h1>
             </div>
             
             <p style="color: #666; font-size: 14px;">
               • This code will expire in <strong>5 minutes</strong><br>
-              • Use this code to complete your ${purpose} process<br>
+              • Use this code to complete your \${purpose} process<br>
               • If you didn't request this code, please ignore this email
             </p>
             
@@ -146,7 +146,7 @@ export class OTPService {
 
         // WhatsApp template variables (pathak_bhandar_number_verification)
         // Variable 1: {{name}}, Variable 2: {{offer_code}}
-        const variablesValues = `${customerName}|${otpCode}`;
+        const variablesValues = `\${customerName}|\${otpCode}`;
         
         // Build request for WhatsApp
         const params = new URLSearchParams({
@@ -159,7 +159,7 @@ export class OTPService {
           numbers: formattedPhone
         });
         
-        const url = `${fast2smsConfig.baseUrl}?${params.toString()}`;
+        const url = `\${fast2smsConfig.baseUrl}?\${params.toString()}`;
         const response = await fetch(url, {
           method: 'GET'
         });
@@ -212,7 +212,7 @@ export class OTPService {
       }
       
       // DLT template variables: Name|OTP|
-      const variablesValues = `${customerName}|${otpCode}|`;
+      const variablesValues = `\${customerName}|\${otpCode}|`;
       
       // Build query parameters for DLT template
       const params = new URLSearchParams({
@@ -226,7 +226,7 @@ export class OTPService {
       });
       
       // Fast2SMS DLT API request (GET)
-      const url = `${fast2smsConfig.baseUrl}?${params.toString()}`;
+      const url = `\${fast2smsConfig.baseUrl}?\${params.toString()}`;
       const response = await fetch(url, {
         method: 'GET'
       });
@@ -602,6 +602,8 @@ export class OTPService {
         )
         .limit(1);
 
+      console.log(`Found OTP record for ${identifier} (${type}):`, otpRecord ? 'Yes' : 'No');
+
       if (!otpRecord) {
         return {
           success: false,
@@ -611,6 +613,7 @@ export class OTPService {
 
       // Check if OTP is expired
       if (new Date() > otpRecord.expiresAt) {
+        // Delete expired OTP
         await db.delete(otps).where(eq(otps.id, otpRecord.id));
         return {
           success: false,
@@ -618,32 +621,36 @@ export class OTPService {
         };
       }
 
-      // Check attempts limit
-      const attempts = otpRecord.attempts || 0;
-      if (attempts >= 3) {
-        await db.delete(otps).where(eq(otps.id, otpRecord.id));
-        return {
-          success: false,
-          message: 'Too many incorrect attempts. Please request a new OTP.'
-        };
-      }
-
-      // Verify OTP
+      // Check if OTP matches
       if (otpRecord.otp !== inputOTP) {
+        const remainingAttempts = Math.max(0, 3 - (otpRecord.attempts + 1));
+        
         // Increment attempts
         await db
           .update(otps)
-          .set({ attempts: attempts + 1 })
+          .set({ attempts: otpRecord.attempts + 1 })
           .where(eq(otps.id, otpRecord.id));
+
+        if (remainingAttempts === 0) {
+          // Delete exhausted OTP
+          await db.delete(otps).where(eq(otps.id, otpRecord.id));
+          return {
+            success: false,
+            message: 'Maximum attempts reached. Please request a new OTP.'
+          };
+        }
 
         return {
           success: false,
-          message: `Invalid OTP. ${3 - (attempts + 1)} attempts remaining.`
+          message: `Invalid OTP. ${remainingAttempts} attempts remaining.`
         };
       }
 
-      // OTP is correct - mark as verified and clean up
-      await db.delete(otps).where(eq(otps.id, otpRecord.id));
+      // Mark as verified
+      await db
+        .update(otps)
+        .set({ isVerified: true })
+        .where(eq(otps.id, otpRecord.id));
 
       return {
         success: true,
@@ -653,7 +660,7 @@ export class OTPService {
       console.error('Verify OTP Error:', error);
       return {
         success: false,
-        message: 'Failed to verify OTP. Please try again.'
+        message: 'An error occurred during verification. Please try again.'
       };
     }
   }

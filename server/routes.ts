@@ -304,14 +304,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/verify-phone", authenticateUser, async (req, res) => {
     try {
-      const { phone, otp } = req.body;
+      const { phone, otp, type } = req.body;
       const userId = req.user.id;
       
-      // Verify OTP
-      const isValid = await storage.verifyOtp(phone, otp, 'whatsapp');
+      console.log(`Verifying phone OTP: ${phone}, OTP: ${otp}, Type: ${type || 'whatsapp'}`);
+
+      // Verify OTP using otpService for consistency
+      const result = await otpService.verifyOTP(phone, otp, type || 'whatsapp');
       
-      if (!isValid) {
-        return res.status(400).json({ message: 'Invalid or expired OTP' });
+      if (!result.success) {
+        return res.status(400).json({ 
+          success: false, 
+          message: result.message,
+          verified: false 
+        });
       }
       
       // Update user phone and verification status
@@ -320,9 +326,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isVerified: true,
       });
       
-      res.json(updatedUser);
+      res.json({
+        ...updatedUser,
+        success: true,
+        message: 'Phone verified successfully'
+      });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      console.error('Verify phone error:', error);
+      res.status(400).json({ success: false, message: error.message });
     }
   });
 

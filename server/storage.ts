@@ -148,6 +148,20 @@ export interface IStorage {
   getPhonePeTransactionByOrderId(orderId: number): Promise<PhonePeTransaction | undefined>;
   updatePhonePeTransaction(id: number, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction>;
   updatePhonePeTransactionByMerchantId(merchantTransactionId: string, updates: Partial<PhonePeTransaction>): Promise<PhonePeTransaction>;
+
+  // Verified customers methods (for admin tracking)
+  getVerifiedCustomers(): Promise<{
+    id: number;
+    customerName: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    verifiedAt: Date | null;
+    addressId: number;
+  }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1165,6 +1179,75 @@ export class DatabaseStorage implements IStorage {
       .where(eq(phonePeTransactions.merchantTransactionId, merchantTransactionId))
       .returning();
     return updated;
+  }
+
+  // Verified customers methods - returns verified phone numbers with address details
+  // Note: OTP values are intentionally NOT returned for security reasons
+  async getVerifiedCustomers(): Promise<{
+    id: number;
+    customerName: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    verifiedAt: Date | null;
+    addressId: number;
+  }[]> {
+    // Get all verified OTPs (without the OTP value for security)
+    const verifiedRecords = await db
+      .select({
+        otpId: otps.id,
+        phone: otps.identifier,
+        verifiedAt: otps.createdAt,
+      })
+      .from(otps)
+      .where(eq(otps.isVerified, true))
+      .orderBy(desc(otps.createdAt));
+
+    const results = [];
+    
+    for (const record of verifiedRecords) {
+      // Find addresses with this phone number
+      const addressRecords = await db
+        .select()
+        .from(addresses)
+        .where(eq(addresses.phone, record.phone))
+        .limit(1);
+      
+      if (addressRecords.length > 0) {
+        const addr = addressRecords[0];
+        results.push({
+          id: record.otpId,
+          customerName: addr.name,
+          phone: record.phone,
+          addressLine1: addr.addressLine1,
+          addressLine2: addr.addressLine2,
+          city: addr.city,
+          state: addr.state,
+          pincode: addr.pincode,
+          verifiedAt: record.verifiedAt,
+          addressId: addr.id,
+        });
+      } else {
+        // No address found, still show the verification record
+        results.push({
+          id: record.otpId,
+          customerName: 'Unknown',
+          phone: record.phone,
+          addressLine1: 'N/A',
+          addressLine2: null,
+          city: 'N/A',
+          state: 'N/A',
+          pincode: 'N/A',
+          verifiedAt: record.verifiedAt,
+          addressId: 0,
+        });
+      }
+    }
+    
+    return results;
   }
 }
 

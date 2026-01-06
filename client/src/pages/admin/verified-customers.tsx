@@ -15,7 +15,6 @@ interface VerifiedCustomer {
   id: number;
   customerName: string;
   phone: string;
-  otp: string;
   addressLine1: string;
   addressLine2: string | null;
   city: string;
@@ -161,7 +160,6 @@ export default function VerifiedCustomers() {
                       <tr className="border-b bg-gray-50">
                         <th className="text-left py-3 px-4 font-medium text-gray-900">Customer Name</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-900">Phone Number</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-900">OTP Used</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-900">Address</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-900">City</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-900">State</th>
@@ -189,11 +187,6 @@ export default function VerifiedCustomers() {
                               <span>{customer.phone}</span>
                               <Badge className="bg-green-100 text-green-800 text-xs">Verified</Badge>
                             </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
-                              {customer.otp}
-                            </code>
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-start gap-2 max-w-xs">

@@ -636,11 +636,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/addresses", authenticateUser, async (req, res) => {
     try {
+      const userId = req.user.id;
       const addressData = insertAddressSchema.parse({
         ...req.body,
-        userId: req.user.id,
+        userId: userId,
       });
-      const address = await storage.createAddress(addressData);
+
+      // Check if this phone number has been verified before for this user or any user
+      const [verifiedOtp] = await db
+        .select()
+        .from(otps)
+        .where(
+          and(
+            eq(otps.identifier, addressData.phone),
+            eq(otps.isVerified, true)
+          )
+        )
+        .limit(1);
+
+      const address = await storage.createAddress({
+        ...addressData,
+        isPhoneVerified: !!verifiedOtp,
+        phoneVerifiedAt: verifiedOtp ? verifiedOtp.createdAt : null,
+      });
       res.json(address);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -651,6 +669,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const addressData = insertAddressSchema.partial().parse(req.body);
+
+      // Check if this phone number has been verified before
+      if (addressData.phone) {
+        const [verifiedOtp] = await db
+          .select()
+          .from(otps)
+          .where(
+            and(
+              eq(otps.identifier, addressData.phone),
+              eq(otps.isVerified, true)
+            )
+          )
+          .limit(1);
+
+        if (verifiedOtp) {
+          addressData.isPhoneVerified = true;
+          addressData.phoneVerifiedAt = verifiedOtp.createdAt;
+        } else {
+          addressData.isPhoneVerified = false;
+          addressData.phoneVerifiedAt = null;
+        }
+      }
+
       const address = await storage.updateAddress(id, addressData);
       res.json(address);
     } catch (error: any) {

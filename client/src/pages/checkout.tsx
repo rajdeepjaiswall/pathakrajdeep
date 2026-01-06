@@ -540,18 +540,24 @@ export default function Checkout() {
                           Verified
                         </span>
                       ) : (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="h-auto p-0 text-xs text-blue-600"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleVerifyPhone(address);
-                          }}
-                          data-testid={`verify-phone-${address.id}`}
-                        >
-                          Verify Phone
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Verify phone status
+                          </span>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs text-blue-600"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleVerifyPhone(address);
+                            }}
+                            data-testid={`verify-phone-${address.id}`}
+                          >
+                            Verify Now
+                          </Button>
+                        </div>
                       )}
                     </div>
                     <p className="text-sm text-gray-600">

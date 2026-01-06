@@ -27,8 +27,8 @@ interface Fast2SMSConfig {
 const fast2smsConfig: Fast2SMSConfig = {
   apiKey: process.env.FAST2SMS_API_KEY || '',
   baseUrl: 'https://www.fast2sms.com/dev/bulkV2',
-  senderId: 'GETDWN',
-  otpTemplateId: '148245', // SMS template ID
+  senderId: 'GETDON',
+  otpTemplateId: '206901', // SMS template ID (Excel Message ID)
   whatsappTemplateId: process.env.FAST2SMS_WHATSAPP_TEMPLATE_ID || '1709460170014791', // WhatsApp template ID
   whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID || '15558471512' // WhatsApp sender ID phone number
 };
@@ -211,8 +211,8 @@ export class OTPService {
         formattedPhone = formattedPhone.slice(2);
       }
       
-      // DLT template variables: Name|OTP|
-      const variablesValues = `${customerName}|${otpCode}|`;
+      // DLT template variables: Name|OTP
+      const variablesValues = `${customerName}|${otpCode}`;
       
       // Build query parameters for DLT template
       const params = new URLSearchParams({

@@ -70,7 +70,8 @@ Supports dual database configurations:
 - Fast2SMS API (for OTP verification and order confirmation SMS)
   - Note: User declined Twilio Replit integration, uses Fast2SMS directly with API key stored in secrets
   - Configuration: FAST2SMS_API_KEY environment variable
-  - DLT Template: ID 148245, Sender ID GETDWN, Format: CustomerName|OTP|
+  - DLT Template: ID 206901, Sender ID GETDON, Format: CustomerName|OTP
+  - DLT Content Template ID: 1207176761125931947
 
 ## Deployment
 

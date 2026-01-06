@@ -46,14 +46,14 @@ const adminNavItems = [
     icon: ShoppingBag,
   },
   {
-    title: 'Customers',
-    href: '/admin/customers',
-    icon: Users,
-  },
-  {
     title: 'Verified Customers',
     href: '/admin/verified-customers',
     icon: CheckCircle,
+  },
+  {
+    title: 'All Customers',
+    href: '/admin/customers',
+    icon: Users,
   },
   {
     title: 'Payments',

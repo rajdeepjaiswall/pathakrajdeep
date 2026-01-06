@@ -23,14 +23,14 @@ export default function AdminCustomers() {
   }
 
   // Fetch customers
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/customers'],
   });
 
-  const filteredCustomers = customers.filter((customer: any) =>
-    customer.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.includes(searchTerm)
+  const filteredCustomers = (customers || []).filter((customer: any) =>
+    (customer.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (customer.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (customer.phone || '').includes(searchTerm)
   );
 
   return (

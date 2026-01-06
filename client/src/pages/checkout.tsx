@@ -606,7 +606,18 @@ export default function Checkout() {
                       <FormItem>
                         <FormLabel>Phone Number</FormLabel>
                         <FormControl>
-                          <Input {...field} data-testid="input-address-phone" />
+                          <Input 
+                            {...field} 
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            onKeyPress={(e) => {
+                              if (!/[0-9]/.test(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            data-testid="input-address-phone" 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

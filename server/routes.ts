@@ -11,7 +11,7 @@ import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
 import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 

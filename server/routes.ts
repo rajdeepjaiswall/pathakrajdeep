@@ -1378,6 +1378,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Verified customers endpoint - shows all verified phone numbers with details
+  app.get("/api/admin/verified-customers", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { date } = req.query;
+      
+      // Get all verified OTPs joined with addresses to get customer details
+      const verifiedRecords = await db
+        .select({
+          otpId: otps.id,
+          phone: otps.identifier,
+          otp: otps.otp,
+          verifiedAt: otps.createdAt,
+        })
+        .from(otps)
+        .where(eq(otps.isVerified, true))
+        .orderBy(otps.createdAt);
+
+      // For each verified phone, get the associated address info
+      const { addresses } = await import("@shared/schema");
+      const results = [];
+      
+      for (const record of verifiedRecords) {
+        // Find addresses with this phone number
+        const addressRecords = await db
+          .select()
+          .from(addresses)
+          .where(eq(addresses.phone, record.phone))
+          .limit(1);
+        
+        if (addressRecords.length > 0) {
+          const addr = addressRecords[0];
+          results.push({
+            id: record.otpId,
+            customerName: addr.name,
+            phone: record.phone,
+            otp: record.otp,
+            addressLine1: addr.addressLine1,
+            addressLine2: addr.addressLine2,
+            city: addr.city,
+            state: addr.state,
+            pincode: addr.pincode,
+            verifiedAt: record.verifiedAt,
+            addressId: addr.id,
+          });
+        } else {
+          // No address found, still show the verification record
+          results.push({
+            id: record.otpId,
+            customerName: 'Unknown',
+            phone: record.phone,
+            otp: record.otp,
+            addressLine1: 'N/A',
+            addressLine2: null,
+            city: 'N/A',
+            state: 'N/A',
+            pincode: 'N/A',
+            verifiedAt: record.verifiedAt,
+            addressId: 0,
+          });
+        }
+      }
+      
+      // Sort by verifiedAt descending (newest first)
+      results.sort((a, b) => new Date(b.verifiedAt).getTime() - new Date(a.verifiedAt).getTime());
+      
+      res.json(results);
+    } catch (error: any) {
+      console.error('Verified customers error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Push notification subscription endpoint
   app.post("/api/notifications/subscribe", authenticateUser, async (req, res) => {
     try {

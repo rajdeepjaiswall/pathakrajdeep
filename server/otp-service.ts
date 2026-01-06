@@ -629,12 +629,13 @@ export class OTPService {
 
       // Check if OTP matches
       if (otpRecord.otp !== inputOTP) {
-        const remainingAttempts = Math.max(0, 3 - (otpRecord.attempts + 1));
+        const currentAttempts = otpRecord.attempts ?? 0;
+        const remainingAttempts = Math.max(0, 3 - (currentAttempts + 1));
         
         // Increment attempts
         await db
           .update(otps)
-          .set({ attempts: otpRecord.attempts + 1 })
+          .set({ attempts: currentAttempts + 1 })
           .where(eq(otps.id, otpRecord.id));
 
         if (remainingAttempts === 0) {

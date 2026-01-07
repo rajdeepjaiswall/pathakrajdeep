@@ -110,11 +110,11 @@ export default function AdminCustomers() {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-champagne rounded-full flex items-center justify-center">
                               <span className="text-navy font-semibold text-sm">
-                                {customer.username.charAt(0).toUpperCase()}
+                                {(customer.username || customer.email || 'U').charAt(0).toUpperCase()}
                               </span>
                             </div>
                             <div>
-                              <p className="font-medium text-navy">{customer.username}</p>
+                              <p className="font-medium text-navy">{customer.username || customer.email || 'Unknown'}</p>
                               <p className="text-sm text-gray-600">ID: #{customer.id}</p>
                             </div>
                           </div>
@@ -162,7 +162,7 @@ export default function AdminCustomers() {
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl">
                               <DialogHeader>
-                                <DialogTitle>Customer Details - {customer.username}</DialogTitle>
+                                <DialogTitle>Customer Details - {customer.username || customer.email || 'Unknown'}</DialogTitle>
                               </DialogHeader>
                               {selectedCustomer && (
                                 <div className="space-y-6">
@@ -173,7 +173,7 @@ export default function AdminCustomers() {
                                       <div className="space-y-2 text-sm">
                                         <div className="flex justify-between">
                                           <span className="text-gray-600">Username:</span>
-                                          <span className="font-medium">{selectedCustomer.username}</span>
+                                          <span className="font-medium">{selectedCustomer.username || selectedCustomer.email || 'Unknown'}</span>
                                         </div>
                                         {selectedCustomer.email && (
                                           <div className="flex justify-between">

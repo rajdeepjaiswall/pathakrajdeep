@@ -153,13 +153,16 @@ export default function AdminOrders() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-orange-100 text-orange-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'payment_success': return 'bg-green-100 text-green-800';
+      case 'confirmed': return 'bg-green-100 text-green-800';
       case 'getting_ready': return 'bg-yellow-100 text-yellow-800';
       case 'packed': return 'bg-purple-100 text-purple-800';
       case 'dispatched': return 'bg-indigo-100 text-indigo-800';
       case 'shipped': return 'bg-blue-100 text-blue-800';
       case 'delivered': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'payment_failed': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -167,17 +170,23 @@ export default function AdminOrders() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="h-3 w-3" />;
+      case 'payment_success': return <CheckCircle className="h-3 w-3" />;
+      case 'confirmed': return <CheckCircle className="h-3 w-3" />;
       case 'order_received': return <CheckCircle className="h-3 w-3" />;
       case 'preparing': return <Package className="h-3 w-3" />;
       case 'dispatched': return <Truck className="h-3 w-3" />;
       case 'out_for_delivery': return <Truck className="h-3 w-3" />;
       case 'delivered': return <CheckCircle className="h-3 w-3" />;
+      case 'cancelled': return <XCircle className="h-3 w-3" />;
+      case 'payment_failed': return <AlertCircle className="h-3 w-3" />;
       default: return <Clock className="h-3 w-3" />;
     }
   };
 
   const getStatusDisplay = (status: string) => {
     switch (status) {
+      case 'payment_success': return 'Payment Successful';
+      case 'confirmed': return 'Delivery Pending';
       case 'pending': return 'Pending';
       case 'getting_ready': return 'Getting Ready';
       case 'packed': return 'Packed';
@@ -185,7 +194,23 @@ export default function AdminOrders() {
       case 'shipped': return 'Shipped';
       case 'delivered': return 'Delivered';
       case 'cancelled': return 'Cancelled';
-      default: return status;
+      default: return status.replace(/_/g, ' ');
+    }
+  };
+
+  const getBorderColor = (status: string) => {
+    switch (status) {
+      case 'payment_success':
+      case 'confirmed':
+      case 'delivered':
+        return 'border-green-500 border-2';
+      case 'pending':
+        return 'border-yellow-400 border-2';
+      case 'cancelled':
+      case 'payment_failed':
+        return 'border-red-500 border-2';
+      default:
+        return 'border-gray-200';
     }
   };
 
@@ -275,12 +300,12 @@ export default function AdminOrders() {
             ) : (
               <div className="space-y-4">
                 {filteredOrders.map((order: any) => (
-                  <div key={order.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div key={order.id} className={`border rounded-lg p-4 hover:bg-gray-50 transition-colors ${getBorderColor(order.status)}`}>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-navy">#{order.orderNumber}</h3>
-                          <Badge className={`${getStatusColor(order.status)}`}>
+                          <Badge className={`capitalize ${getStatusColor(order.status)}`}>
                             {getStatusIcon(order.status)}
                             <span className="ml-1">{getStatusDisplay(order.status)}</span>
                           </Badge>
@@ -297,7 +322,7 @@ export default function AdminOrders() {
                             <span className="font-medium">Customer:</span> {order.deliveryAddress?.name}
                           </div>
                           <div>
-                            <span className="font-medium">Date:</span> {new Date(order.orderDate).toLocaleDateString()}
+                            <span className="font-medium">Payment Status:</span> <span className={`font-semibold ${getStatusColor(order.status)} px-1.5 py-0.5 rounded-sm`}>{getStatusDisplay(order.status)}</span>
                           </div>
                           <div>
                             <span className="font-medium">Payment:</span> {order.paymentMethod.toUpperCase()}
@@ -313,7 +338,7 @@ export default function AdminOrders() {
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           <p className="font-bold text-navy text-lg">{formatPrice(parseFloat(order.total))}</p>
-                          <p className="text-sm text-gray-500">{order.paymentStatus}</p>
+                          <p className="text-sm text-gray-500">{new Date(order.orderDate).toLocaleTimeString()}</p>
                         </div>
                         
                         <div className="flex gap-2">

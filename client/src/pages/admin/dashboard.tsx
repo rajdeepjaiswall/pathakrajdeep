@@ -548,6 +548,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="text-xs text-gray-600 space-y-1">
                         <p><span className="font-medium">Customer:</span> {order.deliveryAddress?.name}</p>
+                        <p><span className="font-medium">Payment Status:</span> <span className={`font-semibold ${getStatusColor(order.status)} px-1.5 py-0.5 rounded-sm`}>{getStatusLabel(order.status)}</span></p>
                         <p><span className="font-medium">Total:</span> {formatPrice(parseFloat(order.total))}</p>
                         <p><span className="font-medium">Time:</span> {new Date(order.orderDate).toLocaleTimeString()}</p>
                       </div>

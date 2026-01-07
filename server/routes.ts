@@ -2016,6 +2016,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dbStatus = status === 'payment_success' ? 'success' : 
                        status === 'payment_failed' ? 'failed' : 'pending';
       
+      console.log(`Mapping PhonePe status ${status} to DB status: ${dbStatus}`);
+
       // Update transaction
       await storage.updatePhonePeTransactionByMerchantId(merchantOrderId, {
         status: dbStatus,
@@ -2026,17 +2028,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentState: webhookData.payload.state,
       });
 
-      // Get order details for SMS
-      const order = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
-      const orderPhone = transaction.phone || order[0]?.phone || '';
-      const orderNumber = order[0]?.orderNumber || '';
-      // Get customer name from delivery address
-      const deliveryAddress = order[0]?.deliveryAddress as any;
-      const customerName = deliveryAddress?.name || 'Customer';
-      
       // Update order based on payment status and send appropriate SMS
-      if (status === 'payment_success') {
+      if (dbStatus === 'success') {
         // Payment successful - update order to confirmed/pending
+        console.log(`Updating order ${transaction.orderId} to confirmed status`);
         await storage.updateOrderStatus(transaction.orderId, 'pending');
         await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
         
@@ -2108,8 +2103,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update transaction
-      const status = code === 'PAYMENT_SUCCESS' ? 'success' : 
-                     code === 'PAYMENT_PENDING' ? 'pending' : 'failed';
+      const status = (code === 'PAYMENT_SUCCESS' || code === 'SUCCESS' || code === 'COMPLETED') ? 'success' : 
+                     (code === 'PAYMENT_PENDING' || code === 'PENDING') ? 'pending' : 'failed';
       
       await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {
         status,
@@ -2177,8 +2172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await checkPhonePePaymentStatus(merchantTransactionId);
       
       if (result.success && result.status) {
-        const status = result.status === 'SUCCESS' ? 'success' : 
-                       result.status === 'FAILED' ? 'failed' : 'pending';
+        const status = (result.status === 'SUCCESS' || result.status === 'COMPLETED') ? 'success' : 
+                       (result.status === 'FAILED' || result.status === 'CANCELLED') ? 'failed' : 'pending';
         
         // Update transaction
         await storage.updatePhonePeTransactionByMerchantId(merchantTransactionId, {

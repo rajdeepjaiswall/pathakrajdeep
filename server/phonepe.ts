@@ -259,9 +259,10 @@ export async function checkPhonePePaymentStatus(merchantOrderId: string): Promis
     // Parse state from response
     let status: 'SUCCESS' | 'PENDING' | 'FAILED' = 'PENDING';
     
-    if (data.state === 'COMPLETED') {
+    // Check for multiple success indicators
+    if (data.state === 'COMPLETED' || data.code === 'PAYMENT_SUCCESS' || data.state === 'SUCCESS') {
       status = 'SUCCESS';
-    } else if (data.state === 'FAILED' || data.state === 'CANCELLED') {
+    } else if (data.state === 'FAILED' || data.state === 'CANCELLED' || data.code === 'PAYMENT_ERROR') {
       status = 'FAILED';
     }
 
@@ -365,9 +366,12 @@ export function parsePhonePeWebhook(webhookData: PhonePeWebhookPayload): {
   let status: 'payment_success' | 'pending_payment' | 'payment_failed' = 'pending_payment';
   
   // According to docs: Use "payload.state" for payment status
+  const isSuccess = payload.state === 'COMPLETED' || payload.state === 'SUCCESS';
+  const isFailed = payload.state === 'FAILED' || payload.state === 'CANCELLED';
+
   switch (event) {
     case 'checkout.order.completed':
-      status = payload.state === 'COMPLETED' ? 'payment_success' : 'pending_payment';
+      status = isSuccess ? 'payment_success' : (isFailed ? 'payment_failed' : 'pending_payment');
       break;
     case 'checkout.order.failed':
       status = 'payment_failed';

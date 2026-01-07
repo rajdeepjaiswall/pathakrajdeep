@@ -154,6 +154,7 @@ export default function AdminOrders() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'pending_payment': return 'bg-green-100 text-green-800';
       case 'payment_success': return 'bg-green-100 text-green-800';
       case 'confirmed': return 'bg-green-100 text-green-800';
       case 'getting_ready': return 'bg-yellow-100 text-yellow-800';
@@ -170,6 +171,7 @@ export default function AdminOrders() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="h-3 w-3" />;
+      case 'pending_payment': return <CheckCircle className="h-3 w-3" />;
       case 'payment_success': return <CheckCircle className="h-3 w-3" />;
       case 'confirmed': return <CheckCircle className="h-3 w-3" />;
       case 'order_received': return <CheckCircle className="h-3 w-3" />;
@@ -185,6 +187,7 @@ export default function AdminOrders() {
 
   const getStatusDisplay = (status: string) => {
     switch (status) {
+      case 'pending_payment': return 'Payment Successful';
       case 'payment_success': return 'Payment Successful';
       case 'confirmed': return 'Delivery Pending';
       case 'pending': return 'Pending';
@@ -200,6 +203,7 @@ export default function AdminOrders() {
 
   const getBorderColor = (status: string) => {
     switch (status) {
+      case 'pending_payment':
       case 'payment_success':
       case 'confirmed':
       case 'delivered':

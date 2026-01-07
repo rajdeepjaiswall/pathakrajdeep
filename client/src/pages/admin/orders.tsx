@@ -152,13 +152,14 @@ export default function AdminOrders() {
   });
 
   const getStatusColor = (status: string, paymentMethod?: string, paymentStatus?: string) => {
-    // Gateway payments show as successful only if payment is completed (not pending)
-    if (paymentMethod === 'gateway' && paymentStatus !== 'pending' && status !== 'cancelled' && status !== 'payment_failed') {
+    // Gateway payments show as successful only if payment is explicitly completed (paid/success/completed)
+    const isGatewayPaid = paymentMethod === 'gateway' && (paymentStatus === 'paid' || paymentStatus === 'success' || paymentStatus === 'completed');
+    if (isGatewayPaid && status !== 'cancelled' && status !== 'payment_failed') {
       return 'bg-green-100 text-green-800';
     }
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'pending_payment': return 'bg-green-100 text-green-800';
+      case 'pending_payment': return 'bg-yellow-100 text-yellow-800';
       case 'payment_success': return 'bg-green-100 text-green-800';
       case 'confirmed': return 'bg-green-100 text-green-800';
       case 'getting_ready': return 'bg-yellow-100 text-yellow-800';
@@ -173,13 +174,14 @@ export default function AdminOrders() {
   };
 
   const getStatusIcon = (status: string, paymentMethod?: string, paymentStatus?: string) => {
-    // Gateway payments show checkmark only if payment is completed (not pending)
-    if (paymentMethod === 'gateway' && paymentStatus !== 'pending' && status !== 'cancelled' && status !== 'payment_failed') {
+    // Gateway payments show checkmark only if payment is explicitly completed (paid/success/completed)
+    const isGatewayPaid = paymentMethod === 'gateway' && (paymentStatus === 'paid' || paymentStatus === 'success' || paymentStatus === 'completed');
+    if (isGatewayPaid && status !== 'cancelled' && status !== 'payment_failed') {
       return <CheckCircle className="h-3 w-3" />;
     }
     switch (status) {
       case 'pending': return <Clock className="h-3 w-3" />;
-      case 'pending_payment': return <CheckCircle className="h-3 w-3" />;
+      case 'pending_payment': return <Clock className="h-3 w-3" />;
       case 'payment_success': return <CheckCircle className="h-3 w-3" />;
       case 'confirmed': return <CheckCircle className="h-3 w-3" />;
       case 'order_received': return <CheckCircle className="h-3 w-3" />;
@@ -194,12 +196,13 @@ export default function AdminOrders() {
   };
 
   const getStatusDisplay = (status: string, paymentMethod?: string, paymentStatus?: string) => {
-    // Gateway payments show as successful only if payment is completed (not pending)
-    if (paymentMethod === 'gateway' && paymentStatus !== 'pending' && status !== 'cancelled' && status !== 'payment_failed') {
+    // Gateway payments show as successful only if payment is explicitly completed (paid/success/completed)
+    const isGatewayPaid = paymentMethod === 'gateway' && (paymentStatus === 'paid' || paymentStatus === 'success' || paymentStatus === 'completed');
+    if (isGatewayPaid && status !== 'cancelled' && status !== 'payment_failed') {
       return 'Payment Successful';
     }
     switch (status) {
-      case 'pending_payment': return 'Payment Successful';
+      case 'pending_payment': return 'Payment Pending';
       case 'payment_success': return 'Payment Successful';
       case 'confirmed': return 'Delivery Pending';
       case 'pending': return 'Pending';
@@ -214,17 +217,18 @@ export default function AdminOrders() {
   };
 
   const getBorderColor = (status: string, paymentMethod?: string, paymentStatus?: string) => {
-    // Gateway payments show green border only if payment is completed (not pending)
-    if (paymentMethod === 'gateway' && paymentStatus !== 'pending' && status !== 'cancelled' && status !== 'payment_failed') {
+    // Gateway payments show green border only if payment is explicitly completed (paid/success/completed)
+    const isGatewayPaid = paymentMethod === 'gateway' && (paymentStatus === 'paid' || paymentStatus === 'success' || paymentStatus === 'completed');
+    if (isGatewayPaid && status !== 'cancelled' && status !== 'payment_failed') {
       return 'border-green-500 border-2';
     }
     switch (status) {
-      case 'pending_payment':
       case 'payment_success':
       case 'confirmed':
       case 'delivered':
         return 'border-green-500 border-2';
       case 'pending':
+      case 'pending_payment':
         return 'border-yellow-400 border-2';
       case 'cancelled':
       case 'payment_failed':

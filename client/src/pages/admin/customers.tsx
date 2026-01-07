@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Users, Mail, Phone, Calendar, Eye } from 'lucide-react';
+import { Search, Users, Mail, Phone, Calendar, Eye, CheckCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
@@ -15,6 +16,7 @@ export default function AdminCustomers() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('all');
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
@@ -27,11 +29,15 @@ export default function AdminCustomers() {
     queryKey: ['/api/admin/customers'],
   });
 
-  const filteredCustomers = (customers || []).filter((customer: any) =>
+  const allCustomers = (customers || []).filter((customer: any) =>
     (customer.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (customer.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (customer.phone || '').includes(searchTerm)
   );
+
+  const verifiedCustomers = allCustomers.filter((customer: any) => customer.isVerified === true);
+
+  const filteredCustomers = activeTab === 'verified' ? verifiedCustomers : allCustomers;
 
   return (
     <div className="min-h-screen bg-cream">
@@ -48,11 +54,31 @@ export default function AdminCustomers() {
             <div className="bg-white rounded-lg p-4 shadow-sm">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-champagne" />
-                <span className="font-semibold text-navy">{customers.length} Total Customers</span>
+                <span className="font-semibold text-navy">{customers.length} Total</span>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-green-600" />
+                <span className="font-semibold text-green-600">{(customers || []).filter((c: any) => c.isVerified).length} Verified</span>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="all" className="flex items-center gap-2" data-testid="tab-all-customers">
+              <Users className="h-4 w-4" />
+              All Customers ({allCustomers.length})
+            </TabsTrigger>
+            <TabsTrigger value="verified" className="flex items-center gap-2" data-testid="tab-verified-customers">
+              <ShieldCheck className="h-4 w-4" />
+              Verified ({verifiedCustomers.length})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Search */}
         <Card className="mb-6">
@@ -72,8 +98,18 @@ export default function AdminCustomers() {
         {/* Customers Table */}
         <Card>
           <CardHeader>
-            <CardTitle>
-              Customers ({filteredCustomers.length})
+            <CardTitle className="flex items-center gap-2">
+              {activeTab === 'verified' ? (
+                <>
+                  <ShieldCheck className="h-5 w-5 text-green-600" />
+                  Verified Customers ({filteredCustomers.length})
+                </>
+              ) : (
+                <>
+                  <Users className="h-5 w-5 text-champagne" />
+                  All Customers ({filteredCustomers.length})
+                </>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, Search, Filter, Download, CheckCircle, Clock, Package, Truck, User, Phone, Edit, Save, X } from 'lucide-react';
+import { Eye, Search, Filter, Download, CheckCircle, Clock, Package, Truck, User, Phone, Edit, Save, X, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -317,22 +317,18 @@ export default function AdminOrders() {
                             </div>
                           )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm text-gray-600">
-                          <div>
-                            <span className="font-medium">Customer:</span> {order.deliveryAddress?.name}
-                          </div>
                           <div>
                             <span className="font-medium">Payment Status:</span> <span className={`font-semibold ${getStatusColor(order.status)} px-1.5 py-0.5 rounded-sm`}>{getStatusDisplay(order.status)}</span>
                           </div>
                           <div>
+                            <span className="font-medium">Total:</span> {formatPrice(parseFloat(order.total))}
+                          </div>
+                          <div>
+                            <span className="font-medium">Time:</span> {new Date(order.orderDate).toLocaleTimeString()}
+                          </div>
+                          <div>
                             <span className="font-medium">Payment:</span> {order.paymentMethod.toUpperCase()}
                           </div>
-                          {order.riderName && (
-                            <div>
-                              <span className="font-medium">Rider:</span> {order.riderName}
-                            </div>
-                          )}
-                        </div>
                       </div>
                       
                       <div className="flex items-center gap-3">

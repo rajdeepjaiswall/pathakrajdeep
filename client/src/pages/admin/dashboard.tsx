@@ -279,11 +279,13 @@ export default function AdminDashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed': return 'bg-blue-100 text-blue-800';
+      case 'payment_success': return 'bg-green-100 text-green-800';
+      case 'confirmed': return 'bg-green-100 text-green-800';
       case 'processing': return 'bg-purple-100 text-purple-800';
       case 'shipped': return 'bg-indigo-100 text-indigo-800';
       case 'delivered': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'payment_failed': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -291,11 +293,37 @@ export default function AdminDashboard() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="h-3 w-3" />;
+      case 'payment_success': return <CheckCircle className="h-3 w-3" />;
       case 'confirmed': return <CheckCircle className="h-3 w-3" />;
       case 'processing': return <Package className="h-3 w-3" />;
       case 'delivered': return <CheckCircle className="h-3 w-3" />;
-      case 'cancelled': return <AlertCircle className="h-3 w-3" />;
+      case 'cancelled': return <XCircle className="h-3 w-3" />;
+      case 'payment_failed': return <AlertCircle className="h-3 w-3" />;
       default: return <Clock className="h-3 w-3" />;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'payment_success': return 'Payment Successful';
+      case 'confirmed': return 'Delivery Pending';
+      default: return status.replace(/_/g, ' ');
+    }
+  };
+
+  const getBorderColor = (status: string) => {
+    switch (status) {
+      case 'payment_success':
+      case 'confirmed':
+      case 'delivered':
+        return 'border-green-500 border-2';
+      case 'pending':
+        return 'border-yellow-400 border-2';
+      case 'cancelled':
+      case 'payment_failed':
+        return 'border-red-500 border-2';
+      default:
+        return 'border-gray-200';
     }
   };
 
@@ -507,15 +535,15 @@ export default function AdminDashboard() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {liveOrders.map((order: any) => (
-                  <Card key={order.id} className={`transition-all duration-300 ${
+                  <Card key={order.id} className={`transition-all duration-300 ${getBorderColor(order.status)} ${
                     newOrderAlert ? 'ring-2 ring-red-500 shadow-lg' : 'hover:shadow-md'
                   }`}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-navy">#{order.orderNumber}</span>
-                        <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                        <Badge className={`${getStatusColor(order.status)} text-xs capitalize`}>
                           {getStatusIcon(order.status)}
-                          <span className="ml-1">{order.status}</span>
+                          <span className="ml-1">{getStatusLabel(order.status)}</span>
                         </Badge>
                       </div>
                       <div className="text-xs text-gray-600 space-y-1">
@@ -551,13 +579,13 @@ export default function AdminDashboard() {
                 <div className="space-y-4">
                   {recentOrders && recentOrders.length > 0 ? (
                     recentOrders.slice(0, 5).map((order: any) => (
-                      <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={order.id} className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg border \${getBorderColor(order.status)}`}>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium text-navy">#{order.orderNumber}</span>
-                            <Badge className={`text-xs ${getStatusColor(order.status)}`}>
+                            <Badge className={`text-xs capitalize \${getStatusColor(order.status)}`}>
                               {getStatusIcon(order.status)}
-                              <span className="ml-1">{ORDER_STATUSES[order.status as keyof typeof ORDER_STATUSES] || order.status}</span>
+                              <span className="ml-1">{getStatusLabel(order.status)}</span>
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600">

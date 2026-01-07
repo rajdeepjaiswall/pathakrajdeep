@@ -151,9 +151,9 @@ export default function AdminOrders() {
     },
   });
 
-  const getStatusColor = (status: string, paymentMethod?: string) => {
-    // Gateway payments should always show as successful (green)
-    if (paymentMethod === 'gateway' && status !== 'cancelled' && status !== 'payment_failed') {
+  const getStatusColor = (status: string, paymentMethod?: string, paymentStatus?: string) => {
+    // Gateway payments show as successful only if payment is completed (not pending)
+    if (paymentMethod === 'gateway' && paymentStatus !== 'pending' && status !== 'cancelled' && status !== 'payment_failed') {
       return 'bg-green-100 text-green-800';
     }
     switch (status) {
@@ -172,9 +172,9 @@ export default function AdminOrders() {
     }
   };
 
-  const getStatusIcon = (status: string, paymentMethod?: string) => {
-    // Gateway payments should always show checkmark (successful)
-    if (paymentMethod === 'gateway' && status !== 'cancelled' && status !== 'payment_failed') {
+  const getStatusIcon = (status: string, paymentMethod?: string, paymentStatus?: string) => {
+    // Gateway payments show checkmark only if payment is completed (not pending)
+    if (paymentMethod === 'gateway' && paymentStatus !== 'pending' && status !== 'cancelled' && status !== 'payment_failed') {
       return <CheckCircle className="h-3 w-3" />;
     }
     switch (status) {
@@ -193,9 +193,9 @@ export default function AdminOrders() {
     }
   };
 
-  const getStatusDisplay = (status: string, paymentMethod?: string) => {
-    // Gateway payments should always show as "Payment Successful"
-    if (paymentMethod === 'gateway' && status !== 'cancelled' && status !== 'payment_failed') {
+  const getStatusDisplay = (status: string, paymentMethod?: string, paymentStatus?: string) => {
+    // Gateway payments show as successful only if payment is completed (not pending)
+    if (paymentMethod === 'gateway' && paymentStatus !== 'pending' && status !== 'cancelled' && status !== 'payment_failed') {
       return 'Payment Successful';
     }
     switch (status) {
@@ -213,9 +213,9 @@ export default function AdminOrders() {
     }
   };
 
-  const getBorderColor = (status: string, paymentMethod?: string) => {
-    // Gateway payments should always show green border
-    if (paymentMethod === 'gateway' && status !== 'cancelled' && status !== 'payment_failed') {
+  const getBorderColor = (status: string, paymentMethod?: string, paymentStatus?: string) => {
+    // Gateway payments show green border only if payment is completed (not pending)
+    if (paymentMethod === 'gateway' && paymentStatus !== 'pending' && status !== 'cancelled' && status !== 'payment_failed') {
       return 'border-green-500 border-2';
     }
     switch (status) {
@@ -320,18 +320,18 @@ export default function AdminOrders() {
             ) : (
               <div className="space-y-4">
                 {filteredOrders.map((order: any) => (
-                  <div key={order.id} className={`border rounded-lg p-4 hover:bg-gray-50 transition-colors ${getBorderColor(order.status, order.paymentMethod)}`}>
+                  <div key={order.id} className={`border rounded-lg p-4 hover:bg-gray-50 transition-colors ${getBorderColor(order.status, order.paymentMethod, order.paymentStatus)}`}>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-navy">#{order.orderNumber}</h3>
-                          <Badge className={`capitalize ${getStatusColor(order.status, order.paymentMethod)}`}>
-                            {getStatusIcon(order.status, order.paymentMethod)}
-                            <span className="ml-1">{getStatusDisplay(order.status, order.paymentMethod)}</span>
+                          <Badge className={`capitalize ${getStatusColor(order.status, order.paymentMethod, order.paymentStatus)}`}>
+                            {getStatusIcon(order.status, order.paymentMethod, order.paymentStatus)}
+                            <span className="ml-1">{getStatusDisplay(order.status, order.paymentMethod, order.paymentStatus)}</span>
                           </Badge>
                         </div>
                           <div>
-                            <span className="font-medium">Payment Status:</span> <span className={`font-semibold ${getStatusColor(order.status, order.paymentMethod)} px-1.5 py-0.5 rounded-sm`}>{getStatusDisplay(order.status, order.paymentMethod)}</span>
+                            <span className="font-medium">Payment Status:</span> <span className={`font-semibold ${getStatusColor(order.status, order.paymentMethod, order.paymentStatus)} px-1.5 py-0.5 rounded-sm`}>{getStatusDisplay(order.status, order.paymentMethod, order.paymentStatus)}</span>
                           </div>
                           <div>
                             <span className="font-medium">Total:</span> {formatPrice(parseFloat(order.total))}

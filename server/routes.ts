@@ -1327,18 +1327,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to send push notification:', notifyError);
       }
       
-      // Send SMS notification to customer about order status update
+      // Send notification to customer about order status update
       if (order.deliveryAddress && order.deliveryAddress.phone) {
         try {
-          await otpService.sendOrderStatusUpdate(
-            order.deliveryAddress.phone,
-            order.orderNumber,
-            status
-          );
-          console.log('Order status SMS sent to:', order.deliveryAddress.phone, 'Status:', status);
-        } catch (smsError) {
-          console.error('Failed to send order status SMS:', smsError);
-          // Don't fail the status update if SMS fails
+          // For "out_for_delivery" status, send WhatsApp ONLY (no SMS)
+          if (status === 'out_for_delivery') {
+            const customerName = order.deliveryAddress.name || 'Customer';
+            await otpService.sendOutForDeliveryWhatsApp(
+              order.deliveryAddress.phone,
+              customerName,
+              order.orderNumber
+            );
+            console.log('Out for Delivery WhatsApp sent to:', order.deliveryAddress.phone);
+          } else {
+            // For all other statuses, send SMS as usual
+            await otpService.sendOrderStatusUpdate(
+              order.deliveryAddress.phone,
+              order.orderNumber,
+              status
+            );
+            console.log('Order status SMS sent to:', order.deliveryAddress.phone, 'Status:', status);
+          }
+        } catch (notifyError) {
+          console.error('Failed to send order status notification:', notifyError);
+          // Don't fail the status update if notification fails
         }
       }
       

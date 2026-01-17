@@ -426,6 +426,68 @@ export class OTPService {
     }
   }
 
+  // Send WhatsApp notification for "Out for Delivery" status
+  async sendOutForDeliveryWhatsApp(phoneNumber: string, customerName: string, orderNumber: string): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!fast2smsConfig.apiKey) {
+        return {
+          success: false,
+          message: 'WhatsApp API not configured.'
+        };
+      }
+
+      // Format phone number
+      let formattedPhone = phoneNumber.replace(/\D/g, '');
+      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+        formattedPhone = formattedPhone.slice(2);
+      }
+
+      // WhatsApp API URL
+      const whatsappApiUrl = 'https://www.fast2sms.com/dev/whatsapp';
+      
+      // Template variables: Var1=customer name, Var2=order number
+      const variablesValues = `${customerName}|${orderNumber}`;
+      
+      // Build request for WhatsApp (template ID: 9781 - orderstatus)
+      const params = new URLSearchParams({
+        authorization: fast2smsConfig.apiKey,
+        message_id: '9781',
+        phone_number_id: '979454055241619',
+        numbers: formattedPhone,
+        variables_values: variablesValues
+      });
+      
+      const url = `${whatsappApiUrl}?${params.toString()}`;
+      console.log(`Sending Out for Delivery WhatsApp: URL=${url.replace(fast2smsConfig.apiKey, 'HIDDEN')}`);
+      
+      const response = await fetch(url, {
+        method: 'GET'
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok && responseData.return) {
+        console.log('Out for Delivery WhatsApp sent successfully:', responseData);
+        return {
+          success: true,
+          message: 'Out for delivery notification sent via WhatsApp'
+        };
+      } else {
+        console.error('Fast2SMS WhatsApp Out for Delivery Error:', responseData);
+        return {
+          success: false,
+          message: 'Failed to send WhatsApp notification'
+        };
+      }
+    } catch (error) {
+      console.error('Out for Delivery WhatsApp Error:', error);
+      return {
+        success: false,
+        message: 'Failed to send WhatsApp notification'
+      };
+    }
+  }
+
   // Send SMS when order is placed - customized based on status and payment method
   async sendOrderPlacedSMS(
     phoneNumber: string,

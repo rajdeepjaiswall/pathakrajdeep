@@ -1365,8 +1365,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { riderName, riderPhone, riderImage } = req.body;
       const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone, riderImage);
       
-      // Send WhatsApp notification when rider is assigned (only if both name and phone provided)
-      if (riderName && riderPhone && order.deliveryAddress && order.deliveryAddress.phone) {
+      // Send WhatsApp notification when rider is assigned (only if order is "out_for_delivery" and both name and phone provided)
+      if (riderName && riderPhone && order.status === 'out_for_delivery' && order.deliveryAddress && order.deliveryAddress.phone) {
         try {
           const customerName = order.deliveryAddress.name || 'Customer';
           await otpService.sendRiderAssignedWhatsApp(
@@ -1376,7 +1376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             riderName,
             riderPhone
           );
-          console.log('Rider assigned WhatsApp sent to:', order.deliveryAddress.phone);
+          console.log('Rider assigned WhatsApp sent to:', order.deliveryAddress.phone, '(order status: out_for_delivery)');
         } catch (whatsappError) {
           console.error('Failed to send rider assigned WhatsApp:', whatsappError);
           // Don't fail the rider update if WhatsApp fails

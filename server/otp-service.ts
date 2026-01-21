@@ -488,6 +488,74 @@ export class OTPService {
     }
   }
 
+  // Send WhatsApp notification when rider is assigned to order
+  async sendRiderAssignedWhatsApp(
+    customerPhone: string, 
+    customerName: string, 
+    orderNumber: string, 
+    riderName: string, 
+    riderPhone: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!fast2smsConfig.apiKey) {
+        return {
+          success: false,
+          message: 'WhatsApp API not configured.'
+        };
+      }
+
+      // Format customer phone number
+      let formattedPhone = customerPhone.replace(/\D/g, '');
+      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+        formattedPhone = formattedPhone.slice(2);
+      }
+
+      // WhatsApp API URL
+      const whatsappApiUrl = 'https://www.fast2sms.com/dev/whatsapp';
+      
+      // Template variables: Var1=customer name, Var2=order number, Var3=rider name, Var4=rider phone
+      const variablesValues = `${customerName}|${orderNumber}|${riderName}|${riderPhone}`;
+      
+      // Build request for WhatsApp (template ID: 10639 - dilivery_pb)
+      const params = new URLSearchParams({
+        authorization: fast2smsConfig.apiKey,
+        message_id: '10639',
+        phone_number_id: '979454055241619',
+        numbers: formattedPhone,
+        variables_values: variablesValues
+      });
+      
+      const url = `${whatsappApiUrl}?${params.toString()}`;
+      console.log(`Sending Rider Assigned WhatsApp: URL=${url.replace(fast2smsConfig.apiKey, 'HIDDEN')}`);
+      
+      const response = await fetch(url, {
+        method: 'GET'
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok && responseData.return) {
+        console.log('Rider Assigned WhatsApp sent successfully:', responseData);
+        return {
+          success: true,
+          message: 'Rider assignment notification sent via WhatsApp'
+        };
+      } else {
+        console.error('Fast2SMS WhatsApp Rider Assigned Error:', responseData);
+        return {
+          success: false,
+          message: 'Failed to send WhatsApp notification'
+        };
+      }
+    } catch (error) {
+      console.error('Rider Assigned WhatsApp Error:', error);
+      return {
+        success: false,
+        message: 'Failed to send WhatsApp notification'
+      };
+    }
+  }
+
   // Send SMS when order is placed - customized based on status and payment method
   async sendOrderPlacedSMS(
     phoneNumber: string,

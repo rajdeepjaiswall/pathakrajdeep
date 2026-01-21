@@ -1364,6 +1364,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { riderName, riderPhone, riderImage } = req.body;
       const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone, riderImage);
+      
+      // Send WhatsApp notification when rider is assigned (only if both name and phone provided)
+      if (riderName && riderPhone && order.deliveryAddress && order.deliveryAddress.phone) {
+        try {
+          const customerName = order.deliveryAddress.name || 'Customer';
+          await otpService.sendRiderAssignedWhatsApp(
+            order.deliveryAddress.phone,
+            customerName,
+            order.orderNumber,
+            riderName,
+            riderPhone
+          );
+          console.log('Rider assigned WhatsApp sent to:', order.deliveryAddress.phone);
+        } catch (whatsappError) {
+          console.error('Failed to send rider assigned WhatsApp:', whatsappError);
+          // Don't fail the rider update if WhatsApp fails
+        }
+      }
+      
       res.json(order);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

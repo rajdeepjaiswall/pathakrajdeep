@@ -1,443 +1,185 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
-import { COMPANY_INFO } from '@/lib/constants';
+import { useQuery } from '@tanstack/react-query';
+import { Category, Product } from '@shared/schema';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
 import bakeryPattern from '@assets/project_20250607_1604012-01_1749292781428.png';
-import OptimizedImage from '@/components/OptimizedImage';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
   const { summary, openCart } = useCart();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+  });
+
+  const { data: allProducts = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
+  });
 
   const handleInstallApp = () => {
     const event = new CustomEvent('showInstallPrompt');
     window.dispatchEvent(event);
     setIsMobileMenuOpen(false);
-    setIsDesktopMenuOpen(false);
   };
 
-  const navigation = [
-    { name: 'Home', href: '/' },
-    { name: 'Products', href: '/products' },
-    { name: 'Categories', href: '/products?category=all' },
-    { name: 'About', href: '/#about' },
-    { name: 'Contact', href: '/#contact' },
-  ];
+  const filteredCategories = categories.map(cat => ({
+    ...cat,
+    productCount: allProducts.filter(p => p.category_id === cat.id).length
+  }));
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      setLocation(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
 
   return (
     <header className="bg-cream shadow-lg sticky top-0 z-50 border-b border-almond">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-18">
-          {/* Combined Logo */}
-          <Link href="/" className="flex items-center">
-            <img 
-              src={pathakLogo}
-              alt="Pathak Bhandar Logo" 
-              className="h-12 object-contain"
-            />
-          </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`font-semibold transition-all duration-300 py-2 px-3 rounded-lg ${
-                  location === item.href
-                    ? 'text-navy bg-champagne shadow-sm'
-                    : 'text-navy hover:text-champagne hover:bg-almond/30'
-                }`}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Profile & Actions */}
-          <div className="flex items-center space-x-4">
-            {/* Desktop Hamburger Menu */}
-            {isAuthenticated ? (
-              <div className="hidden md:flex items-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsDesktopMenuOpen(!isDesktopMenuOpen)}
-                  className="relative text-navy hover:bg-almond/30 rounded-xl p-3 transition-all duration-300"
-                >
-                  <Menu className="h-6 w-6 text-navy" />
-                  {summary.itemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {summary.itemCount}
-                    </span>
-                  )}
+        <div className="grid grid-cols-3 items-center h-18">
+          {/* Left Side: Search & Menu */}
+          <div className="flex items-center space-x-2">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-navy hover:bg-almond/30">
+                  <Menu className="h-6 w-6" />
                 </Button>
-              </div>
-            ) : (
-              <div className="hidden md:flex items-center space-x-2">
-                <Link href="/customer/register">
-                  <Button variant="outline" className="border-champagne text-navy hover:bg-champagne/10 rounded-lg px-4 py-2 font-semibold transition-all duration-300">
-                    Sign Up
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button className="bg-champagne text-navy hover:bg-champagne/90 rounded-lg px-4 py-2 font-semibold transition-all duration-300 shadow-sm">
-                    <User className="h-4 w-4 mr-2 text-navy" />
-                    Login
-                  </Button>
-                </Link>
-              </div>
-            )}
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 bg-cream p-0 overflow-hidden">
+                <div 
+                  className="absolute inset-0 opacity-10 pointer-events-none"
+                  style={{
+                    backgroundImage: `url(${bakeryPattern})`,
+                    backgroundSize: '200px 200px',
+                    backgroundRepeat: 'repeat'
+                  }}
+                />
+                <div className="relative h-full flex flex-col p-6">
+                  <SheetHeader className="mb-6">
+                    <SheetTitle className="text-navy font-bold text-xl">Menu</SheetTitle>
+                  </SheetHeader>
 
-            {/* Mobile hamburger menu */}
+                  {/* Search bar inside menu */}
+                  <form onSubmit={handleSearch} className="relative mb-6">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy/50" />
+                    <Input
+                      placeholder="Search products..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 bg-white/50 border-almond focus:border-champagne rounded-full"
+                    />
+                  </form>
+
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    <h4 className="text-sm font-bold text-navy/60 uppercase tracking-wider px-2 mb-2">Categories</h4>
+                    {filteredCategories.map((category) => (
+                      <Link 
+                        key={category.id} 
+                        href={`/products?category=${category.id}`}
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-almond/30 transition-colors group"
+                      >
+                        <span className="text-navy font-medium group-hover:text-amber-900">{category.name}</span>
+                        <span className="bg-champagne/30 text-navy text-xs px-2 py-1 rounded-full font-bold">
+                          {category.productCount}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="mt-6 pt-6 border-t border-almond space-y-2">
+                    {isAuthenticated ? (
+                      <>
+                        <Link href="/customer/profile" className="flex items-center space-x-3 p-2 rounded-lg hover:bg-almond/20">
+                          <User className="h-5 w-5 text-navy" />
+                          <span className="text-navy font-medium">Profile</span>
+                        </Link>
+                        <Link href="/customer/orders" className="flex items-center space-x-3 p-2 rounded-lg hover:bg-almond/20">
+                          <Package className="h-5 w-5 text-navy" />
+                          <span className="text-navy font-medium">Orders</span>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => logout()}
+                          className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <LogOut className="h-5 w-5 mr-3" />
+                          Logout
+                        </Button>
+                      </>
+                    ) : (
+                      <Link href="/login">
+                        <Button className="w-full bg-champagne text-navy hover:bg-champagne/90 font-bold">
+                          Login / Register
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Center: Logo */}
+          <div className="flex justify-center">
+            <Link href="/" className="flex items-center">
+              <img 
+                src={pathakLogo}
+                alt="Pathak Bhandar Logo" 
+                className="h-14 object-contain"
+              />
+            </Link>
+          </div>
+
+          {/* Right Side: Cart & Account */}
+          <div className="flex items-center justify-end space-x-2">
             <Button
               variant="ghost"
-              size="sm"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-navy hover:bg-almond/30 rounded-xl p-3 transition-all duration-300"
+              size="icon"
+              onClick={() => openCart()}
+              className="relative text-navy hover:bg-almond/30"
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6 text-navy" /> : <Menu className="h-6 w-6 text-navy" />}
+              <ShoppingCart className="h-6 w-6" />
+              {summary.itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
+                  {summary.itemCount}
+                </span>
+              )}
             </Button>
+            
+            <div className="hidden sm:block">
+              {isAuthenticated ? (
+                <Link href="/customer/profile">
+                  <Avatar className="h-8 w-8 cursor-pointer border border-almond">
+                    <AvatarImage src={(user as any)?.profileImageUrl} />
+                    <AvatarFallback className="bg-champagne text-navy text-xs font-bold">
+                      {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              ) : (
+                <Link href="/login">
+                  <Button variant="ghost" size="icon" className="text-navy">
+                    <User className="h-6 w-6" />
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-t shadow-lg relative bg-cream">
-          {/* Background Pattern for Mobile */}
-          <div 
-            className="absolute inset-0 opacity-15"
-            style={{
-              backgroundImage: `url(${bakeryPattern})`,
-              backgroundSize: '180px 180px',
-              backgroundRepeat: 'repeat'
-            }}
-          />
-          <div className="relative px-4 py-4 space-y-3">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="block text-navy font-medium py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {item.name}
-              </Link>
-            ))}
-            
-            {isAuthenticated ? (
-              <div className="pt-4 border-t border-almond space-y-3">
-                <Link href="/customer/profile">
-                  <div 
-                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors relative"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <div className="relative">
-                      {(user as any)?.profileImageUrl ? (
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user.username || 'Profile'} />
-                          <AvatarFallback className="bg-champagne text-navy text-sm font-semibold">
-                            {((user as any).firstName || user.username || 'U').charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      ) : (
-                        <Avatar className="h-8 w-8 bg-champagne">
-                          <AvatarFallback className="bg-champagne text-navy text-sm font-semibold">
-                            {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      {(user as any)?.authProvider === 'google' && !(user as any)?.profileCompleted && (
-                        <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-                      )}
-                    </div>
-                    <span className="text-navy font-medium">Namaste, {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() : user?.username}</span>
-                  </div>
-                </Link>
-
-                {/* Admin Dashboard - Only for admin and super_admin */}
-                {(user?.role === 'admin' || user?.role === 'super_admin') && (
-                  <Link href="/admin/dashboard">
-                    <div 
-                      className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <BarChart3 className="h-5 w-5 text-navy" />
-                      <span className="text-navy font-medium">Dashboard</span>
-                    </div>
-                  </Link>
-                )}
-                
-                <div 
-                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
-                  onClick={() => {
-                    openCart();
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  <div className="relative">
-                    <ShoppingCart className="h-5 w-5 text-navy" />
-                    {summary.itemCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                        {summary.itemCount}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-navy font-medium">Cart ({summary.itemCount})</span>
-                </div>
-
-                <Link href="/customer/wishlist">
-                  <div 
-                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Heart className="h-5 w-5 text-navy" />
-                    <span className="text-navy font-medium">Wishlist</span>
-                  </div>
-                </Link>
-
-                <Link href="/customer/orders">
-                  <div 
-                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Package className="h-5 w-5 text-navy" />
-                    <span className="text-navy font-medium">My Orders</span>
-                  </div>
-                </Link>
-
-                <Link href="/customer/profile">
-                  <div 
-                    className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Settings className="h-5 w-5 text-navy" />
-                    <span className="text-navy font-medium">Account Settings</span>
-                  </div>
-                </Link>
-
-                <div 
-                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
-                  onClick={handleInstallApp}
-                >
-                  <Download className="h-5 w-5 text-navy" />
-                  <span className="text-navy font-medium">Install App</span>
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    logout();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full text-navy border-champagne hover:bg-champagne mt-3"
-                >
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <div className="pt-4 border-t border-almond space-y-2">
-                <Link href="/customer/register">
-                  <Button 
-                    variant="outline"
-                    className="w-full border-champagne text-navy hover:bg-champagne/10"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Sign Up
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button 
-                    className="w-full bg-champagne text-navy hover:bg-champagne/90"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    Login
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Desktop Sliding Menu */}
-      {isDesktopMenuOpen && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-25 z-40 hidden md:block"
-            onClick={() => setIsDesktopMenuOpen(false)}
-          />
-          
-          {/* Sliding Menu */}
-          <div className="fixed top-0 right-0 h-full w-80 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out hidden md:block bg-cream">
-            {/* Background Pattern */}
-            <div 
-              className="absolute inset-0 opacity-25"
-              style={{
-                backgroundImage: `url(${bakeryPattern})`,
-                backgroundSize: '250px 250px',
-                backgroundRepeat: 'repeat'
-              }}
-            />
-            {/* Content Overlay */}
-            <div className="relative p-6 h-full">
-              {/* Header */}
-              <div className="flex justify-between items-center mb-6 pb-4 border-b border-almond">
-                <h3 className="text-lg font-semibold text-navy">Menu</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsDesktopMenuOpen(false)}
-                  className="text-navy hover:bg-almond/30 rounded-full p-2"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-
-              {/* User Greeting */}
-              <div className="mb-6">
-                <Link href="/customer/profile">
-                  <div 
-                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
-                    onClick={() => setIsDesktopMenuOpen(false)}
-                  >
-                    {(user as any)?.profileImageUrl ? (
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={(user as any).profileImageUrl} alt={(user as any).firstName || user.username || 'Profile'} />
-                        <AvatarFallback className="bg-champagne text-navy font-semibold">
-                          {((user as any).firstName || user.username || 'U').charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <Avatar className="h-10 w-10 bg-champagne">
-                        <AvatarFallback className="bg-champagne text-navy font-semibold">
-                          {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div>
-                      <p className="text-sm text-navy/70">Welcome back</p>
-                      <p className="font-semibold text-navy">Namaste, {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() : user?.username}</p>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-
-              {/* Menu Items */}
-              <div className="space-y-2">
-                {/* Admin Dashboard - Only for admin and super_admin */}
-                {(user?.role === 'admin' || user?.role === 'super_admin') && (
-                  <Link href="/admin/dashboard">
-                    <div 
-                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors"
-                      onClick={() => setIsDesktopMenuOpen(false)}
-                    >
-                      <BarChart3 className="h-6 w-6 text-navy" />
-                      <span className="text-navy font-medium">Dashboard</span>
-                    </div>
-                  </Link>
-                )}
-
-                {/* My Orders */}
-                <Link href="/customer/orders">
-                  <div 
-                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors"
-                    onClick={() => setIsDesktopMenuOpen(false)}
-                  >
-                    <Package className="h-6 w-6 text-navy" />
-                    <span className="text-navy font-medium">My Orders</span>
-                  </div>
-                </Link>
-
-                {/* Cart */}
-                <div 
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
-                  onClick={() => {
-                    openCart();
-                    setIsDesktopMenuOpen(false);
-                  }}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      <ShoppingCart className="h-6 w-6 text-navy" />
-                      {summary.itemCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {summary.itemCount}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-navy font-medium">Cart</span>
-                  </div>
-                  {summary.itemCount > 0 && (
-                    <span className="bg-champagne text-navy text-sm px-2 py-1 rounded-full font-medium">
-                      {summary.itemCount} items
-                    </span>
-                  )}
-                </div>
-
-                {/* Wishlist */}
-                <Link href="/customer/wishlist">
-                  <div 
-                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors"
-                    onClick={() => setIsDesktopMenuOpen(false)}
-                  >
-                    <Heart className="h-6 w-6 text-navy" />
-                    <span className="text-navy font-medium">Wishlist</span>
-                  </div>
-                </Link>
-
-                {/* Account Settings */}
-                <Link href="/customer/profile">
-                  <div 
-                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors"
-                    onClick={() => setIsDesktopMenuOpen(false)}
-                  >
-                    <Settings className="h-6 w-6 text-navy" />
-                    <span className="text-navy font-medium">Account Settings</span>
-                  </div>
-                </Link>
-
-                {/* Install App */}
-                <div 
-                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-almond/30 transition-colors cursor-pointer"
-                  onClick={handleInstallApp}
-                >
-                  <Download className="h-6 w-6 text-navy" />
-                  <span className="text-navy font-medium">Install App</span>
-                </div>
-              </div>
-
-              {/* Logout Button */}
-              <div className="mt-8 pt-6 border-t border-almond">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => {
-                    logout();
-                    setIsDesktopMenuOpen(false);
-                  }}
-                  className="w-full text-navy border-champagne hover:bg-champagne/10 font-semibold flex items-center justify-center space-x-2"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span>Logout</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </header>
   );
 }

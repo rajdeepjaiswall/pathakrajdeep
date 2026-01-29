@@ -1,4 +1,4 @@
-import { Home, Search, ShoppingCart, User } from 'lucide-react';
+import { Home, ClipboardList, ShoppingCart, User } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
@@ -37,7 +37,7 @@ export default function MobileNav() {
 
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
-    { icon: Search, label: 'Search', href: '/products?search=true' },
+    { icon: ClipboardList, label: 'Orders', href: '/customer/orders' },
     { icon: 'logo', label: 'Categories', href: '/products' },
     { icon: ShoppingCart, label: 'Cart', href: '/cart' },
     { icon: User, label: 'Account', href: isAuthenticated ? '/account' : '/login' },
@@ -50,7 +50,7 @@ export default function MobileNav() {
 
   const isActiveRoute = (href: string) => {
     if (href === '/') return location === '/';
-    if (href === '/products?search=true') return location.includes('/products') && location.includes('search');
+    if (href === '/customer/orders') return location.includes('/customer/orders');
     if (href === '/products') return location === '/products' || location.startsWith('/products/category');
     if (href === '/cart') return location === '/cart';
     if (href === '/account' || href === '/login') return location === '/account' || location.startsWith('/customer/') || location === '/login';

@@ -49,8 +49,8 @@ export default function Header() {
     <header className="bg-cream shadow-lg sticky top-0 z-50 border-b border-almond">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-3 items-center h-18">
-          {/* Left Side: Search & Menu */}
-          <div className="flex items-center space-x-2">
+          {/* Left Side: Menu */}
+          <div className="flex items-center space-x-2 justify-start">
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-navy hover:bg-almond/30">
@@ -138,7 +138,7 @@ export default function Header() {
               <img 
                 src={pathakLogo}
                 alt="Pathak Bhandar Logo" 
-                className="h-14 object-contain"
+                className="h-10 sm:h-14 object-contain"
               />
             </Link>
           </div>

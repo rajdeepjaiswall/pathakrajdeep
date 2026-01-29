@@ -70,17 +70,17 @@ function Router() {
       <Route path="/customer/orders" component={CustomerOrders} />
       <Route path="/order-confirmation" component={OrderConfirmation} />
       <Route path="/admin/login" component={AdminLogin} />
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/dashboard" component={AdminDashboard} />
-      <Route path="/admin/orders" component={AdminOrders} />
-      <Route path="/admin/products" component={AdminProducts} />
-      <Route path="/admin/customers" component={AdminCustomers} />
-      <Route path="/admin/banners" component={AdminBanners} />
-      <Route path="/admin/categories" component={AdminCategories} />
-      <Route path="/admin/settings" component={AdminSettings} />
-      <Route path="/admin/payments" component={AdminPayments} />
-      <Route path="/admin/payment-gateway" component={AdminPaymentGateway} />
-      <Route path="/admin/verified-customers" component={AdminVerifiedCustomers} />
+      <Route path="/admin1" component={AdminDashboard} />
+      <Route path="/admin1/dashboard" component={AdminDashboard} />
+      <Route path="/admin1/orders" component={AdminOrders} />
+      <Route path="/admin1/products" component={AdminProducts} />
+      <Route path="/admin1/customers" component={AdminCustomers} />
+      <Route path="/admin1/banners" component={AdminBanners} />
+      <Route path="/admin1/categories" component={AdminCategories} />
+      <Route path="/admin1/settings" component={AdminSettings} />
+      <Route path="/admin1/payments" component={AdminPayments} />
+      <Route path="/admin1/payment-gateway" component={AdminPaymentGateway} />
+      <Route path="/admin1/verified-customers" component={AdminVerifiedCustomers} />
       <Route path="/super-admin/login" component={SuperAdminLogin} />
       <Route path="/super-admin" component={SuperAdminDashboard} />
       <Route path="/super-admin/logo-manager" component={LogoManager} />

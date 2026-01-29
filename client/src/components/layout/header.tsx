@@ -173,7 +173,7 @@ export default function Header() {
                           </Link>
 
                           {(user?.role === 'admin' || user?.role === 'super_admin') && (
-                            <Link href="/admin/dashboard" className="flex items-center space-x-3 p-3 rounded-xl bg-navy text-cream hover:bg-navy/90 transition-colors group">
+                            <Link href="/admin1" className="flex items-center space-x-3 p-3 rounded-xl bg-navy text-cream hover:bg-navy/90 transition-colors group">
                               <BarChart3 className="h-5 w-5 group-hover:scale-110 transition-transform" />
                               <span className="font-bold">Admin Dashboard</span>
                             </Link>

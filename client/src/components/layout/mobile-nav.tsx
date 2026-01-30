@@ -17,15 +17,24 @@ export default function MobileNav() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
+      // If we are at the top, or scrolling up, or if some overlay/popup requires it to be visible
+      // For this specific requirement, we want it to stick if the cart popup is active.
+      // We check for a global marker or state if needed, but the user asked for it to stick
+      // when items are added to cart.
+      
       if (currentScrollY < 10) {
-        // Always show at top
         setIsVisible(true);
       } else if (currentScrollY < lastScrollY) {
-        // Scrolling up - show nav
         setIsVisible(true);
       } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down - hide nav after scrolling past 100px
-        setIsVisible(false);
+        // Only hide if we aren't in a state where it should be sticky
+        // We'll add a check for the popup here
+        const cartPopupActive = document.querySelector('[data-cart-popup-active="true"]');
+        if (!cartPopupActive) {
+          setIsVisible(false);
+        } else {
+          setIsVisible(true);
+        }
       }
       
       setLastScrollY(currentScrollY);

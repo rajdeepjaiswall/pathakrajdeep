@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { ShoppingCart, PartyPopper } from "lucide-react";
+import { ShoppingCart, PartyPopper, X } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
@@ -19,11 +19,7 @@ export function AddToCartPopup() {
   useEffect(() => {
     if (lastAddedItem) {
       setShow(true);
-      const timer = setTimeout(() => {
-        setShow(false);
-        clearLastAddedItem?.();
-      }, 5000);
-
+      
       // Check for party popper trigger
       if (currentTotal >= FREE_DELIVERY_THRESHOLD && prevTotal < FREE_DELIVERY_THRESHOLD) {
         confetti({
@@ -40,9 +36,13 @@ export function AddToCartPopup() {
       }
       
       setPrevTotal(currentTotal);
-      return () => clearTimeout(timer);
     }
-  }, [lastAddedItem, currentTotal, prevTotal, clearLastAddedItem]);
+  }, [lastAddedItem, currentTotal, prevTotal]);
+
+  const handleClose = () => {
+    setShow(false);
+    clearLastAddedItem?.();
+  };
 
   return (
     <AnimatePresence>
@@ -52,8 +52,16 @@ export function AddToCartPopup() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           className="fixed bottom-20 left-4 right-4 z-50 md:left-auto md:right-8 md:w-96"
+          data-cart-popup-active="true"
         >
-          <div className="bg-white rounded-2xl shadow-2xl border border-almond p-4 flex flex-col gap-3">
+          <div className="bg-white rounded-2xl shadow-2xl border border-almond p-4 flex flex-col gap-3 relative">
+            <button 
+              onClick={handleClose}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors z-[60]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
             <div className="flex items-center gap-3">
               {lastAddedItem?.image && (
                 <img

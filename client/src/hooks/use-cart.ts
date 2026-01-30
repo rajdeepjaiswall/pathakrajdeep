@@ -16,6 +16,8 @@ interface CartContextType {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
+  lastAddedItem: { id: number; name: string; image?: string } | null;
+  clearLastAddedItem: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -29,6 +31,7 @@ export function CartProvider({ children }: CartProviderProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [lastAddedItem, setLastAddedItem] = useState<{ id: number; name: string; image?: string } | null>(null);
 
   // Fetch cart items
   const { data: cartData, isLoading } = useQuery({
@@ -36,9 +39,15 @@ export function CartProvider({ children }: CartProviderProps) {
     enabled: isAuthenticated,
   });
 
+  const { data: products = [] } = useQuery({
+    queryKey: ['/api/products'],
+  });
+
   const items = (cartData as CartItem[]) || [];
   // Calculate cart summary
   const summary = calculateCartSummary(items);
+
+  const clearLastAddedItem = () => setLastAddedItem(null);
 
   // Add to cart mutation
   const addToCartMutation = useMutation({
@@ -48,8 +57,18 @@ export function CartProvider({ children }: CartProviderProps) {
         quantity,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, { productId }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      
+      const product = (products as any[]).find(p => p.id === productId);
+      if (product) {
+        setLastAddedItem({
+          id: productId,
+          name: product.name,
+          image: product.images?.[0] || product.image_url
+        });
+      }
+
       toast({
         title: 'Added to cart',
         description: 'Item has been added to your cart',
@@ -145,6 +164,8 @@ export function CartProvider({ children }: CartProviderProps) {
     isOpen,
     openCart,
     closeCart,
+    lastAddedItem,
+    clearLastAddedItem,
   };
 
   return React.createElement(CartContext.Provider, { value }, children);

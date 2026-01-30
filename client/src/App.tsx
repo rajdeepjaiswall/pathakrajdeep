@@ -135,6 +135,7 @@ function AppContent() {
       <PWAInstaller />
       <GoogleOneTap />
       <PopupBanner />
+      <AddToCartPopup />
       <Router />
     </>
   );

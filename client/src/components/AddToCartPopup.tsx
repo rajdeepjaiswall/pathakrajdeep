@@ -1,0 +1,109 @@
+import { useState, useEffect } from "react";
+import { Link } from "wouter";
+import { ShoppingCart, PartyPopper } from "lucide-react";
+import { useCart } from "@/hooks/use-cart";
+import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
+import { Button } from "@/components/ui/button";
+
+export function AddToCartPopup() {
+  const { summary, lastAddedItem, clearLastAddedItem } = useCart();
+  const [show, setShow] = useState(false);
+  const [prevTotal, setPrevTotal] = useState(0);
+
+  const FREE_DELIVERY_THRESHOLD = 500;
+  const currentTotal = Number(summary.total);
+  const diff = FREE_DELIVERY_THRESHOLD - currentTotal;
+  const isFreeDelivery = currentTotal >= FREE_DELIVERY_THRESHOLD;
+
+  useEffect(() => {
+    if (lastAddedItem) {
+      setShow(true);
+      const timer = setTimeout(() => {
+        setShow(false);
+        clearLastAddedItem?.();
+      }, 5000);
+
+      // Check for party popper trigger
+      if (currentTotal >= FREE_DELIVERY_THRESHOLD && prevTotal < FREE_DELIVERY_THRESHOLD) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#22c55e", "#eab308", "#ef4444"],
+        });
+        
+        // Haptic feedback if supported
+        if ("vibrate" in navigator) {
+          navigator.vibrate([100, 50, 100]);
+        }
+      }
+      
+      setPrevTotal(currentTotal);
+      return () => clearTimeout(timer);
+    }
+  }, [lastAddedItem, currentTotal, prevTotal, clearLastAddedItem]);
+
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          className="fixed bottom-20 left-4 right-4 z-50 md:left-auto md:right-8 md:w-96"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl border border-almond p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              {lastAddedItem?.image && (
+                <img
+                  src={lastAddedItem.image}
+                  alt={lastAddedItem.name}
+                  className="w-12 h-12 rounded-lg object-cover border border-almond"
+                />
+              )}
+              <div className="flex-1 overflow-hidden">
+                <p className="text-xs font-bold text-navy/60 uppercase tracking-tighter">Added to Cart</p>
+                <p className="text-sm font-bold text-navy truncate">{lastAddedItem?.name}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-navy/60 uppercase">Cart Total</p>
+                <p className="text-sm font-black text-navy">₹{currentTotal.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="h-1 w-full bg-almond/30 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-amber-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min((currentTotal / FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-medium text-navy/80">
+                {isFreeDelivery ? (
+                  <span className="text-green-600 font-bold flex items-center gap-1">
+                    <PartyPopper className="w-3 h-3" /> Free Delivery Unlocked!
+                  </span>
+                ) : (
+                  <span>Add <span className="font-bold text-amber-600">₹{diff.toFixed(0)}</span> more for Free Delivery</span>
+                )}
+              </div>
+              <Link href="/cart">
+                <Button 
+                  size="sm" 
+                  className={`font-bold h-8 px-4 rounded-full transition-colors ${
+                    isFreeDelivery ? "bg-green-600 hover:bg-green-700" : "bg-navy hover:bg-navy/90"
+                  }`}
+                >
+                  Checkout
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

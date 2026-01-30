@@ -105,8 +105,8 @@ export default function Header() {
                                 href={`/products/${product.id}`}
                                 className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/30 transition-colors group bg-white/40 border border-almond/20"
                               >
-                                {product.image_url && (
-                                  <img src={product.image_url} alt={product.name} className="h-10 w-10 object-cover rounded-lg" />
+                                {product.images && product.images.length > 0 && (
+                                  <img src={product.images[0]} alt={product.name} className="h-10 w-10 object-cover rounded-lg" />
                                 )}
                                 <div className="flex flex-col">
                                   <span className="text-navy font-medium group-hover:text-amber-900 line-clamp-1">{product.name}</span>
@@ -144,8 +144,8 @@ export default function Header() {
                                         className="flex items-center space-x-3 p-2 rounded-lg hover:bg-champagne/20 transition-colors group"
                                       >
                                         <div className="h-8 w-8 rounded bg-white flex items-center justify-center overflow-hidden border border-almond/20">
-                                          {product.image_url ? (
-                                            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                                          {product.images && product.images.length > 0 ? (
+                                            <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" />
                                           ) : (
                                             <Package className="h-4 w-4 text-navy/20" />
                                           )}

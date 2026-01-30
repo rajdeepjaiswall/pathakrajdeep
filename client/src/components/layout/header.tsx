@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
@@ -11,6 +11,7 @@ import pathakLogo from '@assets/project_20250528_0859055-02.png';
 import bakeryPattern from '@assets/project_20250607_1604012-01_1749292781428.png';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -37,6 +38,15 @@ export default function Header() {
     ...cat,
     productCount: allProducts.filter(p => p.category_id === cat.id).length
   }));
+
+  const searchResults = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    const term = searchTerm.toLowerCase();
+    return allProducts.filter(p => 
+      p.name.toLowerCase().includes(term) || 
+      p.description?.toLowerCase().includes(term)
+    ).slice(0, 10);
+  }, [searchTerm, allProducts]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,20 +93,82 @@ export default function Header() {
                     />
                   </form>
 
-                  <div className="flex-1 overflow-y-auto space-y-2">
-                    <h4 className="text-sm font-bold text-navy/60 uppercase tracking-wider px-2 mb-2 text-center">Popular Categories</h4>
-                    {filteredCategories.map((category) => (
-                      <Link 
-                        key={category.id} 
-                        href={`/products?category=${category.id}`}
-                        className="flex items-center justify-between p-3 rounded-xl hover:bg-almond/30 transition-colors group"
-                      >
-                        <span className="text-navy font-medium group-hover:text-amber-900">{category.name}</span>
-                        <span className="bg-champagne/30 text-navy text-xs px-2 py-1 rounded-full font-bold">
-                          {category.productCount}
-                        </span>
-                      </Link>
-                    ))}
+                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                    {searchTerm.trim() ? (
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-navy/60 uppercase tracking-wider px-2">Search Results</h4>
+                        {searchResults.length > 0 ? (
+                          <div className="space-y-2">
+                            {searchResults.map((product) => (
+                              <Link 
+                                key={product.id} 
+                                href={`/products/${product.id}`}
+                                className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/30 transition-colors group bg-white/40 border border-almond/20"
+                              >
+                                {product.image_url && (
+                                  <img src={product.image_url} alt={product.name} className="h-10 w-10 object-cover rounded-lg" />
+                                )}
+                                <div className="flex flex-col">
+                                  <span className="text-navy font-medium group-hover:text-amber-900 line-clamp-1">{product.name}</span>
+                                  <span className="text-xs text-navy/60">₹{Number(product.price).toFixed(2)}</span>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-center text-navy/60 py-10">No products found for "{searchTerm}"</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-bold text-navy/60 uppercase tracking-wider px-2 mb-2">Categories</h4>
+                        <Accordion type="single" collapsible className="w-full space-y-2">
+                          {filteredCategories.map((category) => (
+                            <AccordionItem key={category.id} value={`cat-${category.id}`} className="border-none">
+                              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl hover:bg-almond/30 transition-colors group hover:no-underline py-3">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-navy font-medium group-hover:text-amber-900">{category.name}</span>
+                                  <span className="bg-champagne/30 text-navy text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                                    {category.productCount}
+                                  </span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="pt-1 pb-2 px-2">
+                                <div className="grid grid-cols-1 gap-1">
+                                  {allProducts
+                                    .filter(p => p.category_id === category.id)
+                                    .map(product => (
+                                      <Link 
+                                        key={product.id} 
+                                        href={`/products/${product.id}`}
+                                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-champagne/20 transition-colors group"
+                                      >
+                                        <div className="h-8 w-8 rounded bg-white flex items-center justify-center overflow-hidden border border-almond/20">
+                                          {product.image_url ? (
+                                            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                                          ) : (
+                                            <Package className="h-4 w-4 text-navy/20" />
+                                          )}
+                                        </div>
+                                        <span className="text-sm text-navy/80 group-hover:text-navy truncate font-medium">
+                                          {product.name}
+                                        </span>
+                                      </Link>
+                                    ))
+                                  }
+                                  <Link 
+                                    href={`/products?category=${category.id}`}
+                                    className="text-center text-xs text-amber-800 font-bold py-2 mt-1 hover:underline"
+                                  >
+                                    View All {category.name}
+                                  </Link>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                        </Accordion>
+                      </div>
+                    )}
                   </div>
                 </div>
               </SheetContent>

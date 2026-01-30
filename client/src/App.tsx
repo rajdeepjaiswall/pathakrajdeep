@@ -50,6 +50,7 @@ import TermsOfService from "@/pages/TermsOfService";
 import CompleteProfile from "@/pages/complete-profile";
 import PhonePeCallback from "@/pages/phonepe-callback";
 import NotFound from "@/pages/not-found";
+import { AddToCartPopup } from "@/components/AddToCartPopup";
 
 function Router() {
   return (

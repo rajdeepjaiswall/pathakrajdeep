@@ -189,7 +189,7 @@ export default function AdminDashboard() {
   }, []);
 
   // Fetch analytics data
-  const { data: analytics, isLoading: analyticsLoading } = useQuery<{
+  const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery<{
     totalOrders: number;
     totalRevenue: number;
     totalCustomers: number;
@@ -205,11 +205,19 @@ export default function AdminDashboard() {
   });
 
   // Fetch recent orders
-  const { data: recentOrders = [], isLoading: ordersLoading } = useQuery<any[]>({
+  const { data: recentOrders = [], isLoading: ordersLoading, refetch: refetchOrders } = useQuery<any[]>({
     queryKey: ['/api/admin/orders'],
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
     refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  // Manual refetch on mount if data is empty but not loading
+  useEffect(() => {
+    if (user && !analyticsLoading && !ordersLoading && (!analytics || analytics.totalProducts === 0)) {
+      refetchAnalytics();
+      refetchOrders();
+    }
+  }, [user, analyticsLoading, ordersLoading, analytics, refetchAnalytics, refetchOrders]);
 
   // Payment config state and queries
   const queryClient = useQueryClient();

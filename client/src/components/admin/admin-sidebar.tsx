@@ -22,52 +22,52 @@ import { cn } from '@/lib/utils';
 const adminNavItems = [
   {
     title: 'Dashboard',
-    href: '/admin1',
+    href: '/admin',
     icon: LayoutDashboard,
   },
   {
     title: 'Products',
-    href: '/admin1/products',
+    href: '/admin/products',
     icon: Package,
   },
   {
     title: 'Categories',
-    href: '/admin1/categories',
+    href: '/admin/categories',
     icon: Grid3X3,
   },
   {
     title: 'Banners',
-    href: '/admin1/banners',
+    href: '/admin/banners',
     icon: Image,
   },
   {
     title: 'Orders',
-    href: '/admin1/orders',
+    href: '/admin/orders',
     icon: ShoppingBag,
   },
   {
     title: 'Verified Customers',
-    href: '/admin1/verified-customers',
+    href: '/admin/verified-customers',
     icon: CheckCircle,
   },
   {
     title: 'All Customers',
-    href: '/admin1/customers',
+    href: '/admin/customers',
     icon: Users,
   },
   {
     title: 'Payments',
-    href: '/admin1/payments',
+    href: '/admin/payments',
     icon: CreditCard,
   },
   {
     title: 'Payment Gateway',
-    href: '/admin1/payment-gateway',
+    href: '/admin/payment-gateway',
     icon: Wallet,
   },
   {
     title: 'Analytics',
-    href: '/admin1/analytics',
+    href: '/admin/analytics',
     icon: BarChart3,
   },
 ];
@@ -75,7 +75,7 @@ const adminNavItems = [
 const superAdminNavItems = [
   {
     title: 'Settings',
-    href: '/admin1/settings',
+    href: '/admin/settings',
     icon: Settings,
   },
 ];

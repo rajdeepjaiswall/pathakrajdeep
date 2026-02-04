@@ -245,11 +245,11 @@ export default function AdminCustomers() {
                                       <h4 className="font-medium mb-3">Account Statistics</h4>
                                       <div className="space-y-3">
                                         <div className="bg-gray-50 rounded-lg p-3">
-                                          <div className="text-2xl font-bold text-navy">0</div>
+                                          <div className="text-2xl font-bold text-navy">{selectedCustomer.totalOrders || 0}</div>
                                           <div className="text-sm text-gray-600">Total Orders</div>
                                         </div>
                                         <div className="bg-gray-50 rounded-lg p-3">
-                                          <div className="text-2xl font-bold text-navy">₹0.00</div>
+                                          <div className="text-2xl font-bold text-navy">{formatPrice(selectedCustomer.totalSpent || 0)}</div>
                                           <div className="text-sm text-gray-600">Total Spent</div>
                                         </div>
                                       </div>

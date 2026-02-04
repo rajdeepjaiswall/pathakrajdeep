@@ -1402,8 +1402,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/customers", authenticateUser, requireAdmin, async (req, res) => {
     try {
-      const customers = await storage.getCustomers();
-      res.json(customers);
+      const allCustomers = await storage.getCustomers();
+      
+      // Enrich customers with order stats
+      const enrichedCustomers = await Promise.all(allCustomers.map(async (customer) => {
+        const orders = await storage.getOrdersByUserId(customer.id);
+        const totalOrders = orders.length;
+        const totalSpent = orders
+          .filter(o => o.status !== 'cancelled' && o.status !== 'payment_failed')
+          .reduce((sum, o) => sum + Number(o.total), 0);
+        
+        return {
+          ...customer,
+          totalOrders,
+          totalSpent
+        };
+      }));
+
+      res.json(enrichedCustomers);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

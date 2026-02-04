@@ -35,7 +35,17 @@ export default function SuperAdminDashboard() {
   }
 
   // Fetch analytics data
-  const { data: analytics, isLoading } = useQuery({
+  const { data: analytics, isLoading } = useQuery<{
+    totalOrders: number;
+    totalRevenue: number;
+    totalCustomers: number;
+    totalProducts: number;
+    ordersReceivedToday: number;
+    ordersDeliveredToday: number;
+    ordersCancelledToday: number;
+    recentOrders: any[];
+    topProducts: any[];
+  }>({
     queryKey: ['/api/admin/analytics'],
   });
 
@@ -83,20 +93,6 @@ export default function SuperAdminDashboard() {
           </p>
         </div>
 
-        {/* System Health Alert */}
-        <Card className="mb-8 border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-green-800">System Status: Operational</h3>
-                <p className="text-green-700 text-sm">All services are running normally. Last updated: {new Date().toLocaleTimeString()}</p>
-              </div>
-              <Badge className="bg-green-100 text-green-800">Healthy</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Button 
@@ -120,7 +116,7 @@ export default function SuperAdminDashboard() {
           <Button 
             variant="outline" 
             className="h-20 flex-col gap-2 border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-            onClick={() => setLocation('/super-admin/popup-banners')}
+            onClick={() => setLocation('/admin/banners')}
             data-testid="button-popup-banners"
           >
             <Bell className="h-6 w-6" />
@@ -128,16 +124,15 @@ export default function SuperAdminDashboard() {
           </Button>
           <Button 
             variant="outline" 
-            className="h-20 flex-col gap-2 border-purple-300 text-purple-700 hover:bg-purple-50"
-            onClick={() => setLocation('/super-admin/reports')}
-            data-testid="button-reports"
+            className="h-20 flex-col gap-2 border-rose-300 text-rose-700 hover:bg-rose-50"
+            onClick={() => setLocation('/admin/dashboard')}
           >
-            <BarChart3 className="h-6 w-6" />
-            <span>Reports & Export</span>
+            <Activity className="h-6 w-6" />
+            <span>Admin Dashboard</span>
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-8">
           <Button 
             variant="outline" 
             className="h-20 flex-col gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
@@ -153,22 +148,6 @@ export default function SuperAdminDashboard() {
           >
             <Users className="h-6 w-6" />
             <span>Manage Shopkeepers</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-20 flex-col gap-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-            onClick={() => setLocation('/super-admin/products')}
-          >
-            <Package className="h-6 w-6" />
-            <span>Product Manager</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-20 flex-col gap-2 border-rose-300 text-rose-700 hover:bg-rose-50"
-            onClick={() => setLocation('/admin/dashboard')}
-          >
-            <Activity className="h-6 w-6" />
-            <span>Admin Dashboard</span>
           </Button>
         </div>
 
@@ -218,134 +197,6 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </Card>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* System Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                System Performance
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>System Uptime</span>
-                  <span className="font-medium text-green-600">{systemStats.uptime}</span>
-                </div>
-                <Progress value={99.9} className="h-2" />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Average Response Time</span>
-                  <span className="font-medium text-blue-600">{systemStats.responseTime}</span>
-                </div>
-                <Progress value={85} className="h-2" />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Server Load</span>
-                  <span className="font-medium text-yellow-600">Medium</span>
-                </div>
-                <Progress value={60} className="h-2" />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Database Health</span>
-                  <span className="font-medium text-green-600">Optimal</span>
-                </div>
-                <Progress value={95} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent System Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
-                System Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-sm text-gray-600 mb-1">Database Size</div>
-                  <div className="font-semibold text-navy">2.4 GB</div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-sm text-gray-600 mb-1">Storage Used</div>
-                  <div className="font-semibold text-navy">45%</div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-sm text-gray-600 mb-1">API Calls Today</div>
-                  <div className="font-semibold text-navy">1,247</div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-sm text-gray-600 mb-1">Last Backup</div>
-                  <div className="font-semibold text-navy">{systemStats.lastBackup}</div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-medium text-navy">Recent Activity</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                    <span>System backup completed</span>
-                    <span className="text-green-600">2h ago</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-blue-50 rounded">
-                    <span>Database optimization</span>
-                    <span className="text-blue-600">6h ago</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-yellow-50 rounded">
-                    <span>Security scan completed</span>
-                    <span className="text-yellow-600">1d ago</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Advanced Controls Section */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Advanced System Controls
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button 
-                variant="outline" 
-                className="h-16 flex-col gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
-              >
-                <Database className="h-5 w-5" />
-                <span>Database Management</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-16 flex-col gap-2 border-purple-200 text-purple-700 hover:bg-purple-50"
-              >
-                <Users className="h-5 w-5" />
-                <span>User Permissions</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-16 flex-col gap-2 border-red-200 text-red-700 hover:bg-red-50"
-              >
-                <AlertTriangle className="h-5 w-5" />
-                <span>System Maintenance</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

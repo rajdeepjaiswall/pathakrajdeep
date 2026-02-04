@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
+import { formatPrice } from '@/lib/cart';
 
 export default function AdminCustomers() {
   const { user } = useAuth();

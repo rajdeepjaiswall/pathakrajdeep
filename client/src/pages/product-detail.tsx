@@ -16,38 +16,44 @@ import { formatPrice } from '@/lib/cart';
 export default function ProductDetail() {
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);
-  const [mediaTab, setMediaTab] = useState<'videos' | 'photos'>('videos');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { addToCart } = useCart();
 
-  // Fetch product details
-  const { data: product, isLoading } = useQuery({
+  const { data: product, isLoading } = useQuery<any>({
     queryKey: [`/api/products/${id}`],
     enabled: !!id,
   });
 
-  // Fetch product reviews
-  const { data: reviews = [] } = useQuery({
+  const { data: reviews = [] } = useQuery<any[]>({
     queryKey: [`/api/products/${id}/reviews`],
     enabled: !!id,
   });
 
-  // Auto-select the right tab based on available media
+  const mediaItems = (() => {
+    if (!product) return [];
+    const photos = (product.images || []).filter((url: string) => url && url.trim()).map((url: string) => ({ type: 'image' as const, url }));
+    const videos = (product.videos || []).filter((url: string) => url && url.trim()).map((url: string) => ({ type: 'video' as const, url }));
+    return [...photos, ...videos];
+  })();
+
   useEffect(() => {
-    if (product) {
-      const hasVideos = product.videos && product.videos.some((v: string) => v && v.trim());
-      const hasPhotos = product.images && product.images.some((p: string) => p && p.trim());
-      
-      if (hasVideos) {
-        setMediaTab('videos');
-      } else if (hasPhotos) {
-        setMediaTab('photos');
-      }
-      setCurrentIndex(0);
+    if (mediaItems.length <= 1 || isZoomed) return;
+
+    const currentMedia = mediaItems[currentIndex];
+    
+    if (currentMedia?.type === 'image') {
+      const timer = setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
+      }, 5000);
+      return () => clearTimeout(timer);
     }
-  }, [product]);
+  }, [currentIndex, mediaItems.length, isZoomed]);
+
+  const handleVideoEnd = () => {
+    setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
+  };
 
   if (isLoading) {
     return (
@@ -93,198 +99,107 @@ export default function ProductDetail() {
     );
   }
 
-  const handleAddToCart = () => {
-    addToCart(product.id, quantity);
-  };
-
-  const rating = reviews.length > 0 
-    ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / reviews.length 
-    : 4.5;
-
   return (
     <div className="min-h-screen bg-cream">
       <Header />
-      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Product Media Gallery with Switch Buttons */}
           <div className="space-y-4">
-            {(() => {
-              const videos: string[] = (product.videos || []).filter((url: string) => url && url.trim());
-              const photos: string[] = (product.images || []).filter((url: string) => url && url.trim());
-              
-              const hasVideos = videos.length > 0;
-              const hasPhotos = photos.length > 0;
-              
-              const currentItems = mediaTab === 'videos' ? videos : photos;
-              const safeIndex = Math.min(currentIndex, Math.max(0, currentItems.length - 1));
-              
-              const handleSwipe = () => {
-                if (!touchStart || !touchEnd) return;
-                const distance = touchStart - touchEnd;
-                const minSwipeDistance = 50;
-                
-                if (Math.abs(distance) > minSwipeDistance) {
-                  if (distance > 0 && safeIndex < currentItems.length - 1) {
-                    setCurrentIndex(safeIndex + 1);
-                  } else if (distance < 0 && safeIndex > 0) {
-                    setCurrentIndex(safeIndex - 1);
-                  }
-                }
-                setTouchStart(null);
-                setTouchEnd(null);
-              };
-              
-              const handleTabChange = (tab: 'videos' | 'photos') => {
-                setMediaTab(tab);
-                setCurrentIndex(0);
-              };
-              
-              return (
-                <>
-                  {/* Small Switch Buttons */}
-                  {(hasVideos || hasPhotos) && (
-                    <div className="flex justify-center gap-2 mb-2">
-                      {hasVideos && (
-                        <button
-                          onClick={() => handleTabChange('videos')}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                            mediaTab === 'videos' 
-                              ? 'bg-navy text-white shadow-md' 
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                          data-testid="switch-videos"
-                        >
-                          <Play className="w-3 h-3" />
-                          Videos ({videos.length})
-                        </button>
-                      )}
-                      {hasPhotos && (
-                        <button
-                          onClick={() => handleTabChange('photos')}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                            mediaTab === 'photos' 
-                              ? 'bg-navy text-white shadow-md' 
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                          data-testid="switch-photos"
-                        >
-                          <Image className="w-3 h-3" />
-                          Photos ({photos.length})
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Main Media Display with Swipe */}
+            <div className="relative aspect-square rounded-lg overflow-hidden bg-white shadow-lg group">
+              {mediaItems.length > 0 ? (
+                mediaItems[currentIndex].type === 'video' ? (
+                  <video
+                    ref={videoRef}
+                    key={mediaItems[currentIndex].url}
+                    src={mediaItems[currentIndex].url}
+                    autoPlay
+                    muted
+                    onEnded={handleVideoEnd}
+                    controls
+                    playsInline
+                    className="w-full h-full object-contain bg-black"
+                  />
+                ) : (
                   <div 
-                    className="relative aspect-square rounded-lg overflow-hidden bg-white shadow-lg"
-                    onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
-                    onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
-                    onTouchEnd={handleSwipe}
+                    className={`w-full h-full transition-transform duration-300 ${isZoomed ? 'scale-150 cursor-zoom-out' : 'scale-100 cursor-zoom-in'}`}
+                    onClick={() => setIsZoomed(!isZoomed)}
                   >
-                    {currentItems.length > 0 ? (
-                      mediaTab === 'videos' ? (
-                        <video
-                          key={currentItems[safeIndex]}
-                          src={currentItems[safeIndex]}
-                          autoPlay
-                          muted
-                          loop
-                          controls
-                          playsInline
-                          className="w-full h-full object-contain bg-black"
-                        />
-                      ) : (
-                        <img
-                          src={currentItems[safeIndex]}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      )
-                    ) : (
-                      <img
-                        src="/placeholder-product.jpg"
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                    
-                    {/* Navigation Arrows */}
-                    {currentItems.length > 1 && (
-                      <>
-                        <button
-                          onClick={() => setCurrentIndex(Math.max(0, safeIndex - 1))}
-                          className={`absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-md transition-opacity ${
-                            safeIndex === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white'
-                          }`}
-                          disabled={safeIndex === 0}
-                          data-testid="nav-prev"
-                        >
-                          <ChevronLeft className="w-5 h-5 text-navy" />
-                        </button>
-                        <button
-                          onClick={() => setCurrentIndex(Math.min(currentItems.length - 1, safeIndex + 1))}
-                          className={`absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-md transition-opacity ${
-                            safeIndex === currentItems.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white'
-                          }`}
-                          disabled={safeIndex === currentItems.length - 1}
-                          data-testid="nav-next"
-                        >
-                          <ChevronRight className="w-5 h-5 text-navy" />
-                        </button>
-                      </>
-                    )}
-                    
-                    {/* Dot Indicators */}
-                    {currentItems.length > 1 && (
-                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {currentItems.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setCurrentIndex(index)}
-                            className={`w-2 h-2 rounded-full transition-all ${
-                              index === safeIndex ? 'bg-champagne w-4' : 'bg-white/60 hover:bg-white/80'
-                            }`}
-                            data-testid={`dot-${index}`}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    <img
+                      src={mediaItems[currentIndex].url}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  
-                  {/* Thumbnail Strip */}
-                  {currentItems.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto pb-2">
-                      {currentItems.map((url, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setCurrentIndex(index)}
-                          className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                            safeIndex === index ? 'border-champagne ring-2 ring-champagne/30' : 'border-gray-200 hover:border-champagne/50'
-                          }`}
-                        >
-                          {mediaTab === 'videos' ? (
-                            <div className="w-full h-full bg-gradient-to-br from-navy to-navy/80 flex items-center justify-center">
-                              <Play className="w-5 h-5 text-white" fill="white" />
-                            </div>
-                          ) : (
-                            <img
-                              src={url}
-                              alt={`${product.name} ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                )
+              ) : (
+                <img
+                  src="/placeholder-product.jpg"
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              )}
+              {mediaItems.length > 1 && (
+                <>
+                  <button
+                    onClick={() => {
+                      setCurrentIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
+                      setIsZoomed(false);
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronLeft className="w-6 h-6 text-navy" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
+                      setIsZoomed(false);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronRight className="w-6 h-6 text-navy" />
+                  </button>
                 </>
-              );
-            })()}
+              )}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                {mediaItems.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setCurrentIndex(index);
+                      setIsZoomed(false);
+                    }}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentIndex ? 'bg-champagne w-4' : 'bg-white/60'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            {mediaItems.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {mediaItems.map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setCurrentIndex(index);
+                      setIsZoomed(false);
+                    }}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                      currentIndex === index ? 'border-champagne ring-2 ring-champagne/30' : 'border-gray-200'
+                    }`}
+                  >
+                    {item.type === 'video' ? (
+                      <div className="w-full h-full bg-navy flex items-center justify-center">
+                        <Play className="w-6 h-6 text-white" fill="white" />
+                      </div>
+                    ) : (
+                      <img src={item.url} className="w-full h-full object-cover" alt="" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-
-          {/* Product Info */}
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -295,7 +210,6 @@ export default function ProductDetail() {
               <h1 className="text-3xl font-bold text-navy mb-4">{product.name}</h1>
               <p className="text-gray-600 text-lg">{product.description}</p>
             </div>
-
             <div className="space-y-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-navy">
@@ -309,8 +223,6 @@ export default function ProductDetail() {
                 + {formatPrice(parseFloat(product.price) * parseFloat(product.gstRate) / 100)} GST included
               </p>
             </div>
-
-            {/* Quantity Selector */}
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <span className="font-medium text-navy">Quantity:</span>
@@ -334,10 +246,9 @@ export default function ProductDetail() {
                   </Button>
                 </div>
               </div>
-
               <div className="flex gap-4">
                 <Button
-                  onClick={handleAddToCart}
+                  onClick={() => addToCart(product.id, quantity)}
                   className="flex-1 bg-champagne text-navy hover:bg-champagne/90"
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
@@ -351,8 +262,6 @@ export default function ProductDetail() {
                 </Button>
               </div>
             </div>
-
-            {/* Product Details */}
             <Card>
               <CardContent className="p-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -377,8 +286,6 @@ export default function ProductDetail() {
             </Card>
           </div>
         </div>
-
-        {/* Product Details Tabs */}
         <div className="mt-16">
           <Tabs defaultValue="description" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
@@ -413,7 +320,6 @@ export default function ProductDetail() {
           </Tabs>
         </div>
       </div>
-
       <Footer />
       <MobileNav />
       <CartSidebar />

@@ -41,17 +41,12 @@ export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Show loading while auth is being checked
-  if (!user && !authLoading) {
-    setLocation('/admin/login');
-    return null;
-  }
-
   // Redirect if not admin after auth is confirmed
-  if (user && user.role !== 'admin' && user.role !== 'super_admin') {
-    setLocation('/admin/login');
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && (!user || (user.role !== 'admin' && user.role !== 'super_admin'))) {
+      setLocation('/admin/login');
+    }
+  }, [user, authLoading, setLocation]);
 
   // Live visitor counter state
   const [liveVisitors, setLiveVisitors] = useState(Math.floor(Math.random() * 5) + 1);
@@ -120,7 +115,7 @@ export default function AdminDashboard() {
         });
         if (response.ok) {
           const orders = await response.json();
-          const recentOrders = orders.slice(0, 5);
+          const recentOrders = Array.isArray(orders) ? orders.slice(0, 5) : [];
           
           if (liveOrders.length > 0 && recentOrders.length > liveOrders.length) {
             // New order detected
@@ -379,6 +374,11 @@ export default function AdminDashboard() {
     );
   }
 
+  // Prevent rendering if not authorized (useEffect will redirect)
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-cream">
       <AdminSidebar />
@@ -450,7 +450,7 @@ export default function AdminDashboard() {
               <CardContent>
                 <div className="text-2xl font-bold text-navy">{liveVisitors}</div>
                 <p className={`text-xs flex items-center gap-1 ${isOnline ? 'text-green-600' : 'text-red-600'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></span>
                   LIVE
                 </p>
               </CardContent>
@@ -552,37 +552,41 @@ export default function AdminDashboard() {
                 }`}>
                   {newOrderAlert ? (
                     <>
-                      <Bell className="h-3 w-3 animate-bounce" />
-                      <Volume2 className="h-3 w-3" />
+                      <Bell className="h-3 w-3" />
                       NEW ORDER!
                     </>
                   ) : (
                     <>
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      LIVE
+                      <CheckCircle className="h-3 w-3" />
+                      Up to date
                     </>
                   )}
                 </div>
               </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {liveOrders.map((order: any) => (
-                  <Card key={order.id} className={`transition-all duration-300 ${getBorderColor(order.status, order.paymentMethod, order.paymentStatus)} ${
-                    newOrderAlert ? 'ring-2 ring-red-500 shadow-lg' : 'hover:shadow-md'
-                  }`}>
+                  <Card key={order.id} className={getBorderColor(order.status, order.paymentMethod, order.paymentStatus)}>
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-navy">#{order.orderNumber}</span>
-                        <Badge className={`${getStatusColor(order.status, order.paymentMethod, order.paymentStatus)} text-xs capitalize`}>
-                          {getStatusIcon(order.status, order.paymentMethod, order.paymentStatus)}
-                          <span className="ml-1">{getStatusLabel(order.status, order.paymentMethod, order.paymentStatus)}</span>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-bold text-navy">Order #{order.orderNumber}</p>
+                          <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleTimeString()}</p>
+                        </div>
+                        <Badge className={getStatusColor(order.status, order.paymentMethod, order.paymentStatus)}>
+                          {getStatusLabel(order.status, order.paymentMethod, order.paymentStatus)}
                         </Badge>
                       </div>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <p><span className="font-medium">Customer:</span> {order.deliveryAddress?.name}</p>
-                        <p><span className="font-medium">Payment Status:</span> <span className={`font-semibold ${getStatusColor(order.status, order.paymentMethod, order.paymentStatus)} px-1.5 py-0.5 rounded-sm`}>{getStatusLabel(order.status, order.paymentMethod, order.paymentStatus)}</span></p>
-                        <p><span className="font-medium">Total:</span> {formatPrice(parseFloat(order.total))}</p>
-                        <p><span className="font-medium">Time:</span> {new Date(order.orderDate).toLocaleTimeString()}</p>
+                      <div className="space-y-1 mb-3 text-sm">
+                        <p className="text-gray-700 font-medium">{order.customerName}</p>
+                        <p className="text-gray-600 line-clamp-1">{order.items?.map((i: any) => i.name).join(', ')}</p>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                        <p className="font-bold text-navy">{formatPrice(parseFloat(order.total))}</p>
+                        <Link href={`/admin/orders`}>
+                          <Button variant="ghost" size="sm" className="text-champagne h-7 px-2">
+                            View Details
+                          </Button>
+                        </Link>
                       </div>
                     </CardContent>
                   </Card>
@@ -591,202 +595,78 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* Recent Orders and Top Products */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Recent Orders */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  Recent Orders 
-                  <Badge variant="secondary" className="text-xs">
-                    {recentOrders.length} found
-                  </Badge>
-                </CardTitle>
+                <CardTitle>Recent Orders</CardTitle>
                 <Link href="/admin/orders">
-                  <Button variant="ghost" size="sm" className="text-champagne hover:text-navy">
-                    <Eye className="h-4 w-4 mr-1" />
-                    View All
-                  </Button>
+                  <Button variant="ghost" size="sm" className="text-champagne">View All</Button>
                 </Link>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentOrders && recentOrders.length > 0 ? (
-                    recentOrders.slice(0, 5).map((order: any) => (
-                      <div key={order.id} className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg border ${getBorderColor(order.status, order.paymentMethod, order.paymentStatus)}`}>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-navy">#{order.orderNumber}</span>
-                            <Badge className={`text-xs capitalize ${getStatusColor(order.status, order.paymentMethod, order.paymentStatus)}`}>
-                              {getStatusIcon(order.status, order.paymentMethod, order.paymentStatus)}
-                              <span className="ml-1">{getStatusLabel(order.status, order.paymentMethod, order.paymentStatus)}</span>
-                            </Badge>
+                  {analytics?.recentOrders?.length ? (
+                    analytics.recentOrders.slice(0, 5).map((order: any) => (
+                      <div key={order.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-white transition-colors shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-champagne/10 rounded-full flex items-center justify-center">
+                            <ShoppingCart className="h-5 w-5 text-champagne" />
                           </div>
-                          <p className="text-sm text-gray-600">
-                            {new Date(order.orderDate).toLocaleDateString()}
-                          </p>
+                          <div>
+                            <p className="font-semibold text-navy">#{order.orderNumber}</p>
+                            <p className="text-xs text-gray-500">{order.customerName}</p>
+                          </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-navy">{formatPrice(parseFloat(order.total))}</p>
-                          <p className="text-xs text-gray-500">{order.paymentMethod?.toUpperCase() || 'N/A'}</p>
+                          <p className="font-bold text-navy">{formatPrice(parseFloat(order.total))}</p>
+                          <Badge className={getStatusColor(order.status, order.paymentMethod, order.paymentStatus)}>
+                            {getStatusLabel(order.status, order.paymentMethod, order.paymentStatus)}
+                          </Badge>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8">
-                      <ShoppingCart className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                      <p className="text-gray-500 text-lg font-medium mb-2">No orders yet</p>
-                      <p className="text-gray-400 text-sm">Orders will appear here once customers start placing them</p>
-                    </div>
+                    <p className="text-center text-gray-500 py-4">No recent orders</p>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Top Products */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Top Products</CardTitle>
+                <Link href="/admin/products">
+                  <Button variant="ghost" size="sm" className="text-champagne">Manage</Button>
+                </Link>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {analytics?.topProducts?.slice(0, 5).map((product: any) => (
-                    <div key={product.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <img
-                        src={product.images[0] || '/placeholder-product.jpg'}
-                        alt={product.name}
-                        className="w-12 h-12 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-navy">{product.name}</h4>
-                        <p className="text-sm text-gray-600">{formatPrice(parseFloat(product.price))}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-champagne">{product.orderCount}</p>
-                        <p className="text-xs text-gray-500">orders</p>
-                      </div>
-                    </div>
-                  )) || []}
-                  {(!analytics?.topProducts || analytics.topProducts.length === 0) && (
-                    <p className="text-gray-500 text-center py-8">No sales data yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Payment Settings Widget */}
-          <div className="mt-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <IndianRupee className="h-5 w-5 text-champagne" />
-                  Payment Settings (QR/UPI)
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Enable QR Payment</span>
-                  <Switch
-                    checked={qrEnabled}
-                    onCheckedChange={setQrEnabled}
-                    data-testid="switch-qr-enabled"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="qrImageUrl">QR Code Image URL</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="qrImageUrl"
-                          value={qrImageUrl}
-                          onChange={(e) => setQrImageUrl(e.target.value)}
-                          placeholder="https://example.com/qr-code.png"
-                          data-testid="input-qr-image-url"
-                        />
-                        <Button variant="outline" size="icon">
-                          <QrCode className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {qrImageUrl && (
-                        <div className="mt-2 p-2 border rounded-lg">
-                          <img
-                            src={qrImageUrl}
-                            alt="QR Preview"
-                            className="w-32 h-32 object-contain mx-auto"
-                            onError={(e) => (e.currentTarget.style.display = 'none')}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="upiId">UPI ID</Label>
-                      <Input
-                        id="upiId"
-                        value={upiId}
-                        onChange={(e) => setUpiId(e.target.value)}
-                        placeholder="yourname@upi"
-                        data-testid="input-upi-id"
-                      />
-                    </div>
-
-                    <Button
-                      onClick={handleSavePaymentConfig}
-                      disabled={savePaymentConfigMutation.isPending}
-                      className="w-full bg-champagne text-navy hover:bg-champagne/90"
-                      data-testid="button-save-payment-config"
-                    >
-                      {savePaymentConfigMutation.isPending ? 'Saving...' : 'Save Payment Settings'}
-                    </Button>
-                  </div>
-
-                  {/* QR Payment Orders List */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-navy flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      QR Payment Orders ({qrPaymentOrders.length})
-                    </h4>
-                    <div className="max-h-64 overflow-y-auto space-y-2">
-                      {qrPaymentOrders.length > 0 ? (
-                        qrPaymentOrders.slice(0, 10).map((order: any) => (
-                          <div
-                            key={order.id}
-                            className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100"
-                            data-testid={`qr-order-${order.id}`}
-                          >
-                            <div>
-                              <p className="font-medium text-navy">#{order.orderNumber}</p>
-                              <p className="text-sm text-gray-600">
-                                {order.deliveryAddress?.name || 'Customer'}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {order.deliveryAddress?.phone}
-                              </p>
+                  {analytics?.topProducts?.length ? (
+                    analytics.topProducts.slice(0, 5).map((product: any) => (
+                      <div key={product.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-white transition-colors shadow-sm">
+                        <div className="flex items-center gap-4">
+                          {product.images?.[0] ? (
+                            <img src={product.images[0]} alt={product.name} className="w-12 h-12 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <Package className="h-6 w-6 text-gray-400" />
                             </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-navy">{formatPrice(parseFloat(order.total))}</p>
-                              <Badge className={`text-xs ${getStatusColor(order.status)}`}>
-                                {order.status}
-                              </Badge>
-                            </div>
+                          )}
+                          <div>
+                            <p className="font-semibold text-navy">{product.name}</p>
+                            <p className="text-xs text-gray-500">{product.category}</p>
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <QrCode className="h-12 w-12 mx-auto text-gray-300 mb-2" />
-                          <p>No QR payment orders yet</p>
                         </div>
-                      )}
-                    </div>
-                    {qrPaymentOrders.length > 10 && (
-                      <Link href="/admin/payments">
-                        <Button variant="outline" className="w-full">
-                          View All QR Orders ({qrPaymentOrders.length})
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
+                        <div className="text-right">
+                          <p className="font-bold text-navy">{product.salesCount || 0} sales</p>
+                          <p className="text-xs text-green-600 font-medium">{formatPrice(product.revenue || 0)}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 py-4">No top products data</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

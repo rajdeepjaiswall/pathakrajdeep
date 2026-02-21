@@ -26,11 +26,6 @@ export default function ProductDetail() {
     enabled: !!id,
   });
 
-  const { data: reviews = [] } = useQuery<any[]>({
-    queryKey: [`/api/products/${id}/reviews`],
-    enabled: !!id,
-  });
-
   const mediaItems = (() => {
     if (!product) return [];
     const photos = (product.images || []).filter((url: string) => url && url.trim()).map((url: string) => ({ type: 'image' as const, url }));
@@ -198,7 +193,7 @@ export default function ProductDetail() {
                   </button>
                 ))}
               </div>
-            </div>
+            )}
           </div>
           <div className="space-y-6">
             <div>

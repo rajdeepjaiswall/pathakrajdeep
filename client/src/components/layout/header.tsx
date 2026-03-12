@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search, ChevronDown, ChevronRight, Home, ClipboardList, Phone, Info, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,6 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMenuSheetOpen, setIsMenuSheetOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
   const { summary, openCart } = useCart();
   const [location, setLocation] = useLocation();
@@ -27,12 +28,6 @@ export default function Header() {
   const { data: allProducts = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
   });
-
-  const handleInstallApp = () => {
-    const event = new CustomEvent('showInstallPrompt');
-    window.dispatchEvent(event);
-    setIsMobileMenuOpen(false);
-  };
 
   const filteredCategories = categories.map(cat => ({
     ...cat,
@@ -53,6 +48,14 @@ export default function Header() {
     if (searchTerm.trim()) {
       setLocation(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
     }
+  };
+
+  const handleMenuClose = () => setIsMenuSheetOpen(false);
+
+  const handleLogout = async () => {
+    await logout();
+    handleMenuClose();
+    setLocation('/');
   };
 
   return (
@@ -81,7 +84,6 @@ export default function Header() {
                     <SheetTitle className="text-navy font-bold text-xl text-center">Search Products</SheetTitle>
                   </SheetHeader>
 
-                  {/* Search bar inside menu */}
                   <form onSubmit={handleSearch} className="relative mb-6">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy/50" />
                     <Input
@@ -186,15 +188,15 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Right Side: Menu */}
+          {/* Right Side: Hamburger Menu */}
           <div className="flex items-center justify-end">
-            <Sheet>
+            <Sheet open={isMenuSheetOpen} onOpenChange={setIsMenuSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-navy hover:bg-almond/30">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 bg-cream p-0 overflow-hidden">
+              <SheetContent side="right" className="w-80 bg-cream p-0 overflow-hidden flex flex-col">
                 <div 
                   className="absolute inset-0 opacity-10 pointer-events-none"
                   style={{
@@ -203,80 +205,144 @@ export default function Header() {
                     backgroundRepeat: 'repeat'
                   }}
                 />
-                <div className="relative h-full flex flex-col p-6">
-                  <SheetHeader className="mb-6">
-                    <SheetTitle className="text-navy font-bold text-xl">Menu</SheetTitle>
-                  </SheetHeader>
-
-                  <div className="flex-1 overflow-y-auto space-y-4">
-                    <Link href="/" className="block text-navy font-semibold text-lg py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors">
-                      Home
-                    </Link>
-                    <Link href="/products" className="block text-navy font-semibold text-lg py-2 px-3 rounded-lg hover:bg-almond/30 transition-colors">
-                      Products
-                    </Link>
-                    
-                    <div className="pt-4 border-t border-almond space-y-3">
-                      {isAuthenticated ? (
-                        <>
-                          <div className="flex items-center space-x-3 px-3 py-2">
-                            <Avatar className="h-10 w-10 border border-almond">
-                              <AvatarImage src={(user as any)?.profileImageUrl} />
-                              <AvatarFallback className="bg-champagne text-navy font-bold">
-                                {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                              <span className="text-navy/60 text-xs font-medium">Namaste</span>
-                              <span className="text-navy font-bold truncate max-w-[150px]">
-                                {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() : user?.username}
-                              </span>
-                            </div>
-                          </div>
-
-                          <Link href="/customer/profile" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/30 transition-colors group">
-                            <User className="h-5 w-5 text-navy group-hover:scale-110 transition-transform" />
-                            <span className="text-navy font-medium">My Profile</span>
-                          </Link>
-                          
-                          <Link href="/customer/orders" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/30 transition-colors group">
-                            <Package className="h-5 w-5 text-navy group-hover:scale-110 transition-transform" />
-                            <span className="text-navy font-medium">My Orders</span>
-                          </Link>
-
-                          {(user?.role === 'admin' || user?.role === 'super_admin') && (
-                            <Link href="/admin" className="flex items-center space-x-3 p-3 rounded-xl bg-navy text-cream hover:bg-navy/90 transition-colors group">
-                              <BarChart3 className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                              <span className="font-bold">Admin Dashboard</span>
-                            </Link>
-                          )}
-
-                          <div className="pt-4 mt-4 border-t border-almond">
-                            <Button 
-                              variant="ghost" 
-                              onClick={() => logout()}
-                              className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl"
-                            >
-                              <LogOut className="h-5 w-5 mr-3" />
-                              <span className="font-bold">Logout</span>
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="space-y-3">
-                          <Link href="/login">
-                            <Button className="w-full bg-navy text-cream hover:bg-navy/90 font-bold py-6 rounded-xl">
-                              Login to Account
-                            </Button>
-                          </Link>
-                          <Link href="/customer/register">
-                            <Button variant="outline" className="w-full border-navy text-navy hover:bg-navy/5 font-bold py-6 rounded-xl">
-                              Create New Account
-                            </Button>
-                          </Link>
+                <div className="relative h-full flex flex-col">
+                  {/* Header */}
+                  <div className="p-6 pb-4 border-b border-almond/50">
+                    <SheetTitle className="text-navy font-bold text-xl mb-4">Menu</SheetTitle>
+                    {isAuthenticated && user ? (
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-12 w-12 border-2 border-champagne">
+                          <AvatarImage src={(user as any)?.profileImageUrl} />
+                          <AvatarFallback className="bg-champagne text-navy font-bold text-lg">
+                            {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-navy/60 text-xs">Namaste</p>
+                          <p className="text-navy font-bold text-sm truncate max-w-[160px]">
+                            {(user as any)?.firstName 
+                              ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() 
+                              : user?.username}
+                          </p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Link href="/login" onClick={handleMenuClose}>
+                          <Button className="w-full bg-navy text-cream hover:bg-navy/90 font-bold rounded-xl">
+                            Login to Account
+                          </Button>
+                        </Link>
+                        <Link href="/customer/register" onClick={handleMenuClose}>
+                          <Button variant="outline" className="w-full border-navy text-navy hover:bg-navy/5 font-bold rounded-xl">
+                            Create New Account
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Navigation Items */}
+                  <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                    <Link href="/" onClick={handleMenuClose}>
+                      <div className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/40 transition-colors group cursor-pointer">
+                        <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <Home className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <span className="text-navy font-semibold">Home</span>
+                      </div>
+                    </Link>
+
+                    <Link href="/customer/wishlist" onClick={handleMenuClose}>
+                      <div className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/40 transition-colors group cursor-pointer">
+                        <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                          <Heart className="h-5 w-5 text-red-500" />
+                        </div>
+                        <span className="text-navy font-semibold">Favorites</span>
+                      </div>
+                    </Link>
+
+                    <Link href="/customer/orders" onClick={handleMenuClose}>
+                      <div className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/40 transition-colors group cursor-pointer">
+                        <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                          <ClipboardList className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <span className="text-navy font-semibold">Orders</span>
+                      </div>
+                    </Link>
+
+                    <Link href="/contact-us" onClick={handleMenuClose}>
+                      <div className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/40 transition-colors group cursor-pointer">
+                        <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                          <Phone className="h-5 w-5 text-green-600" />
+                        </div>
+                        <span className="text-navy font-semibold">Contact Us</span>
+                      </div>
+                    </Link>
+
+                    <Link href="/about-us" onClick={handleMenuClose}>
+                      <div className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/40 transition-colors group cursor-pointer">
+                        <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                          <Info className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <span className="text-navy font-semibold">About Us</span>
+                      </div>
+                    </Link>
+
+                    {isAuthenticated && (
+                      <Link href="/customer/account" onClick={handleMenuClose}>
+                        <div className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/40 transition-colors group cursor-pointer">
+                          <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <Settings className="h-5 w-5 text-gray-600" />
+                          </div>
+                          <span className="text-navy font-semibold">Account Settings</span>
+                        </div>
+                      </Link>
+                    )}
+
+                    {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                      <Link href="/admin" onClick={handleMenuClose}>
+                        <div className="flex items-center space-x-3 p-3 rounded-xl bg-navy/5 hover:bg-navy/10 transition-colors group cursor-pointer border border-navy/10">
+                          <div className="w-9 h-9 rounded-lg bg-navy flex items-center justify-center flex-shrink-0">
+                            <BarChart3 className="h-5 w-5 text-champagne" />
+                          </div>
+                          <span className="text-navy font-bold">Admin Dashboard</span>
+                        </div>
+                      </Link>
+                    )}
+
+                    {isAuthenticated && (
+                      <div className="pt-2">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-50 transition-colors group cursor-pointer"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                            <LogOut className="h-5 w-5 text-red-500" />
+                          </div>
+                          <span className="text-red-600 font-semibold">Logout</span>
+                        </button>
+                      </div>
+                    )}
+                  </nav>
+
+                  {/* Admin Login Button at Bottom */}
+                  <div className="p-4 border-t border-almond/50">
+                    {!isAuthenticated || (user?.role !== 'admin' && user?.role !== 'super_admin') ? (
+                      <Link href="/admin/login" onClick={handleMenuClose}>
+                        <button className="w-full flex items-center justify-center space-x-2 p-3 rounded-xl bg-navy text-cream hover:bg-navy/90 transition-colors font-bold">
+                          <Shield className="h-4 w-4" />
+                          <span>Admin Login</span>
+                        </button>
+                      </Link>
+                    ) : (
+                      <Link href="/admin" onClick={handleMenuClose}>
+                        <button className="w-full flex items-center justify-center space-x-2 p-3 rounded-xl bg-champagne text-navy hover:bg-champagne/90 transition-colors font-bold">
+                          <Shield className="h-4 w-4" />
+                          <span>Go to Admin Panel</span>
+                        </button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </SheetContent>

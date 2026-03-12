@@ -10,7 +10,7 @@ import ProductCard from '@/components/product/product-card';
 import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
 import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
-
+import CartReminder from '@/components/CartReminder';
 
 import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
@@ -22,17 +22,15 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
   
-  // Fetch all products
   const { data: allProducts = [], isLoading: productsLoading } = useQuery({
     queryKey: ['/api/products'],
   });
 
-  // Preload critical images when products load
   useEffect(() => {
     const products = allProducts as any[];
     if (products && products.length > 0) {
       const imagesToPreload = products
-        .slice(0, 8) // First 8 products
+        .slice(0, 8)
         .flatMap((product: any) => product.images || [])
         .filter((img: string) => img && !img.startsWith('data:'));
       
@@ -42,23 +40,19 @@ export default function Home() {
     }
   }, [allProducts]);
 
-  // Filter featured products or show all if none are featured
   const featuredProducts = (allProducts as any[]).filter((product: any) => product.featured).length > 0
     ? (allProducts as any[]).filter((product: any) => product.featured)
     : (allProducts as any[]);
 
-  // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ['/api/categories'],
   });
 
-  // Fetch previously ordered products for authenticated users
   const { data: previouslyOrderedProducts = [] } = useQuery({
     queryKey: ['/api/previously-ordered'],
     enabled: isAuthenticated,
   });
 
-  // Show loading spinner for mobile on initial load
   if (productsLoading && (allProducts as any[]).length === 0) {
     return (
       <div className="min-h-screen bg-background">
@@ -97,6 +91,9 @@ export default function Home() {
 
       {/* Category Showcase - Automatic Moving Carousel */}
       <CategoryShowcase />
+
+      {/* Cart Reminder Section - below Specialties, above Featured Products */}
+      <CartReminder />
 
       {/* Featured Products - Product Catalogue */}
       <section className="pt-2 pb-16 bg-background">
@@ -142,8 +139,6 @@ export default function Home() {
         </div>
       </section>
 
-
-
       {/* Mini Banner Slideshow */}
       <div className="pt-2 pb-3 bg-background">
         <div className="max-w-7xl mx-auto">
@@ -152,7 +147,7 @@ export default function Home() {
       </div>
 
       {/* Trust Indicators */}
-<section className="py-12 bg-background">
+      <section className="py-12 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">

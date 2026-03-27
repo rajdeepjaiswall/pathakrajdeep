@@ -46,22 +46,22 @@ export default function FreshSection() {
   const scrollBy = useCallback((dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
     const isDesktop = window.innerWidth >= 1024;
-    const cardWidth = (isDesktop ? 192 : 160) + 12;
+    const cardWidth = (isDesktop ? 192 : 160) + 16;
     scrollRef.current.scrollBy({ left: dir === 'right' ? cardWidth * 2 : -cardWidth * 2, behavior: 'smooth' });
   }, []);
 
-  // Auto-scroll every 4 seconds
+  // Auto-scroll in REVERSE (right → left) every 4 seconds
   useEffect(() => {
     if (isHovered || !scrollRef.current || products.length === 0) return;
 
     autoScrollRef.current = setInterval(() => {
       const el = scrollRef.current;
       if (!el) return;
-      const maxScroll = el.scrollWidth - el.clientWidth;
-      if (el.scrollLeft >= maxScroll - 4) {
-        el.scrollTo({ left: 0, behavior: 'smooth' });
+      if (el.scrollLeft <= 4) {
+        // Reached beginning — jump to end
+        el.scrollTo({ left: el.scrollWidth - el.clientWidth, behavior: 'smooth' });
       } else {
-        el.scrollBy({ left: 200, behavior: 'smooth' });
+        el.scrollBy({ left: -200, behavior: 'smooth' });
       }
     }, 4000);
 
@@ -83,11 +83,10 @@ export default function FreshSection() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex-1 min-w-0 pr-4">
-              {/* Glow effect behind title */}
               <div className="relative">
                 <div className="absolute -inset-2 bg-amber-200/40 blur-xl rounded-full" />
                 <h2
-                  className="relative text-2xl lg:text-3xl font-black text-amber-900 leading-tight transition-all duration-400"
+                  className="relative text-2xl lg:text-3xl font-black text-amber-900 leading-tight"
                   style={{ opacity: fading ? 0 : 1, transform: fading ? 'translateY(4px)' : 'translateY(0)', transition: 'opacity 0.4s ease, transform 0.4s ease' }}
                 >
                   {title}
@@ -112,19 +111,17 @@ export default function FreshSection() {
             </div>
           </div>
 
-          {/* Horizontal Carousel */}
+          {/* Horizontal Carousel — gap-5 lg:gap-6 for visible spacing */}
           <div
             ref={scrollRef}
-            className="flex gap-3 lg:gap-4 overflow-x-auto scrollbar-hide pb-2"
+            className="flex gap-5 lg:gap-6 overflow-x-auto scrollbar-hide pb-2"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {products.map((product, index) => (
               <Link key={product.id} href={`/products/${product.id}`} className="flex-shrink-0">
                 <div
-                  className="w-36 sm:w-40 lg:w-48 bg-white rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 overflow-hidden cursor-pointer"
-                  style={{
-                    animationDelay: `${index * 80}ms`,
-                  }}
+                  className="w-36 sm:w-40 lg:w-48 bg-white rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 overflow-hidden cursor-pointer border border-amber-100"
+                  style={{ animationDelay: `${index * 80}ms` }}
                 >
                   {/* Image */}
                   <div className="relative h-36 sm:h-40 lg:h-48 overflow-hidden rounded-t-3xl">
@@ -134,7 +131,7 @@ export default function FreshSection() {
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
-                    {/* NEW badge with bounce */}
+                    {/* NEW badge */}
                     <div className="absolute top-2 left-2">
                       <span
                         className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md inline-block"

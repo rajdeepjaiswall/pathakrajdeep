@@ -100,14 +100,11 @@ export default function Home() {
       {/* Dynamic Fresh Section - Latest products with rotating title */}
       <FreshSection />
 
-      {/* Cart Reminder Section - below Specialties, above Featured Products */}
+      {/* Cart Reminder Section */}
       <CartReminder />
 
-      {/* Trending in Prayagraj */}
-      <TrendingSection />
-
-      {/* Featured Products - Product Catalogue */}
-      <section className="pt-2 pb-12 lg:py-12 bg-[#F8F4F1]">
+      {/* Featured Products - above Trending section */}
+      <section className="pt-2 pb-10 lg:py-12 bg-[#F8F4F1]">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-6 lg:mb-8">
             <div>
@@ -121,11 +118,12 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-5">
+          {/* Mobile: 2 cols | Desktop: exactly 3 rectangle cards per row */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6">
             {productsLoading ? (
-              <LoadingSkeleton type="product" count={8} className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-5" />
+              <LoadingSkeleton type="product" count={6} className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6" />
             ) : featuredProducts.length > 0 ? (
-              featuredProducts.slice(0, 12).map((product: any) => (
+              featuredProducts.slice(0, 9).map((product: any) => (
                 <ProductCard 
                   key={product.id} 
                   product={product}
@@ -149,6 +147,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Trending in Prayagraj — below Featured Products */}
+      <TrendingSection />
 
       {/* Mini Banner Slideshow */}
       <div className="pt-2 pb-3 bg-background">

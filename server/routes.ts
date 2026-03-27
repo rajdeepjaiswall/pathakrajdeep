@@ -774,6 +774,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/categories", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
+      if (isR2Configured() && categoryData.imageUrl && categoryData.imageUrl.startsWith('data:')) {
+        categoryData.imageUrl = await uploadBase64ToR2(categoryData.imageUrl, 'categories');
+      }
       const category = await storage.createCategory(categoryData);
       res.status(201).json(category);
     } catch (error: any) {
@@ -785,6 +788,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const categoryData = insertCategorySchema.partial().parse(req.body);
+      if (isR2Configured() && categoryData.imageUrl && categoryData.imageUrl.startsWith('data:')) {
+        categoryData.imageUrl = await uploadBase64ToR2(categoryData.imageUrl, 'categories');
+      }
       const category = await storage.updateCategory(id, categoryData);
       res.json(category);
     } catch (error: any) {
@@ -1815,6 +1821,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/banners", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const bannerData = insertBannerSchema.parse(req.body);
+      if (isR2Configured()) {
+        if (bannerData.imageUrl && bannerData.imageUrl.startsWith('data:')) {
+          bannerData.imageUrl = await uploadBase64ToR2(bannerData.imageUrl, 'banners/images');
+        }
+        if (bannerData.videoUrl && bannerData.videoUrl.startsWith('data:')) {
+          bannerData.videoUrl = await uploadBase64ToR2(bannerData.videoUrl, 'banners/videos');
+        }
+      }
       const banner = await storage.createBanner(bannerData);
       res.status(201).json(banner);
     } catch (error: any) {
@@ -1826,6 +1840,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const bannerData = insertBannerSchema.partial().parse(req.body);
+      if (isR2Configured()) {
+        if (bannerData.imageUrl && bannerData.imageUrl.startsWith('data:')) {
+          bannerData.imageUrl = await uploadBase64ToR2(bannerData.imageUrl, 'banners/images');
+        }
+        if (bannerData.videoUrl && bannerData.videoUrl.startsWith('data:')) {
+          bannerData.videoUrl = await uploadBase64ToR2(bannerData.videoUrl, 'banners/videos');
+        }
+      }
       const banner = await storage.updateBanner(id, bannerData);
       res.json(banner);
     } catch (error: any) {
@@ -1894,7 +1916,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/manual-payment-config", authenticateUser, requireAdmin, async (req, res) => {
     try {
-      const { qrImageUrl, upiId, isActive } = req.body;
+      let { qrImageUrl, upiId, isActive } = req.body;
+      if (isR2Configured() && qrImageUrl && qrImageUrl.startsWith('data:')) {
+        qrImageUrl = await uploadBase64ToR2(qrImageUrl, 'misc/qr');
+      }
       const config = await storage.upsertManualPaymentConfig({
         qrImageUrl,
         upiId,

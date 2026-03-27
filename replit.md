@@ -51,6 +51,8 @@ Supports dual database configurations:
   - **Chef Editorial Picks**: Products with `isChefSpecial=true` shown in a premium editorial grid with chef hat badge
   - **Customer Testimonials**: Static testimonials section with 5-star ratings
   - Admin toggles for all three flags added to the admin products form
+- **Event Inquiry System**: Dark-chocolate collapsible banner strip above the footer. Customers submit Name, Event Name, Event Location, and Phone for catering/event orders. On submit shows "Our experts will call you shortly!". Submissions stored in `event_inquiries` DB table. Admin can view all inquiries at GET `/api/admin/event-inquiries`.
+- **Trust Bar**: Slim 4-icon horizontal bar (Free Delivery, Easy Payments, Quality Guarantee, Delivered in 30 Min) with 2-col mobile / 4-col desktop layout.
 - **SEO Optimization**: Full Open Graph tags, Twitter Card meta, JSON-LD structured data (Bakery schema), keyword meta tags, canonical URL in index.html
 - **Data Flow**: JWT-based user authentication, category-based product display, user-specific shopping carts, and order processing with inventory updates.
 - **UI/UX Decisions**: Focus on a custom design system with Tailwind CSS and Radix UI for a consistent and premium look.

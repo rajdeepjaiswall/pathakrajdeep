@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
-import { ArrowRight, Truck, Smartphone, Award } from 'lucide-react';
+import { ArrowRight, Truck, Smartphone, Award, Clock } from 'lucide-react';
+import EventInquiryBanner from '@/components/EventInquiryBanner';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/header';
@@ -167,34 +168,52 @@ export default function Home() {
       {/* Customer Testimonials */}
       <Testimonials />
 
-      {/* Trust Indicators */}
-      <section className="py-12 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-almond rounded-full flex items-center justify-center mx-auto mb-4">
-                <Truck className="h-8 w-8 text-champagne" />
+      {/* Trust Indicators — slim 4-icon bar */}
+      <section className="py-4 bg-[#F5EFE6] border-t border-[#D4B896]/50">
+        <div className="max-w-[1400px] mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border border-[#D4B896]/40">
+                <Truck className="h-4.5 w-4.5 text-[#6B3E2E]" style={{ width: 18, height: 18 }} />
               </div>
-              <h3 className="font-semibold text-navy mb-2">Free Delivery</h3>
-              <p className="text-gray-600 text-sm">Free delivery on orders above ₹500 in Prayagraj</p>
+              <div>
+                <p className="font-semibold text-[#3E2723] text-xs leading-tight">Free Delivery</p>
+                <p className="text-gray-500 text-[10px] leading-tight">Orders above ₹500</p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-almond rounded-full flex items-center justify-center mx-auto mb-4">
-                <Smartphone className="h-8 w-8 text-champagne" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border border-[#D4B896]/40">
+                <Smartphone style={{ width: 18, height: 18 }} className="text-[#6B3E2E]" />
               </div>
-              <h3 className="font-semibold text-navy mb-2">Easy Payments</h3>
-              <p className="text-gray-600 text-sm">UPI, Cards, Net Banking, and Cash on Delivery</p>
+              <div>
+                <p className="font-semibold text-[#3E2723] text-xs leading-tight">Easy Payments</p>
+                <p className="text-gray-500 text-[10px] leading-tight">UPI, Cards, COD</p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-almond rounded-full flex items-center justify-center mx-auto mb-4">
-                <Award className="h-8 w-8 text-champagne" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border border-[#D4B896]/40">
+                <Award style={{ width: 18, height: 18 }} className="text-[#6B3E2E]" />
               </div>
-              <h3 className="font-semibold text-navy mb-2">Quality Guarantee</h3>
-              <p className="text-gray-600 text-sm">Fresh products with satisfaction guarantee</p>
+              <div>
+                <p className="font-semibold text-[#3E2723] text-xs leading-tight">Quality Guarantee</p>
+                <p className="text-gray-500 text-[10px] leading-tight">Fresh, every time</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border border-[#D4B896]/40">
+                <Clock style={{ width: 18, height: 18 }} className="text-[#6B3E2E]" />
+              </div>
+              <div>
+                <p className="font-semibold text-[#3E2723] text-xs leading-tight">Delivered in 30 Min</p>
+                <p className="text-gray-500 text-[10px] leading-tight">Within Prayagraj</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Event Inquiry Banner */}
+      <EventInquiryBanner />
 
       <Footer />
       <MobileNav />

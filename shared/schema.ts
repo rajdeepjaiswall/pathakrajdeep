@@ -530,6 +530,21 @@ export const insertPhonePeTransactionSchema = createInsertSchema(phonePeTransact
   updatedAt: true,
 });
 
+// Event inquiry table — stores catering/event order requests
+export const eventInquiries = pgTable("event_inquiries", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  eventName: text("event_name").notNull(),
+  eventLocation: text("event_location").notNull(),
+  phone: text("phone").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEventInquirySchema = createInsertSchema(eventInquiries).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Select schemas
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -571,3 +586,5 @@ export type InsertPaymentGatewayConfig = z.infer<typeof insertPaymentGatewayConf
 export type InsertPageContent = z.infer<typeof insertPageContentSchema>;
 export type InsertPopupBanner = z.infer<typeof insertPopupBannerSchema>;
 export type InsertPhonePeTransaction = z.infer<typeof insertPhonePeTransactionSchema>;
+export type EventInquiry = typeof eventInquiries.$inferSelect;
+export type InsertEventInquiry = z.infer<typeof insertEventInquirySchema>;

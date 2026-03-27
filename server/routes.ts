@@ -10,7 +10,7 @@ import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrde
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
 import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and } from "drizzle-orm";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -2511,6 +2511,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // OTP routes for email and WhatsApp verification
   app.use("/api/otp", otpRoutes);
+
+  // ── Event Inquiries (catering/event orders) ──────────────────────────────
+  // Auto-create table on first run
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS event_inquiries (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        event_name TEXT NOT NULL,
+        event_location TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+  } catch (e) { /* table already exists */ }
+
+  app.post("/api/event-inquiries", async (req, res) => {
+    try {
+      const { name, eventName, eventLocation, phone } = req.body;
+      if (!name || !eventName || !eventLocation || !phone) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      await pool.query(
+        "INSERT INTO event_inquiries (name, event_name, event_location, phone) VALUES ($1, $2, $3, $4)",
+        [name.trim(), eventName.trim(), eventLocation.trim(), phone.trim()]
+      );
+      res.json({ success: true, message: "Our experts will call you shortly!" });
+    } catch (error: any) {
+      console.error("Event inquiry error:", error);
+      res.status(500).json({ error: "Failed to submit inquiry" });
+    }
+  });
+
+  app.get("/api/admin/event-inquiries", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const result = await pool.query(
+        "SELECT * FROM event_inquiries ORDER BY created_at DESC"
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch inquiries" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

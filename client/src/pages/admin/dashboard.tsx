@@ -206,13 +206,6 @@ export default function AdminDashboard() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  // Manual refetch on mount if data is empty but not loading
-  useEffect(() => {
-    if (user && !analyticsLoading && !ordersLoading && (!analytics || analytics.totalProducts === 0)) {
-      refetchAnalytics();
-      refetchOrders();
-    }
-  }, [user, analyticsLoading, ordersLoading, analytics, refetchAnalytics, refetchOrders]);
 
   // Payment config state and queries
   const queryClient = useQueryClient();
@@ -369,6 +362,18 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading spinner while auth is being checked
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5EFE6] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-[#6B3E2E] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-[#6B3E2E] text-sm font-medium">Loading admin panel…</p>
         </div>
       </div>
     );

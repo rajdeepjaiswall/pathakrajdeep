@@ -13,13 +13,21 @@ import { useLocation } from 'wouter';
 import { formatPrice } from '@/lib/cart';
 
 export default function AdminCustomers() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('all');
 
   // Redirect if not admin
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5EFE6] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#6B3E2E] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
     setLocation('/admin/login');
     return null;

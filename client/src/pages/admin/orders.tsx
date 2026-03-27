@@ -18,7 +18,7 @@ import { useLocation } from 'wouter';
 import { playAdminNotification } from '@/lib/sounds';
 
 export default function AdminOrders() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -31,6 +31,18 @@ export default function AdminOrders() {
   const [riderImage, setRiderImage] = useState('');
   const [estimatedDelivery, setEstimatedDelivery] = useState('');
   const previousOrderCount = useRef<number>(0);
+
+  // Wait for auth to resolve before redirecting
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5EFE6] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-[#6B3E2E] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-[#6B3E2E] text-sm font-medium">Loading…</p>
+        </div>
+      </div>
+    );
+  }
 
   // Redirect if not admin
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {

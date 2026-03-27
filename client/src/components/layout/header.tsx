@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search, ChevronDown, ChevronRight, Home, ClipboardList, Phone, Info, Shield } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart, Settings, LogOut, BarChart3, Package, Download, Search, ChevronDown, ChevronRight, Home, ClipboardList, Phone, Info, Shield, Grid3x3, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
@@ -21,6 +21,15 @@ export default function Header() {
   const [location, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Desktop nav state
+  const [isAttention, setIsAttention] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const categoryRef = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const attentionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const attentionInitialRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
@@ -37,8 +46,8 @@ export default function Header() {
   const searchResults = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const term = searchTerm.toLowerCase();
-    return allProducts.filter(p => 
-      p.name.toLowerCase().includes(term) || 
+    return allProducts.filter(p =>
+      p.name.toLowerCase().includes(term) ||
       p.description?.toLowerCase().includes(term)
     ).slice(0, 10);
   }, [searchTerm, allProducts]);
@@ -58,9 +67,56 @@ export default function Header() {
     setLocation('/');
   };
 
+  // Attention animation for unauthenticated users — every 8s, highlight for 2s
+  useEffect(() => {
+    if (isAuthenticated) {
+      setIsAttention(false);
+      return;
+    }
+    const trigger = () => {
+      setIsAttention(true);
+      setTimeout(() => setIsAttention(false), 2000);
+    };
+    attentionInitialRef.current = setTimeout(() => {
+      trigger();
+      attentionIntervalRef.current = setInterval(trigger, 8000);
+    }, 4000);
+    return () => {
+      if (attentionInitialRef.current) clearTimeout(attentionInitialRef.current);
+      if (attentionIntervalRef.current) clearInterval(attentionIntervalRef.current);
+    };
+  }, [isAuthenticated]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) {
+        setIsCategoryOpen(false);
+      }
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setIsAccountOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const displayName = isAuthenticated && user
+    ? ((user as any)?.firstName || user?.username || 'Account')
+    : null;
+
+  const cartCount = summary?.itemCount ?? 0;
+
+  const navLinkClass = (active = false) =>
+    `relative flex items-center gap-1.5 px-1 py-1 text-[14px] font-semibold transition-colors duration-200 group
+    ${active ? 'text-[#6B3E2E]' : 'text-[#5a3a28] hover:text-[#6B3E2E]'}`;
+
+  const underline = `after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-[#8B5E3C] after:transition-all after:duration-300 group-hover:after:w-full`;
+
   return (
     <header className="bg-cream shadow-lg sticky top-0 z-50 border-b border-almond">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ── ROW 1: Search | Logo | Menu (all screen sizes) ── */}
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-3 items-center h-18">
           {/* Left Side: Search */}
           <div className="flex items-center justify-start">
@@ -71,7 +127,7 @@ export default function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-80 bg-cream p-0 overflow-hidden">
-                <div 
+                <div
                   className="absolute inset-0 opacity-10 pointer-events-none"
                   style={{
                     backgroundImage: `url(${bakeryPattern})`,
@@ -102,8 +158,8 @@ export default function Header() {
                         {searchResults.length > 0 ? (
                           <div className="space-y-2">
                             {searchResults.map((product) => (
-                              <Link 
-                                key={product.id} 
+                              <Link
+                                key={product.id}
                                 href={`/products/${product.id}`}
                                 className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/30 transition-colors group bg-white/40 border border-almond/20"
                               >
@@ -140,8 +196,8 @@ export default function Header() {
                                   {allProducts
                                     .filter(p => p.category_id === category.id)
                                     .map(product => (
-                                      <Link 
-                                        key={product.id} 
+                                      <Link
+                                        key={product.id}
                                         href={`/products/${product.id}`}
                                         className="flex items-center space-x-3 p-2 rounded-lg hover:bg-champagne/20 transition-colors group"
                                       >
@@ -158,7 +214,7 @@ export default function Header() {
                                       </Link>
                                     ))
                                   }
-                                  <Link 
+                                  <Link
                                     href={`/products?category=${category.id}`}
                                     className="text-center text-xs text-amber-800 font-bold py-2 mt-1 hover:underline"
                                   >
@@ -180,9 +236,9 @@ export default function Header() {
           {/* Center: Logo */}
           <div className="flex justify-center">
             <Link href="/" className="flex items-center">
-              <img 
+              <img
                 src={pathakLogo}
-                alt="Pathak Bhandar Logo" 
+                alt="Pathak Bhandar Logo"
                 className="h-10 sm:h-14 object-contain"
               />
             </Link>
@@ -197,7 +253,7 @@ export default function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80 bg-cream p-0 overflow-hidden flex flex-col">
-                <div 
+                <div
                   className="absolute inset-0 opacity-10 pointer-events-none"
                   style={{
                     backgroundImage: `url(${bakeryPattern})`,
@@ -220,8 +276,8 @@ export default function Header() {
                         <div>
                           <p className="text-navy/60 text-xs">Namaste</p>
                           <p className="text-navy font-bold text-sm truncate max-w-[160px]">
-                            {(user as any)?.firstName 
-                              ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim() 
+                            {(user as any)?.firstName
+                              ? `${(user as any).firstName} ${(user as any)?.lastName || ''}`.trim()
                               : user?.username}
                           </p>
                         </div>
@@ -350,6 +406,188 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      {/* ── ROW 2: Desktop-Only Secondary Navigation Bar ── */}
+      <div
+        className="hidden lg:block border-t transition-colors duration-700 ease-in-out"
+        style={{
+          borderColor: 'rgba(107,62,46,0.12)',
+          backgroundColor: isAttention ? '#FFE5E5' : '#F8F4F1',
+        }}
+      >
+        <div className="max-w-[1400px] mx-auto px-8">
+          <div className="flex items-center justify-center gap-8 py-3">
+
+            {/* Home */}
+            <Link href="/">
+              <span className={`${navLinkClass(location === '/')} ${underline}`}>
+                <Home className="h-4 w-4 flex-shrink-0" />
+                Home
+              </span>
+            </Link>
+
+            {/* Orders */}
+            <Link href="/customer/orders">
+              <span className={`${navLinkClass(location === '/customer/orders')} ${underline}`}>
+                <ClipboardList className="h-4 w-4 flex-shrink-0" />
+                Orders
+              </span>
+            </Link>
+
+            {/* Category — hover dropdown */}
+            <div className="relative" ref={categoryRef}>
+              <button
+                onMouseEnter={() => setIsCategoryOpen(true)}
+                onMouseLeave={() => setIsCategoryOpen(false)}
+                onClick={() => setIsCategoryOpen(v => !v)}
+                className={`${navLinkClass()} ${underline} cursor-pointer bg-transparent border-none outline-none`}
+              >
+                <Grid3x3 className="h-4 w-4 flex-shrink-0" />
+                Category
+                <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isCategoryOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Category Dropdown */}
+              {isCategoryOpen && (
+                <div
+                  className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white rounded-2xl shadow-2xl border border-[rgba(107,62,46,0.1)] z-50 py-3 min-w-[200px]"
+                  onMouseEnter={() => setIsCategoryOpen(true)}
+                  onMouseLeave={() => setIsCategoryOpen(false)}
+                >
+                  <div className="px-3 pb-2 mb-1 border-b border-[rgba(107,62,46,0.08)]">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#8B5E3C]/60">Browse By Category</p>
+                  </div>
+                  {categories.slice(0, 10).map((cat) => (
+                    <Link
+                      key={cat.id}
+                      href={`/products?category=${cat.id}`}
+                      onClick={() => setIsCategoryOpen(false)}
+                    >
+                      <div className="flex items-center justify-between px-4 py-2.5 hover:bg-[#F8F4F1] transition-colors group cursor-pointer">
+                        <span className="text-[13px] font-medium text-[#5a3a28] group-hover:text-[#6B3E2E]">{cat.name}</span>
+                        <ChevronRight className="h-3 w-3 text-[#8B5E3C]/40 group-hover:text-[#6B3E2E]" />
+                      </div>
+                    </Link>
+                  ))}
+                  <div className="px-3 pt-2 mt-1 border-t border-[rgba(107,62,46,0.08)]">
+                    <Link href="/products" onClick={() => setIsCategoryOpen(false)}>
+                      <p className="text-[12px] font-bold text-[#8B5E3C] text-center py-1 hover:underline cursor-pointer">
+                        View All Products
+                      </p>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Cart */}
+            <button
+              onClick={openCart}
+              className={`${navLinkClass()} cursor-pointer bg-transparent border-none outline-none relative`}
+            >
+              <ShoppingCart className="h-4 w-4 flex-shrink-0" />
+              Cart
+              {cartCount > 0 && (
+                <span className="absolute -top-1.5 -right-3 bg-[#6B3E2E] text-white text-[10px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center min-w-[18px] px-1 leading-none">
+                  {cartCount > 9 ? '9+' : cartCount}
+                </span>
+              )}
+            </button>
+
+            {/* Divider */}
+            <div className="w-px h-5 bg-[rgba(107,62,46,0.2)]" />
+
+            {/* Sign In / Account */}
+            {isAuthenticated && user ? (
+              <div className="relative" ref={accountRef}>
+                <button
+                  onMouseEnter={() => setIsAccountOpen(true)}
+                  onMouseLeave={() => setIsAccountOpen(false)}
+                  onClick={() => setIsAccountOpen(v => !v)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#6B3E2E]/8 hover:bg-[#6B3E2E]/15 transition-colors duration-200 cursor-pointer border-none outline-none"
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#6B3E2E] flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-[11px] font-black">
+                      {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="text-[14px] font-semibold text-[#5a3a28] max-w-[100px] truncate">
+                    Hi, {displayName?.split(' ')[0]}
+                  </span>
+                  <ChevronDown className={`h-3 w-3 text-[#8B5E3C] transition-transform duration-200 ${isAccountOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Account Dropdown */}
+                {isAccountOpen && (
+                  <div
+                    className="absolute top-full right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-[rgba(107,62,46,0.1)] z-50 py-3 min-w-[180px]"
+                    onMouseEnter={() => setIsAccountOpen(true)}
+                    onMouseLeave={() => setIsAccountOpen(false)}
+                  >
+                    <div className="px-4 pb-2 mb-1 border-b border-[rgba(107,62,46,0.08)]">
+                      <p className="text-[12px] font-bold text-[#6B3E2E]">{displayName}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{user?.email || user?.username}</p>
+                    </div>
+                    <Link href="/customer/account" onClick={() => setIsAccountOpen(false)}>
+                      <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F8F4F1] transition-colors cursor-pointer group">
+                        <Settings className="h-4 w-4 text-[#8B5E3C]" />
+                        <span className="text-[13px] font-medium text-[#5a3a28] group-hover:text-[#6B3E2E]">My Account</span>
+                      </div>
+                    </Link>
+                    <Link href="/customer/orders" onClick={() => setIsAccountOpen(false)}>
+                      <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F8F4F1] transition-colors cursor-pointer group">
+                        <ClipboardList className="h-4 w-4 text-[#8B5E3C]" />
+                        <span className="text-[13px] font-medium text-[#5a3a28] group-hover:text-[#6B3E2E]">My Orders</span>
+                      </div>
+                    </Link>
+                    <div className="px-3 pt-2 mt-1 border-t border-[rgba(107,62,46,0.08)]">
+                      <button
+                        onClick={() => { handleLogout(); setIsAccountOpen(false); }}
+                        className="w-full flex items-center gap-3 px-1 py-2 hover:bg-red-50 transition-colors cursor-pointer rounded-xl group"
+                      >
+                        <LogOut className="h-4 w-4 text-red-400" />
+                        <span className="text-[13px] font-medium text-red-500 group-hover:text-red-600">Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link href="/login">
+                <span
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-full font-semibold text-[14px] transition-all duration-300 cursor-pointer border"
+                  style={{
+                    backgroundColor: isAttention ? '#FF4D4D' : '#6B3E2E',
+                    borderColor: isAttention ? '#FF4D4D' : '#6B3E2E',
+                    color: '#fff',
+                    transform: isAttention ? 'scale(1.04)' : 'scale(1)',
+                    boxShadow: isAttention ? '0 0 12px rgba(255,77,77,0.4)' : '0 2px 8px rgba(107,62,46,0.25)',
+                  }}
+                >
+                  <LogIn className="h-4 w-4" />
+                  Sign In
+                </span>
+              </Link>
+            )}
+
+          </div>
+        </div>
+      </div>
+
+      {/* ── Animation keyframes (desktop only) ── */}
+      <style>{`
+        @media (min-width: 1025px) {
+          .desk-nav-attention {
+            animation: navPulse 2s ease-in-out;
+          }
+          @keyframes navPulse {
+            0% { background-color: #F8F4F1; }
+            30% { background-color: #FFE5E5; }
+            70% { background-color: #FFE5E5; }
+            100% { background-color: #F8F4F1; }
+          }
+        }
+      `}</style>
     </header>
   );
 }

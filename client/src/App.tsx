@@ -50,6 +50,7 @@ import TermsOfService from "@/pages/TermsOfService";
 import CompleteProfile from "@/pages/complete-profile";
 import PhonePeCallback from "@/pages/phonepe-callback";
 import NotFound from "@/pages/not-found";
+import TrendingLocalPage from "@/pages/trending-local";
 import { AddToCartPopup } from "@/components/AddToCartPopup";
 
 function Router() {
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/super-admin/pages" component={PageEditor} />
       <Route path="/super-admin/popup-banners" component={PopupBannersManager} />
       <Route path="/super-admin/reports" component={Reports} />
+      <Route path="/trending-local" component={TrendingLocalPage} />
       <Route path="/about-us" component={AboutUs} />
       <Route path="/contact-us" component={ContactUs} />
       <Route path="/otp-test" component={OTPTest} />

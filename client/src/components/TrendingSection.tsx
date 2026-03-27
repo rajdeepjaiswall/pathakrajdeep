@@ -1,59 +1,153 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { TrendingUp, ArrowRight, Flame } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import ProductCard from '@/components/product/product-card';
+import { ShoppingCart } from 'lucide-react';
+import { useCart } from '@/hooks/use-cart';
+import { formatPrice } from '@/lib/cart';
+import { useState } from 'react';
 
-export default function TrendingSection() {
-  const { data: trendingProducts = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/products/trending'],
-  });
+const BADGE_OPTIONS = ['BEST SELLER', 'MUST TRY', 'TRENDING', 'FAN FAV', 'LIMITED'];
 
-  if (isLoading) return null;
-  if (!trendingProducts || trendingProducts.length === 0) return null;
+function getBadge(index: number) {
+  return BADGE_OPTIONS[index % BADGE_OPTIONS.length];
+}
+
+function PinterestCard({ product, index, onClick }: { product: any; index: number; onClick: () => void }) {
+  const { addToCart } = useCart();
+  const image = product.images?.[0] || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80';
+  const price = parseFloat(product.price);
+
+  const heights = ['h-48', 'h-56', 'h-44', 'h-64', 'h-52', 'h-40'];
+  const imgHeight = heights[index % heights.length];
 
   return (
-    <section className="py-10 bg-gradient-to-b from-amber-50 to-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-              <Flame className="h-5 w-5 text-orange-500" />
-            </div>
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-navy">Trending in Prayagraj</h2>
-              <p className="text-sm text-gray-500 mt-0.5">What everyone's ordering right now</p>
-            </div>
-          </div>
-          <Link href="/products">
-            <Button variant="ghost" className="hidden md:flex text-champagne font-semibold hover:text-navy text-sm">
-              See All <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {trendingProducts.slice(0, 10).map((product: any, index: number) => (
-            <div key={product.id} className="relative">
-              {index < 3 && (
-                <div className="absolute top-2 left-2 z-10 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  #{index + 1}
-                </div>
-              )}
-              <ProductCard product={product} />
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center mt-6 md:hidden">
-          <Link href="/products">
-            <Button variant="ghost" className="text-champagne font-semibold text-sm">
-              See All Trending <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          </Link>
+    <div
+      className="mb-4 break-inside-avoid bg-[#F5EFE6] rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden"
+      onClick={onClick}
+    >
+      <div className={`relative ${imgHeight} overflow-hidden rounded-t-3xl`}>
+        <img
+          src={image}
+          alt={product.name}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div className="absolute top-2 left-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-[#F5EFE6]/90 text-[#3E2723] px-2.5 py-1 rounded-full shadow-sm">
+            {getBadge(index)}
+          </span>
         </div>
       </div>
-    </section>
+      <div className="p-3">
+        <p className="font-bold text-[#3E2723] text-sm leading-tight mb-1 line-clamp-2">{product.name}</p>
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-[#3E2723] font-extrabold text-base">{formatPrice(price)}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); addToCart(product.id, 1); }}
+            className="w-8 h-8 rounded-full bg-[#3E2723] hover:bg-[#5D4037] active:scale-95 flex items-center justify-center shadow transition-all duration-200"
+          >
+            <ShoppingCart className="h-3.5 w-3.5 text-[#F5EFE6]" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function TrendingSection() {
+  const { data: products = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/products/trending-local'],
+    queryFn: () => fetch('/api/products/trending-local?limit=6').then(r => r.json()),
+  });
+
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const { addToCart } = useCart();
+
+  if (isLoading) return null;
+  if (!products || products.length === 0) return null;
+
+  const display = products.slice(0, 6);
+
+  return (
+    <>
+      <section className="py-6 px-4 sm:px-6">
+        <div className="max-w-lg mx-auto">
+          <div
+            className="rounded-[3rem] py-8 px-6 shadow-2xl"
+            style={{ backgroundColor: '#3E2723' }}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest bg-[#F5EFE6] text-[#3E2723] px-3 py-1 rounded-full inline-block mb-2">
+                  TOP PICKS
+                </span>
+                <h2 className="text-2xl font-black text-white leading-tight">Trending Local</h2>
+              </div>
+              <Link href="/trending-local">
+                <span className="text-[#F5EFE6]/80 text-xs underline underline-offset-2 mt-1 block hover:text-[#F5EFE6] transition-colors">
+                  Explore All
+                </span>
+              </Link>
+            </div>
+
+            {/* Pinterest Masonry Grid */}
+            <div className="columns-2 gap-3">
+              {display.map((product, i) => (
+                <PinterestCard
+                  key={product.id}
+                  product={product}
+                  index={i}
+                  onClick={() => setSelectedProduct(product)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick View Modal */}
+      {selectedProduct && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          onClick={() => setSelectedProduct(null)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative bg-[#F5EFE6] rounded-t-[2rem] w-full max-w-lg p-6 pb-10 animate-in slide-in-from-bottom duration-300 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {selectedProduct.images?.[0] && (
+              <img
+                src={selectedProduct.images[0]}
+                alt={selectedProduct.name}
+                className="w-full h-52 object-cover rounded-2xl mb-4"
+              />
+            )}
+            <h3 className="text-xl font-extrabold text-[#3E2723] mb-1">{selectedProduct.name}</h3>
+            {selectedProduct.description && (
+              <p className="text-sm text-[#5D4037] mb-4 line-clamp-3">{selectedProduct.description}</p>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-extrabold text-[#3E2723]">
+                {formatPrice(parseFloat(selectedProduct.price))}
+              </span>
+              <button
+                onClick={() => { addToCart(selectedProduct.id, 1); setSelectedProduct(null); }}
+                className="bg-[#3E2723] hover:bg-[#5D4037] text-[#F5EFE6] font-bold text-sm px-6 py-3 rounded-full shadow-lg transition-all duration-200 flex items-center gap-2"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Add to Cart
+              </button>
+            </div>
+            <button
+              onClick={() => setSelectedProduct(null)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#3E2723]/10 flex items-center justify-center text-[#3E2723] hover:bg-[#3E2723]/20"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

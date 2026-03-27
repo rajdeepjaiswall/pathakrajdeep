@@ -60,6 +60,7 @@ export const products = pgTable("products", {
   isTrending: boolean("is_trending").default(false),
   isProductOfDay: boolean("is_product_of_day").default(false),
   isChefSpecial: boolean("is_chef_special").default(false),
+  isTrendingLocal: boolean("is_trending_local").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -74,6 +74,7 @@ export default function AdminProducts() {
       isTrending: false,
       isProductOfDay: false,
       isChefSpecial: false,
+      isTrendingLocal: false,
     },
   });
 
@@ -176,6 +177,7 @@ export default function AdminProducts() {
       isTrending: product.isTrending || false,
       isProductOfDay: product.isProductOfDay || false,
       isChefSpecial: product.isChefSpecial || false,
+      isTrendingLocal: product.isTrendingLocal || false,
     });
     setIsAddingProduct(true);
   };
@@ -758,6 +760,18 @@ export default function AdminProducts() {
                             <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
                           </FormControl>
                           <FormLabel>👨‍🍳 Chef Special</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={productForm.control}
+                      name="isTrendingLocal"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <FormLabel>📍 Trending Local</FormLabel>
                         </FormItem>
                       )}
                     />

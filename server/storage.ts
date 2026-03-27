@@ -45,6 +45,7 @@ export interface IStorage {
   getTrendingProducts(limit?: number): Promise<Product[]>;
   getProductOfDay(): Promise<Product | undefined>;
   getChefSpecialProducts(limit?: number): Promise<Product[]>;
+  getTrendingLocalProducts(limit?: number): Promise<Product[]>;
 
   // Cart methods
   getCartItems(userId: number): Promise<(CartItem & { product: Product })[]>;
@@ -347,6 +348,14 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(products.isActive, true), eq(products.isChefSpecial, true)))
       .orderBy(desc(products.createdAt))
       .limit(limit);
+  }
+
+  async getTrendingLocalProducts(limit: number = 100): Promise<Product[]> {
+    const query = db.select().from(products)
+      .where(and(eq(products.isActive, true), eq(products.isTrendingLocal, true)))
+      .orderBy(desc(products.createdAt));
+    if (limit < 100) return await query.limit(limit);
+    return await query;
   }
 
   // Cart methods

@@ -107,12 +107,12 @@ export default function Home() {
       <TrendingSection />
 
       {/* Featured Products - Product Catalogue */}
-      <section className="pt-2 pb-16 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
+      <section className="pt-2 pb-12 lg:py-12 bg-[#F8F4F1]">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-6 lg:mb-8">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">Featured Products</h2>
-              <p className="text-lg text-gray-600">Our most popular and loved items</p>
+              <h2 className="text-2xl lg:text-4xl font-bold text-navy">Featured Products</h2>
+              <p className="text-sm lg:text-base text-gray-500 mt-1">Our most popular and loved items</p>
             </div>
             <Link href="/products">
               <Button variant="ghost" className="hidden md:flex text-champagne font-semibold hover:text-navy">
@@ -121,9 +121,9 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-5">
             {productsLoading ? (
-              <LoadingSkeleton type="product" count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6" />
+              <LoadingSkeleton type="product" count={8} className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-5" />
             ) : featuredProducts.length > 0 ? (
               featuredProducts.slice(0, 12).map((product: any) => (
                 <ProductCard 

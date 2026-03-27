@@ -45,7 +45,8 @@ export default function FreshSection() {
 
   const scrollBy = useCallback((dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
-    const cardWidth = 160 + 12; // card w + gap
+    const isDesktop = window.innerWidth >= 1024;
+    const cardWidth = (isDesktop ? 192 : 160) + 12;
     scrollRef.current.scrollBy({ left: dir === 'right' ? cardWidth * 2 : -cardWidth * 2, behavior: 'smooth' });
   }, []);
 
@@ -60,7 +61,7 @@ export default function FreshSection() {
       if (el.scrollLeft >= maxScroll - 4) {
         el.scrollTo({ left: 0, behavior: 'smooth' });
       } else {
-        el.scrollBy({ left: 164, behavior: 'smooth' });
+        el.scrollBy({ left: 200, behavior: 'smooth' });
       }
     }, 4000);
 
@@ -71,10 +72,10 @@ export default function FreshSection() {
   if (!products || products.length === 0) return null;
 
   return (
-    <section className="py-4 px-4 sm:px-6">
-      <div className="max-w-lg mx-auto">
+    <section className="py-4 lg:py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto">
         <div
-          className="rounded-[2.5rem] shadow-lg px-6 py-8"
+          className="rounded-[2.5rem] shadow-lg px-6 lg:px-10 py-8 lg:py-10"
           style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%)' }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -86,7 +87,7 @@ export default function FreshSection() {
               <div className="relative">
                 <div className="absolute -inset-2 bg-amber-200/40 blur-xl rounded-full" />
                 <h2
-                  className="relative text-2xl font-black text-amber-900 leading-tight transition-all duration-400"
+                  className="relative text-2xl lg:text-3xl font-black text-amber-900 leading-tight transition-all duration-400"
                   style={{ opacity: fading ? 0 : 1, transform: fading ? 'translateY(4px)' : 'translateY(0)', transition: 'opacity 0.4s ease, transform 0.4s ease' }}
                 >
                   {title}
@@ -98,13 +99,13 @@ export default function FreshSection() {
             <div className="flex gap-2 flex-shrink-0">
               <button
                 onClick={() => scrollBy('left')}
-                className="w-9 h-9 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-amber-50 active:scale-90 transition-all duration-150"
+                className="w-9 h-9 lg:w-11 lg:h-11 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-amber-50 active:scale-90 transition-all duration-150"
               >
                 <ChevronLeft className="h-5 w-5 text-amber-900" />
               </button>
               <button
                 onClick={() => scrollBy('right')}
-                className="w-9 h-9 rounded-full bg-amber-900 shadow-md flex items-center justify-center hover:bg-amber-800 active:scale-90 transition-all duration-150"
+                className="w-9 h-9 lg:w-11 lg:h-11 rounded-full bg-amber-900 shadow-md flex items-center justify-center hover:bg-amber-800 active:scale-90 transition-all duration-150"
               >
                 <ChevronRight className="h-5 w-5 text-white" />
               </button>
@@ -114,19 +115,19 @@ export default function FreshSection() {
           {/* Horizontal Carousel */}
           <div
             ref={scrollRef}
-            className="flex gap-3 overflow-x-auto scrollbar-hide pb-2"
+            className="flex gap-3 lg:gap-4 overflow-x-auto scrollbar-hide pb-2"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {products.map((product, index) => (
               <Link key={product.id} href={`/products/${product.id}`} className="flex-shrink-0">
                 <div
-                  className="w-36 sm:w-40 bg-white rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 overflow-hidden cursor-pointer"
+                  className="w-36 sm:w-40 lg:w-48 bg-white rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 overflow-hidden cursor-pointer"
                   style={{
                     animationDelay: `${index * 80}ms`,
                   }}
                 >
                   {/* Image */}
-                  <div className="relative h-36 sm:h-40 overflow-hidden rounded-t-3xl">
+                  <div className="relative h-36 sm:h-40 lg:h-48 overflow-hidden rounded-t-3xl">
                     <img
                       src={product.images?.[0] || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&q=75'}
                       alt={product.name}
@@ -145,11 +146,11 @@ export default function FreshSection() {
                   </div>
 
                   {/* Content */}
-                  <div className="p-3">
-                    <p className="font-bold text-amber-900 text-xs leading-tight mb-1 line-clamp-2">
+                  <div className="p-3 lg:p-4">
+                    <p className="font-bold text-amber-900 text-xs lg:text-sm leading-tight mb-1 line-clamp-2">
                       {product.name}
                     </p>
-                    <p className="text-amber-700 font-extrabold text-sm">
+                    <p className="text-amber-700 font-extrabold text-sm lg:text-base">
                       {formatPrice(parseFloat(product.price))}
                     </p>
                   </div>

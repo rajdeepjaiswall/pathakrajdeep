@@ -16,12 +16,12 @@ function PinterestCard({ product, index, onClick }: { product: any; index: numbe
   const image = product.images?.[0] || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80';
   const price = parseFloat(product.price);
 
-  const heights = ['h-48', 'h-56', 'h-44', 'h-64', 'h-52', 'h-40'];
+  const heights = ['h-48', 'h-56', 'h-44', 'h-64', 'h-52', 'h-40', 'h-48', 'h-60'];
   const imgHeight = heights[index % heights.length];
 
   return (
     <div
-      className="mb-4 break-inside-avoid bg-[#F5EFE6] rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden"
+      className="mb-3 lg:mb-4 break-inside-avoid bg-[#F5EFE6] rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden"
       onClick={onClick}
     >
       <div className={`relative ${imgHeight} overflow-hidden rounded-t-3xl`}>
@@ -56,7 +56,7 @@ function PinterestCard({ product, index, onClick }: { product: any; index: numbe
 export default function TrendingSection() {
   const { data: products = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/products/trending-local'],
-    queryFn: () => fetch('/api/products/trending-local?limit=6').then(r => r.json()),
+    queryFn: () => fetch('/api/products/trending-local?limit=12').then(r => r.json()),
   });
 
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -65,23 +65,23 @@ export default function TrendingSection() {
   if (isLoading) return null;
   if (!products || products.length === 0) return null;
 
-  const display = products.slice(0, 6);
+  const display = products.slice(0, 12);
 
   return (
     <>
-      <section className="py-6 px-4 sm:px-6">
-        <div className="max-w-lg mx-auto">
+      <section className="py-6 lg:py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto">
           <div
-            className="rounded-[3rem] py-8 px-6 shadow-2xl"
+            className="rounded-[2.5rem] lg:rounded-[3rem] py-8 lg:py-10 px-6 lg:px-10 shadow-2xl"
             style={{ backgroundColor: '#3E2723' }}
           >
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start justify-between mb-6 lg:mb-8">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest bg-[#F5EFE6] text-[#3E2723] px-3 py-1 rounded-full inline-block mb-2">
                   TOP PICKS
                 </span>
-                <h2 className="text-2xl font-black text-white leading-tight">Trending Local</h2>
+                <h2 className="text-2xl lg:text-3xl font-black text-white leading-tight">Trending Local</h2>
               </div>
               <Link href="/trending-local">
                 <span className="text-[#F5EFE6]/80 text-xs underline underline-offset-2 mt-1 block hover:text-[#F5EFE6] transition-colors">
@@ -90,8 +90,8 @@ export default function TrendingSection() {
               </Link>
             </div>
 
-            {/* Pinterest Masonry Grid */}
-            <div className="columns-2 gap-3">
+            {/* Pinterest Masonry Grid — 2 cols mobile, 3 cols tablet, 4 cols desktop */}
+            <div className="columns-2 md:columns-3 xl:columns-4 gap-3 lg:gap-4">
               {display.map((product, i) => (
                 <PinterestCard
                   key={product.id}

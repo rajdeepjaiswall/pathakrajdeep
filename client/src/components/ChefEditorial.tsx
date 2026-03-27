@@ -10,7 +10,7 @@ function ChefCard({ product, imageRight }: { product: any; imageRight: boolean }
 
   return (
     <div
-      className={`relative rounded-3xl overflow-hidden h-56 sm:h-64 cursor-pointer group transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl`}
+      className={`relative rounded-3xl overflow-hidden h-56 sm:h-64 lg:h-72 cursor-pointer group transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl`}
       style={{ backgroundColor: '#1a1209' }}
     >
       {/* Background Image */}
@@ -24,13 +24,13 @@ function ChefCard({ product, imageRight }: { product: any; imageRight: boolean }
 
       {/* Floating Glass Card */}
       <div
-        className={`absolute top-1/2 -translate-y-1/2 ${imageRight ? 'left-4' : 'right-4'} w-48 sm:w-52`}
+        className={`absolute top-1/2 -translate-y-1/2 ${imageRight ? 'left-4' : 'right-4'} w-48 sm:w-52 lg:w-60`}
       >
         <div className="bg-white/90 backdrop-blur-md rounded-[1.5rem] shadow-xl p-4 sm:p-5">
-          <h3 className="text-base sm:text-lg font-extrabold text-gray-900 mb-1 leading-tight">
+          <h3 className="text-base sm:text-lg lg:text-xl font-extrabold text-gray-900 mb-1 leading-tight">
             {product.name}
           </h3>
-          <p className="text-xs text-gray-500 italic mb-3 leading-snug line-clamp-3">
+          <p className="text-xs lg:text-sm text-gray-500 italic mb-3 leading-snug line-clamp-3">
             "{product.description || 'Our chef\'s signature creation, made with the finest ingredients.'}"
           </p>
           <div className={`flex items-center ${imageRight ? 'justify-between' : 'flex-row-reverse justify-between'} gap-2`}>
@@ -58,17 +58,35 @@ export default function ChefEditorial() {
   if (isLoading) return null;
   if (!chefSpecials || chefSpecials.length === 0) return null;
 
-  const displayProducts = chefSpecials.slice(0, 2);
+  const mobileProducts = chefSpecials.slice(0, 2);
+  const desktopProducts = chefSpecials.slice(0, 4);
 
   return (
-    <section className="py-8 px-4 sm:px-6 bg-[#f5f0eb]">
-      <div className="max-w-lg mx-auto">
+    <section className="py-8 lg:py-12 px-4 sm:px-6 lg:px-8 bg-[#f5f0eb]">
+      <div className="max-w-[1400px] mx-auto">
         {/* Section Header */}
-        <h2 className="text-2xl font-extrabold text-gray-900 mb-5">Chef's Editorial</h2>
+        <div className="flex items-center justify-between mb-5 lg:mb-8">
+          <h2 className="text-2xl lg:text-3xl font-extrabold text-gray-900">Chef's Editorial</h2>
+          <span className="hidden lg:inline-block text-xs font-bold uppercase tracking-widest text-amber-700 bg-amber-50 px-3 py-1 rounded-full">
+            Handpicked Specials
+          </span>
+        </div>
 
-        {/* Cards Stack */}
-        <div className="flex flex-col gap-4">
-          {displayProducts.map((product, index) => (
+        {/* Mobile: 2 cards stacked */}
+        <div className="flex flex-col gap-4 lg:hidden">
+          {mobileProducts.map((product, index) => (
+            <Link key={product.id} href={`/products/${product.id}`}>
+              <ChefCard
+                product={product}
+                imageRight={index % 2 === 0}
+              />
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop: 2×2 grid for up to 4 cards */}
+        <div className="hidden lg:grid lg:grid-cols-2 gap-5">
+          {desktopProducts.map((product, index) => (
             <Link key={product.id} href={`/products/${product.id}`}>
               <ChefCard
                 product={product}

@@ -72,8 +72,8 @@ export default function ChefEditorial() {
           </span>
         </div>
 
-        {/* Mobile: 2 cards stacked */}
-        <div className="flex flex-col gap-4 lg:hidden">
+        {/* Mobile only: 2 cards stacked */}
+        <div className="flex flex-col gap-4 md:hidden">
           {mobileProducts.map((product, index) => (
             <Link key={product.id} href={`/products/${product.id}`}>
               <ChefCard
@@ -84,8 +84,8 @@ export default function ChefEditorial() {
           ))}
         </div>
 
-        {/* Desktop: 2×2 grid for up to 4 cards */}
-        <div className="hidden lg:grid lg:grid-cols-2 gap-5">
+        {/* Tablet+Desktop: 2×2 grid for up to 4 cards */}
+        <div className="hidden md:grid md:grid-cols-2 gap-5">
           {desktopProducts.map((product, index) => (
             <Link key={product.id} href={`/products/${product.id}`}>
               <ChefCard

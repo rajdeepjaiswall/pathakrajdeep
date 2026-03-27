@@ -407,9 +407,9 @@ export default function Header() {
         </div>
       </div>
 
-      {/* ── ROW 2: Desktop-Only Secondary Navigation Bar ── */}
+      {/* ── ROW 2: Secondary Navigation Bar (tablet+desktop) ── */}
       <div
-        className="hidden lg:block border-t transition-colors duration-700 ease-in-out"
+        className="hidden md:block border-t transition-colors duration-700 ease-in-out"
         style={{
           borderColor: 'rgba(107,62,46,0.12)',
           backgroundColor: isAttention ? '#FFE5E5' : '#F8F4F1',

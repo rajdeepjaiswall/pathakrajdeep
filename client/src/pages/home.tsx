@@ -118,10 +118,10 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Mobile: 2 cols | Desktop: exactly 3 rectangle cards per row */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6">
+          {/* Mobile: 2 cols | Tablet+Desktop: exactly 3 rectangle cards per row */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
             {productsLoading ? (
-              <LoadingSkeleton type="product" count={6} className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6" />
+              <LoadingSkeleton type="product" count={6} className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6" />
             ) : featuredProducts.length > 0 ? (
               featuredProducts.slice(0, 9).map((product: any) => (
                 <ProductCard 

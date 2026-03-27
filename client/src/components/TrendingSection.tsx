@@ -91,7 +91,7 @@ export default function TrendingSection() {
             </div>
 
             {/* Pinterest Masonry Grid — 2 cols mobile, 3 cols tablet, 4 cols desktop */}
-            <div className="columns-2 md:columns-3 xl:columns-4 gap-3 lg:gap-4">
+            <div className="columns-2 md:columns-3 lg:columns-4 gap-3 md:gap-4">
               {display.map((product, i) => (
                 <PinterestCard
                   key={product.id}

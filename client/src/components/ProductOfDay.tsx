@@ -65,8 +65,8 @@ export default function ProductOfDay() {
     <section className="py-8 lg:py-12 px-4 sm:px-6 lg:px-8 bg-[#f5f0eb]">
       <div className="max-w-[1400px] mx-auto">
 
-        {/* ── MOBILE: stacked card ── */}
-        <div className="lg:hidden bg-white rounded-[2.5rem] shadow-xl overflow-hidden">
+        {/* ── MOBILE: stacked card (under 768px) ── */}
+        <div className="md:hidden bg-white rounded-[2.5rem] shadow-xl overflow-hidden">
           <div className="relative">
             <img src={image} alt={product.name} className="w-full h-72 object-cover" />
             <div className="absolute top-4 left-4">
@@ -103,8 +103,8 @@ export default function ProductOfDay() {
           </div>
         </div>
 
-        {/* ── DESKTOP: big photo left + editorial content right ── */}
-        <div className="hidden lg:flex rounded-[2.5rem] shadow-2xl overflow-hidden bg-white min-h-[540px]">
+        {/* ── TABLET+DESKTOP: big photo left + editorial content right ── */}
+        <div className="hidden md:flex rounded-[2.5rem] shadow-2xl overflow-hidden bg-white min-h-[480px]">
 
           {/* Left — Full-bleed hero photo (3/5 width) */}
           <div className="relative w-3/5 flex-shrink-0">

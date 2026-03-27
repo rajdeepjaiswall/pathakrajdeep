@@ -94,7 +94,7 @@ export default function MobileNav() {
               {isLogo ? (
                 <div className={`relative transition-all duration-200 ${isActive ? '-top-1' : '-top-2'}`}>
                   <img 
-                    src={`/api/logo?v=${Date.now()}`} 
+                    src={pathakLogo} 
                     alt="KB Logo" 
                     className={`object-contain transition-all duration-200 animate-pulse-logo ${isActive ? 'h-9 w-9' : 'h-8 w-8'}`}
                     style={{ 

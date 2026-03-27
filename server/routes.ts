@@ -12,6 +12,7 @@ import { otpService } from "./otp-service";
 import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
 import { db, pool } from "./db";
 import { eq, and } from "drizzle-orm";
+import { uploadBase64ToR2, isR2Configured } from "./r2";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -899,35 +900,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /* ORIGINAL CODE - DO NOT DELETE
   // Product image upload endpoint - accepts base64 and returns a data URL for storage
   app.post("/api/products/upload-image", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { imageData } = req.body;
-      
+      if (!imageData) return res.status(400).json({ message: 'No image data provided' });
+      if (!imageData.startsWith('data:image/')) return res.status(400).json({ message: 'Invalid image format' });
+      const base64Data = imageData.split(',')[1];
+      const sizeInBytes = Buffer.from(base64Data, 'base64').length;
+      const maxSize = 500 * 1024;
+      if (sizeInBytes > maxSize) return res.status(400).json({ message: `Image too large (${Math.round(sizeInBytes / 1024)}KB). Please use an image under 500KB.` });
+      res.json({ imageUrl: imageData, message: 'Image uploaded successfully' });
+    } catch (error: any) {
+      console.error('Product image upload error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  END ORIGINAL CODE */
+
+  // Product image upload endpoint — uploads to Cloudflare R2 CDN, returns CDN URL
+  app.post("/api/products/upload-image", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { imageData } = req.body;
+
       if (!imageData) {
         return res.status(400).json({ message: 'No image data provided' });
       }
 
-      // Validate it's a base64 image
+      // Validate: must be a base64 image
       if (!imageData.startsWith('data:image/')) {
-        return res.status(400).json({ message: 'Invalid image format' });
+        return res.status(400).json({ message: 'Invalid image format. Only jpg, jpeg, png, webp are allowed.' });
       }
 
-      // Check size - limit to 500KB compressed
+      // Validate mime type (jpg, jpeg, png, webp only)
+      const mimeMatch = imageData.match(/^data:(image\/[^;]+);base64,/);
+      const allowedImageMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!mimeMatch || !allowedImageMimes.includes(mimeMatch[1])) {
+        return res.status(400).json({ message: 'Only jpg, jpeg, png, webp images are allowed.' });
+      }
+
+      // Validate size — max 10MB
       const base64Data = imageData.split(',')[1];
       const sizeInBytes = Buffer.from(base64Data, 'base64').length;
-      const maxSize = 500 * 1024; // 500KB
-      
+      const maxSize = 10 * 1024 * 1024; // 10MB
       if (sizeInBytes > maxSize) {
-        return res.status(400).json({ 
-          message: `Image too large (${Math.round(sizeInBytes / 1024)}KB). Please use an image under 500KB.` 
+        return res.status(400).json({
+          message: `Image too large (${Math.round(sizeInBytes / 1024 / 1024 * 10) / 10}MB). Max allowed is 10MB.`
         });
       }
 
-      // Return the image URL (stored as base64 data URL)
-      res.json({ 
-        imageUrl: imageData,
-        message: 'Image uploaded successfully'
+      // Upload to Cloudflare R2
+      if (!isR2Configured()) {
+        return res.status(500).json({ message: 'CDN storage is not configured. Contact admin.' });
+      }
+
+      const cdnUrl = await uploadBase64ToR2(imageData, 'products/images');
+
+      res.json({
+        imageUrl: cdnUrl,
+        message: 'Image uploaded successfully to CDN'
       });
     } catch (error: any) {
       console.error('Product image upload error:', error);
@@ -935,36 +967,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /* ORIGINAL CODE - DO NOT DELETE
   app.post("/api/products", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
-      
-      // Validate and filter images - reject base64 images over 500KB
       if (productData.images && Array.isArray(productData.images)) {
-        const maxImageSize = 500 * 1024; // 500KB per image
-        const validImages = productData.images.filter((img: string) => {
+        const maxImageSize = 500 * 1024;
+        productData.images = productData.images.filter((img: string) => {
           if (!img) return false;
           if (!img.startsWith('data:')) return true;
           const base64Data = img.split(',')[1] || '';
-          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
-          return sizeInBytes < maxImageSize;
+          return Math.ceil(base64Data.length * 0.75) < maxImageSize;
         });
-        productData.images = validImages;
       }
-      
-      // Validate and filter videos - allow base64 videos up to 10MB
       if (productData.videos && Array.isArray(productData.videos)) {
-        const maxVideoSize = 10 * 1024 * 1024; // 10MB per video
-        const validVideos = productData.videos.filter((vid: string) => {
+        const maxVideoSize = 10 * 1024 * 1024;
+        productData.videos = productData.videos.filter((vid: string) => {
           if (!vid || !vid.trim()) return false;
           if (!vid.startsWith('data:')) return true;
           const base64Data = vid.split(',')[1] || '';
-          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
-          return sizeInBytes < maxVideoSize;
+          return Math.ceil(base64Data.length * 0.75) < maxVideoSize;
         });
-        productData.videos = validVideos;
       }
-      
+      const product = await storage.createProduct(productData);
+      res.json(product);
+    } catch (error: any) { res.status(400).json({ message: error.message }); }
+  });
+
+  app.put("/api/products/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      if (productData.images && Array.isArray(productData.images)) {
+        const maxImageSize = 500 * 1024;
+        productData.images = productData.images.filter((img: string) => {
+          if (!img) return false;
+          if (!img.startsWith('data:')) return true;
+          const base64Data = img.split(',')[1] || '';
+          return Math.ceil(base64Data.length * 0.75) < maxImageSize;
+        });
+      }
+      if (productData.videos && Array.isArray(productData.videos)) {
+        const maxVideoSize = 10 * 1024 * 1024;
+        productData.videos = productData.videos.filter((vid: string) => {
+          if (!vid || !vid.trim()) return false;
+          if (!vid.startsWith('data:')) return true;
+          const base64Data = vid.split(',')[1] || '';
+          return Math.ceil(base64Data.length * 0.75) < maxVideoSize;
+        });
+      }
+      const product = await storage.updateProduct(parseInt(req.params.id), productData);
+      res.json(product);
+    } catch (error: any) { res.status(400).json({ message: error.message }); }
+  });
+  END ORIGINAL CODE */
+
+  // Helper: upload any base64 data URLs in an array to R2, return CDN URLs
+  async function uploadMediaToR2(items: string[], folder: string, maxSizeBytes: number): Promise<string[]> {
+    const results: string[] = [];
+    for (const item of items) {
+      if (!item || !item.trim()) continue;
+      if (!item.startsWith('data:')) {
+        // Already a URL (CDN or external) — keep as-is
+        results.push(item);
+        continue;
+      }
+      const base64Data = item.split(',')[1] || '';
+      const sizeInBytes = Math.ceil(base64Data.length * 0.75);
+      if (sizeInBytes > maxSizeBytes) continue; // Skip oversized files silently
+      try {
+        const cdnUrl = await uploadBase64ToR2(item, folder);
+        results.push(cdnUrl);
+      } catch (err) {
+        console.error(`R2 upload failed for ${folder}:`, err);
+        // Fall back to keeping the base64 so the product isn't broken
+        results.push(item);
+      }
+    }
+    return results;
+  }
+
+  app.post("/api/products", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+
+      // Upload any base64 images → R2 /products/images/  (max 10MB each)
+      if (productData.images && Array.isArray(productData.images)) {
+        productData.images = await uploadMediaToR2(productData.images, 'products/images', 10 * 1024 * 1024);
+      }
+
+      // Upload any base64 videos → R2 /products/videos/  (max 100MB each)
+      if (productData.videos && Array.isArray(productData.videos)) {
+        productData.videos = await uploadMediaToR2(productData.videos, 'products/videos', 100 * 1024 * 1024);
+      }
+
       const product = await storage.createProduct(productData);
       res.json(product);
     } catch (error: any) {
@@ -975,33 +1070,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/products/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
-      
-      // Validate and filter images - reject base64 images over 500KB
+
+      // Upload any base64 images → R2 /products/images/  (max 10MB each)
       if (productData.images && Array.isArray(productData.images)) {
-        const maxImageSize = 500 * 1024; // 500KB per image
-        const validImages = productData.images.filter((img: string) => {
-          if (!img) return false;
-          if (!img.startsWith('data:')) return true;
-          const base64Data = img.split(',')[1] || '';
-          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
-          return sizeInBytes < maxImageSize;
-        });
-        productData.images = validImages;
+        productData.images = await uploadMediaToR2(productData.images, 'products/images', 10 * 1024 * 1024);
       }
-      
-      // Validate and filter videos - allow base64 videos up to 10MB
+
+      // Upload any base64 videos → R2 /products/videos/  (max 100MB each)
       if (productData.videos && Array.isArray(productData.videos)) {
-        const maxVideoSize = 10 * 1024 * 1024; // 10MB per video
-        const validVideos = productData.videos.filter((vid: string) => {
-          if (!vid || !vid.trim()) return false;
-          if (!vid.startsWith('data:')) return true;
-          const base64Data = vid.split(',')[1] || '';
-          const sizeInBytes = Math.ceil(base64Data.length * 0.75);
-          return sizeInBytes < maxVideoSize;
-        });
-        productData.videos = validVideos;
+        productData.videos = await uploadMediaToR2(productData.videos, 'products/videos', 100 * 1024 * 1024);
       }
-      
+
       const product = await storage.updateProduct(parseInt(req.params.id), productData);
       res.json(product);
     } catch (error: any) {

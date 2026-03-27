@@ -51,6 +51,7 @@ Supports dual database configurations:
   - **Chef Editorial Picks**: Products with `isChefSpecial=true` shown in a premium editorial grid with chef hat badge
   - **Customer Testimonials**: Static testimonials section with 5-star ratings
   - Admin toggles for all three flags added to the admin products form
+- **Cloudflare R2 CDN Image/Video Storage**: Product images and videos are uploaded to Cloudflare R2 CDN instead of being stored as base64 in the database. Only the public CDN URL is saved. Files are stored under `products/images/` and `products/videos/` with `Date.now()` prefix filenames. Upload logic is in `server/r2.ts`. Original base64 code is preserved as comment blocks in `server/routes.ts` for easy rollback. Credentials: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_R2_ACCESS_KEY_ID`, `CLOUDFLARE_R2_SECRET_ACCESS_KEY`, `CLOUDFLARE_R2_BUCKET_NAME`, `CLOUDFLARE_R2_PUBLIC_URL`.
 - **Event Inquiry System**: Dark-chocolate collapsible banner strip above the footer. Customers submit Name, Event Name, Event Location, and Phone for catering/event orders. On submit shows "Our experts will call you shortly!". Submissions stored in `event_inquiries` DB table. Admin can view all inquiries at GET `/api/admin/event-inquiries`.
 - **Trust Bar**: Slim 4-icon horizontal bar (Free Delivery, Easy Payments, Quality Guarantee, Delivered in 30 Min) with 2-col mobile / 4-col desktop layout.
 - **SEO Optimization**: Full Open Graph tags, Twitter Card meta, JSON-LD structured data (Bakery schema), keyword meta tags, canonical URL in index.html

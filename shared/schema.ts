@@ -57,6 +57,9 @@ export const products = pgTable("products", {
   gstRate: decimal("gst_rate", { precision: 5, scale: 2 }).default("5.00"),
   tags: jsonb("tags").$type<string[]>().default([]),
   featured: boolean("featured").default(false),
+  isTrending: boolean("is_trending").default(false),
+  isProductOfDay: boolean("is_product_of_day").default(false),
+  isChefSpecial: boolean("is_chef_special").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

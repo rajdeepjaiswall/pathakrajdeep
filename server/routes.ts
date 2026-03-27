@@ -838,6 +838,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/products/trending", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 8;
+      const trendingProducts = await storage.getTrendingProducts(limit);
+      res.json(trendingProducts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/products/product-of-day", async (req, res) => {
+    try {
+      const product = await storage.getProductOfDay();
+      res.json(product || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/products/chef-specials", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
+      const chefSpecials = await storage.getChefSpecialProducts(limit);
+      res.json(chefSpecials);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/products/:id", async (req, res) => {
     try {
       const product = await storage.getProduct(parseInt(req.params.id));

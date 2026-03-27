@@ -42,6 +42,9 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
   updateProductStock(id: number, stock: number): Promise<Product>;
+  getTrendingProducts(limit?: number): Promise<Product[]>;
+  getProductOfDay(): Promise<Product | undefined>;
+  getChefSpecialProducts(limit?: number): Promise<Product[]>;
 
   // Cart methods
   getCartItems(userId: number): Promise<(CartItem & { product: Product })[]>;
@@ -322,6 +325,28 @@ export class DatabaseStorage implements IStorage {
       .where(eq(products.id, id))
       .returning();
     return product;
+  }
+
+  async getTrendingProducts(limit: number = 8): Promise<Product[]> {
+    return await db.select().from(products)
+      .where(and(eq(products.isActive, true), eq(products.isTrending, true)))
+      .orderBy(desc(products.createdAt))
+      .limit(limit);
+  }
+
+  async getProductOfDay(): Promise<Product | undefined> {
+    const [product] = await db.select().from(products)
+      .where(and(eq(products.isActive, true), eq(products.isProductOfDay, true)))
+      .orderBy(desc(products.createdAt))
+      .limit(1);
+    return product || undefined;
+  }
+
+  async getChefSpecialProducts(limit: number = 6): Promise<Product[]> {
+    return await db.select().from(products)
+      .where(and(eq(products.isActive, true), eq(products.isChefSpecial, true)))
+      .orderBy(desc(products.createdAt))
+      .limit(limit);
   }
 
   // Cart methods

@@ -11,6 +11,10 @@ import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
 import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
 import CartReminder from '@/components/CartReminder';
+import TrendingSection from '@/components/TrendingSection';
+import ProductOfDay from '@/components/ProductOfDay';
+import ChefEditorial from '@/components/ChefEditorial';
+import Testimonials from '@/components/Testimonials';
 
 import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
@@ -95,6 +99,9 @@ export default function Home() {
       {/* Cart Reminder Section - below Specialties, above Featured Products */}
       <CartReminder />
 
+      {/* Trending in Prayagraj */}
+      <TrendingSection />
+
       {/* Featured Products - Product Catalogue */}
       <section className="pt-2 pb-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -139,12 +146,21 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Product of the Day */}
+      <ProductOfDay />
+
       {/* Mini Banner Slideshow */}
       <div className="pt-2 pb-3 bg-background">
         <div className="max-w-7xl mx-auto">
           <MiniBannerSlideshow />
         </div>
       </div>
+
+      {/* Chef Editorial Picks */}
+      <ChefEditorial />
+
+      {/* Customer Testimonials */}
+      <Testimonials />
 
       {/* Trust Indicators */}
       <section className="py-12 bg-background">

@@ -71,6 +71,9 @@ export default function AdminProducts() {
       gstRate: '5.00',
       tags: [] as string[],
       featured: false,
+      isTrending: false,
+      isProductOfDay: false,
+      isChefSpecial: false,
     },
   });
 
@@ -170,6 +173,9 @@ export default function AdminProducts() {
       gstRate: product.gstRate,
       tags: product.tags || [],
       featured: product.featured,
+      isTrending: product.isTrending || false,
+      isProductOfDay: product.isProductOfDay || false,
+      isChefSpecial: product.isChefSpecial || false,
     });
     setIsAddingProduct(true);
   };
@@ -694,7 +700,7 @@ export default function AdminProducts() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-6">
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={productForm.control}
                       name="featured"
@@ -716,6 +722,42 @@ export default function AdminProducts() {
                             <Switch checked={field.value} onCheckedChange={field.onChange} />
                           </FormControl>
                           <FormLabel>Active</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={productForm.control}
+                      name="isTrending"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <FormLabel>🔥 Trending</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={productForm.control}
+                      name="isProductOfDay"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <FormLabel>⭐ Product of Day</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={productForm.control}
+                      name="isChefSpecial"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <FormLabel>👨‍🍳 Chef Special</FormLabel>
                         </FormItem>
                       )}
                     />

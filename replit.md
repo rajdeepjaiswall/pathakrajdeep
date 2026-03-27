@@ -45,6 +45,13 @@ Supports dual database configurations:
   - Payment statuses: pending_payment, payment_success, payment_failed
   - WhatsApp support integration for failed payments
   - Database tables: manual_payment_config, manual_payment_details
+- **New Homepage Sections**: Admin-controlled homepage sections driven by product flags:
+  - **Trending in Prayagraj**: Products with `isTrending=true` shown in a ranked carousel with #1, #2, #3 badges
+  - **Product of the Day**: Single product with `isProductOfDay=true` shown in a hero banner with add-to-cart
+  - **Chef Editorial Picks**: Products with `isChefSpecial=true` shown in a premium editorial grid with chef hat badge
+  - **Customer Testimonials**: Static testimonials section with 5-star ratings
+  - Admin toggles for all three flags added to the admin products form
+- **SEO Optimization**: Full Open Graph tags, Twitter Card meta, JSON-LD structured data (Bakery schema), keyword meta tags, canonical URL in index.html
 - **Data Flow**: JWT-based user authentication, category-based product display, user-specific shopping carts, and order processing with inventory updates.
 - **UI/UX Decisions**: Focus on a custom design system with Tailwind CSS and Radix UI for a consistent and premium look.
 

@@ -1,9 +1,54 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { ChefHat, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import ProductCard from '@/components/product/product-card';
+import { useCart } from '@/hooks/use-cart';
+import { formatPrice } from '@/lib/cart';
+
+function ChefCard({ product, imageRight }: { product: any; imageRight: boolean }) {
+  const { addToCart } = useCart();
+  const image = product.images?.[0] || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&q=80';
+  const price = parseFloat(product.price);
+
+  return (
+    <div
+      className={`relative rounded-3xl overflow-hidden h-56 sm:h-64 cursor-pointer group transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl`}
+      style={{ backgroundColor: '#1a1209' }}
+    >
+      {/* Background Image */}
+      <img
+        src={image}
+        alt={product.name}
+        className={`absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300 ${imageRight ? 'object-right' : 'object-left'}`}
+      />
+      {/* Dark gradient overlay on image side */}
+      <div className={`absolute inset-0 ${imageRight ? 'bg-gradient-to-l' : 'bg-gradient-to-r'} from-black/60 via-black/10 to-transparent`} />
+
+      {/* Floating Glass Card */}
+      <div
+        className={`absolute top-1/2 -translate-y-1/2 ${imageRight ? 'left-4' : 'right-4'} w-48 sm:w-52`}
+      >
+        <div className="bg-white/90 backdrop-blur-md rounded-[1.5rem] shadow-xl p-4 sm:p-5">
+          <h3 className="text-base sm:text-lg font-extrabold text-gray-900 mb-1 leading-tight">
+            {product.name}
+          </h3>
+          <p className="text-xs text-gray-500 italic mb-3 leading-snug line-clamp-3">
+            "{product.description || 'Our chef\'s signature creation, made with the finest ingredients.'}"
+          </p>
+          <div className={`flex items-center ${imageRight ? 'justify-between' : 'flex-row-reverse justify-between'} gap-2`}>
+            <button
+              onClick={(e) => { e.stopPropagation(); addToCart(product.id, 1); }}
+              className="bg-amber-800 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full transition-all duration-200 shadow"
+            >
+              Order
+            </button>
+            <span className="text-amber-800 font-extrabold text-base">
+              {formatPrice(price)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ChefEditorial() {
   const { data: chefSpecials = [], isLoading } = useQuery<any[]>({
@@ -13,45 +58,24 @@ export default function ChefEditorial() {
   if (isLoading) return null;
   if (!chefSpecials || chefSpecials.length === 0) return null;
 
+  const displayProducts = chefSpecials.slice(0, 2);
+
   return (
-    <section className="py-12 bg-cream">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-3">
-            <div className="w-14 h-14 bg-amber-900 rounded-full flex items-center justify-center shadow-lg">
-              <ChefHat className="h-7 w-7 text-amber-100" />
-            </div>
-          </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-navy mb-2">Chef's Editorial Picks</h2>
-          <p className="text-gray-600 max-w-xl mx-auto text-sm md:text-base">
-            Our master baker's personal recommendations — crafted with generations of expertise and the finest ingredients
-          </p>
-          <div className="flex justify-center gap-2 mt-3">
-            <Badge className="bg-amber-100 text-amber-800 border-amber-200">Handcrafted</Badge>
-            <Badge className="bg-amber-100 text-amber-800 border-amber-200">Chef Recommended</Badge>
-            <Badge className="bg-amber-100 text-amber-800 border-amber-200">Premium Quality</Badge>
-          </div>
-        </div>
+    <section className="py-8 px-4 sm:px-6 bg-[#f5f0eb]">
+      <div className="max-w-lg mx-auto">
+        {/* Section Header */}
+        <h2 className="text-2xl font-extrabold text-gray-900 mb-5">Chef's Editorial</h2>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {chefSpecials.slice(0, 8).map((product: any) => (
-            <div key={product.id} className="relative">
-              <div className="absolute top-2 right-2 z-10">
-                <div className="w-7 h-7 bg-amber-800 rounded-full flex items-center justify-center shadow">
-                  <ChefHat className="h-3.5 w-3.5 text-white" />
-                </div>
-              </div>
-              <ProductCard product={product} />
-            </div>
+        {/* Cards Stack */}
+        <div className="flex flex-col gap-4">
+          {displayProducts.map((product, index) => (
+            <Link key={product.id} href={`/products/${product.id}`}>
+              <ChefCard
+                product={product}
+                imageRight={index % 2 === 0}
+              />
+            </Link>
           ))}
-        </div>
-
-        <div className="text-center mt-8">
-          <Link href="/products">
-            <Button className="bg-amber-900 hover:bg-amber-800 text-white font-semibold px-8">
-              Explore All Products <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </Link>
         </div>
       </div>
     </section>

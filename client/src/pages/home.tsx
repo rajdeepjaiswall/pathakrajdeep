@@ -146,15 +146,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Product of the Day */}
-      <ProductOfDay />
-
       {/* Mini Banner Slideshow */}
       <div className="pt-2 pb-3 bg-background">
         <div className="max-w-7xl mx-auto">
           <MiniBannerSlideshow />
         </div>
       </div>
+
+      {/* Deal of the Day */}
+      <ProductOfDay />
 
       {/* Chef Editorial Picks */}
       <ChefEditorial />

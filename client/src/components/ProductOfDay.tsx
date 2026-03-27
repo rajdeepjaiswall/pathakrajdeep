@@ -1,76 +1,111 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { Star, ShoppingCart, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
+import { useState, useEffect } from 'react';
+
+function useCountdown() {
+  const getTimeLeft = () => {
+    const now = new Date();
+    const midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
+    const diff = Math.max(0, Math.floor((midnight.getTime() - now.getTime()) / 1000));
+    const h = Math.floor(diff / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    const s = diff % 60;
+    return { h, m, s };
+  };
+
+  const [time, setTime] = useState(getTimeLeft());
+
+  useEffect(() => {
+    const interval = setInterval(() => setTime(getTimeLeft()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return time;
+}
+
+function pad(n: number) {
+  return String(n).padStart(2, '0');
+}
 
 export default function ProductOfDay() {
   const { data: product, isLoading } = useQuery<any>({
     queryKey: ['/api/products/product-of-day'],
   });
   const { addToCart } = useCart();
+  const countdown = useCountdown();
 
   if (isLoading) return null;
   if (!product) return null;
 
-  const image = product.images?.[0] || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80';
+  const image = product.images?.[0] || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80';
+  const price = parseFloat(product.price);
+  const originalPrice = Math.round(price * 1.3);
 
   return (
-    <section className="py-10 bg-gradient-to-r from-amber-900 via-amber-800 to-amber-900 text-white overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 mb-6">
-          <Star className="h-5 w-5 text-amber-300 fill-amber-300" />
-          <span className="text-amber-300 font-semibold tracking-wider text-sm uppercase">Product of the Day</span>
-        </div>
+    <section className="py-8 px-4 sm:px-6 bg-[#f5f0eb]">
+      <div className="max-w-lg mx-auto">
+        <div className="bg-white rounded-[2.5rem] shadow-xl overflow-hidden">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-3 leading-tight">{product.name}</h2>
-            {product.description && (
-              <p className="text-amber-100 text-base mb-5 leading-relaxed line-clamp-3">
-                {product.description}
-              </p>
-            )}
-            <div className="flex items-center gap-4 mb-6">
-              <span className="text-3xl font-bold text-amber-300">{formatPrice(parseFloat(product.price))}</span>
-              {product.weight && (
-                <Badge variant="outline" className="border-amber-300 text-amber-300 text-sm">
-                  {product.weight}
-                </Badge>
-              )}
+          {/* Image Container */}
+          <div className="relative">
+            <img
+              src={image}
+              alt={product.name}
+              className="w-full h-72 object-cover"
+            />
+
+            {/* DEAL OF THE DAY Badge */}
+            <div className="absolute top-4 left-4">
+              <span className="bg-red-600 text-white text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md">
+                Deal of the Day
+              </span>
             </div>
-            <div className="flex items-center gap-2 mb-6 text-amber-200 text-sm">
-              <Clock className="h-4 w-4" />
-              <span>Made fresh today — limited quantity available</span>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => addToCart(product.id, 1)}
-                className="bg-amber-400 hover:bg-amber-300 text-amber-900 font-bold px-6"
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Add to Cart
-              </Button>
-              <Link href={`/products/${product.id}`}>
-                <Button variant="outline" className="border-amber-300 text-amber-300 hover:bg-amber-700">
-                  View Details
-                </Button>
-              </Link>
+
+            {/* Countdown Timer Overlay */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+              <div className="bg-white/80 backdrop-blur-md rounded-full px-5 py-2 shadow-lg flex items-center gap-3 whitespace-nowrap">
+                <span className="text-xs text-gray-500 font-medium leading-tight">
+                  ENDS<br />IN
+                </span>
+                <span className="text-base font-bold text-gray-800 tracking-widest">
+                  {pad(countdown.h)} : {pad(countdown.m)} : {pad(countdown.s)}
+                </span>
+              </div>
             </div>
           </div>
-          <div className="flex justify-center">
-            <Link href={`/products/${product.id}`} className="block">
-              <div className="relative w-72 h-72 md:w-80 md:h-80">
-                <div className="absolute inset-0 bg-amber-300/20 rounded-full blur-2xl" />
-                <img
-                  src={image}
-                  alt={product.name}
-                  className="relative w-full h-full object-cover rounded-full border-4 border-amber-400/40 shadow-2xl hover:scale-105 transition-transform duration-300"
-                />
+
+          {/* Bottom Content */}
+          <div className="px-6 pt-5 pb-6">
+            <h2 className="text-2xl font-extrabold text-gray-900 leading-tight mb-1">
+              {product.name}
+            </h2>
+            <p className="text-gray-500 text-sm mb-4 line-clamp-2">
+              {product.description || 'Handcrafted with premium ingredients, made fresh daily.'}
+            </p>
+
+            {/* Price Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-extrabold text-gray-900">
+                  {formatPrice(price)}
+                </span>
+                <span className="text-base text-gray-400 line-through font-medium">
+                  {formatPrice(originalPrice)}
+                </span>
               </div>
-            </Link>
+
+              {/* Circular Add to Cart Button */}
+              <button
+                onClick={() => addToCart(product.id, 1)}
+                className="w-12 h-12 rounded-full bg-amber-800 hover:bg-amber-700 active:scale-95 flex items-center justify-center shadow-lg transition-all duration-200"
+              >
+                <ShoppingCart className="h-5 w-5 text-white" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

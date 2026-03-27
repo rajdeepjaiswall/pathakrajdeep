@@ -11,6 +11,7 @@ import BannerSlideshow from '@/components/banner-slideshow';
 import CategoryShowcase from '@/components/category-showcase';
 import { MiniBannerSlideshow } from '@/components/mini-banner-slideshow';
 import CartReminder from '@/components/CartReminder';
+import FreshSection from '@/components/FreshSection';
 import TrendingSection from '@/components/TrendingSection';
 import ProductOfDay from '@/components/ProductOfDay';
 import ChefEditorial from '@/components/ChefEditorial';
@@ -95,6 +96,9 @@ export default function Home() {
 
       {/* Category Showcase - Automatic Moving Carousel */}
       <CategoryShowcase />
+
+      {/* Dynamic Fresh Section - Latest products with rotating title */}
+      <FreshSection />
 
       {/* Cart Reminder Section - below Specialties, above Featured Products */}
       <CartReminder />

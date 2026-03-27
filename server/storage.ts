@@ -46,6 +46,7 @@ export interface IStorage {
   getProductOfDay(): Promise<Product | undefined>;
   getChefSpecialProducts(limit?: number): Promise<Product[]>;
   getTrendingLocalProducts(limit?: number): Promise<Product[]>;
+  getNewArrivals(limit?: number): Promise<Product[]>;
 
   // Cart methods
   getCartItems(userId: number): Promise<(CartItem & { product: Product })[]>;
@@ -356,6 +357,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(products.createdAt));
     if (limit < 100) return await query.limit(limit);
     return await query;
+  }
+
+  async getNewArrivals(limit: number = 10): Promise<Product[]> {
+    return await db.select().from(products)
+      .where(eq(products.isActive, true))
+      .orderBy(desc(products.createdAt))
+      .limit(limit);
   }
 
   // Cart methods

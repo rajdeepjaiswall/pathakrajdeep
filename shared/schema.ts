@@ -545,6 +545,33 @@ export const insertEventInquirySchema = createInsertSchema(eventInquiries).omit(
   createdAt: true,
 });
 
+// Testimonials table — customer reviews submitted after delivery
+export const testimonials = pgTable("testimonials", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  userName: text("user_name").notNull(),
+  productName: text("product_name").notNull(),
+  rating: integer("rating").notNull(), // 1-5
+  reviewText: text("review_text").notNull(),
+  imageUrl: text("image_url"),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  featured: boolean("featured").default(false),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  status: true,
+  featured: true,
+  approvedBy: true,
+  approvedAt: true,
+  createdAt: true,
+});
+
 // Select schemas
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -588,3 +615,5 @@ export type InsertPopupBanner = z.infer<typeof insertPopupBannerSchema>;
 export type InsertPhonePeTransaction = z.infer<typeof insertPhonePeTransactionSchema>;
 export type EventInquiry = typeof eventInquiries.$inferSelect;
 export type InsertEventInquiry = z.infer<typeof insertEventInquirySchema>;
+export type Testimonial = typeof testimonials.$inferSelect;
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;

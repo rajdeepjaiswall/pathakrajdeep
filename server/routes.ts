@@ -2659,6 +2659,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ─── Testimonials / Reviews ────────────────────────────────────────────────
+
+  // Submit a testimonial — must be logged in, order must be delivered
+  app.post("/api/testimonials", authenticateUser, async (req, res) => {
+    try {
+      const { orderId, productId, productName, rating, reviewText, imageUrl } = req.body;
+      const userId = req.user!.id;
+
+      if (!orderId || !productId || !productName || !rating || !reviewText) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      }
+      if (reviewText.trim().length < 10) {
+        return res.status(400).json({ message: "Review must be at least 10 characters" });
+      }
+
+      // Verify the order belongs to this user and is delivered
+      const orderCheck = await pool.query(
+        "SELECT id, status FROM orders WHERE id = $1 AND user_id = $2",
+        [orderId, userId]
+      );
+      if (orderCheck.rows.length === 0) {
+        return res.status(403).json({ message: "Order not found" });
+      }
+      if (orderCheck.rows[0].status !== 'delivered') {
+        return res.status(400).json({ message: "You can only review delivered orders" });
+      }
+
+      // Prevent duplicate review for same order+product
+      const dupCheck = await pool.query(
+        "SELECT id FROM testimonials WHERE order_id = $1 AND product_id = $2 AND user_id = $3",
+        [orderId, productId, userId]
+      );
+      if (dupCheck.rows.length > 0) {
+        return res.status(409).json({ message: "You have already reviewed this product for this order" });
+      }
+
+      // Get user name
+      const userRow = await pool.query("SELECT username, first_name, last_name FROM users WHERE id = $1", [userId]);
+      const u = userRow.rows[0];
+      const userName = (u?.first_name && u?.last_name)
+        ? `${u.first_name} ${u.last_name}`
+        : (u?.first_name || u?.username || 'Customer');
+
+      // Upload image to R2 if base64
+      let finalImageUrl = imageUrl || null;
+      if (finalImageUrl && finalImageUrl.startsWith('data:') && isR2Configured()) {
+        finalImageUrl = await uploadBase64ToR2(finalImageUrl, 'testimonials');
+      }
+
+      const result = await pool.query(
+        `INSERT INTO testimonials (user_id, order_id, product_id, user_name, product_name, rating, review_text, image_url, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending') RETURNING *`,
+        [userId, orderId, productId, userName, productName.trim(), rating, reviewText.trim(), finalImageUrl]
+      );
+
+      res.status(201).json({ message: "Review submitted! It will appear after approval.", testimonial: result.rows[0] });
+    } catch (error: any) {
+      console.error("Testimonial submit error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get approved testimonials for homepage rotation (max 20)
+  app.get("/api/testimonials/homepage", async (req, res) => {
+    try {
+      const result = await pool.query(
+        `SELECT id, user_name, product_name, rating, review_text, image_url, created_at
+         FROM testimonials WHERE status = 'approved'
+         ORDER BY featured DESC, approved_at DESC LIMIT 20`
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get approved testimonials for a specific product
+  app.get("/api/testimonials/product/:productId", async (req, res) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      const result = await pool.query(
+        `SELECT id, user_name, product_name, rating, review_text, image_url, created_at
+         FROM testimonials WHERE status = 'approved' AND product_id = $1
+         ORDER BY featured DESC, approved_at DESC`,
+        [productId]
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Check if user already reviewed a specific order+product
+  app.get("/api/testimonials/check", authenticateUser, async (req, res) => {
+    try {
+      const { orderId, productId } = req.query;
+      const userId = req.user!.id;
+      const result = await pool.query(
+        "SELECT id FROM testimonials WHERE order_id = $1 AND product_id = $2 AND user_id = $3",
+        [orderId, productId, userId]
+      );
+      res.json({ hasReviewed: result.rows.length > 0 });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin — get all testimonials with optional status filter
+  app.get("/api/admin/testimonials", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { status } = req.query;
+      const whereClause = status && status !== 'all' ? `WHERE t.status = '${status}'` : '';
+      const result = await pool.query(
+        `SELECT t.*, p.name as product_name_actual
+         FROM testimonials t
+         LEFT JOIN products p ON t.product_id = p.id
+         ${whereClause}
+         ORDER BY t.created_at DESC`
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin — approve a testimonial
+  app.patch("/api/admin/testimonials/:id/approve", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await pool.query(
+        `UPDATE testimonials SET status = 'approved', approved_by = $1, approved_at = NOW() WHERE id = $2 RETURNING *`,
+        [req.user!.id, id]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ message: "Not found" });
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin — reject a testimonial
+  app.patch("/api/admin/testimonials/:id/reject", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await pool.query(
+        `UPDATE testimonials SET status = 'rejected', approved_by = $1, approved_at = NOW() WHERE id = $2 RETURNING *`,
+        [req.user!.id, id]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ message: "Not found" });
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin — restore rejected/approved back to pending
+  app.patch("/api/admin/testimonials/:id/restore", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await pool.query(
+        `UPDATE testimonials SET status = 'pending', approved_by = NULL, approved_at = NULL WHERE id = $1 RETURNING *`,
+        [id]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ message: "Not found" });
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin — toggle featured
+  app.patch("/api/admin/testimonials/:id/feature", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await pool.query(
+        `UPDATE testimonials SET featured = NOT featured WHERE id = $1 RETURNING *`,
+        [id]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ message: "Not found" });
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin — delete a testimonial
+  app.delete("/api/admin/testimonials/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await pool.query("DELETE FROM testimonials WHERE id = $1", [id]);
+      res.json({ message: "Deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

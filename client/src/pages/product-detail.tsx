@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'wouter';
-import { Star, Plus, Minus, Heart, Share2, ShoppingCart, Play, Image, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Plus, Minus, Heart, Share2, ShoppingCart, Play, Image, ChevronLeft, ChevronRight, CheckCircle, Quote, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,99 @@ import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
+
+function ProductReviews({ productId }: { productId: number }) {
+  const { data: reviews = [], isLoading } = useQuery<any[]>({
+    queryKey: [`/api/testimonials/product/${productId}`],
+    enabled: !!productId && !isNaN(productId),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mt-12 text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-700 mx-auto"></div>
+      </div>
+    );
+  }
+
+  if (!reviews.length) {
+    return (
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold text-navy mb-6 flex items-center gap-2">
+          <MessageSquare className="h-6 w-6 text-amber-700" />
+          Customer Reviews
+        </h2>
+        <div className="bg-amber-50 rounded-2xl p-8 text-center border border-amber-100">
+          <MessageSquare className="h-10 w-10 text-amber-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">No reviews yet</p>
+          <p className="text-sm text-gray-400 mt-1">Be the first to review this product after purchasing!</p>
+        </div>
+      </div>
+    );
+  }
+
+  const avgRating = reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviews.length;
+
+  return (
+    <div className="mt-12">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-navy flex items-center gap-2">
+          <MessageSquare className="h-6 w-6 text-amber-700" />
+          Customer Reviews
+        </h2>
+        <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-full border border-amber-100">
+          <div className="flex">
+            {[1,2,3,4,5].map(s => (
+              <Star key={s} className={`h-4 w-4 ${s <= Math.round(avgRating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+            ))}
+          </div>
+          <span className="font-bold text-navy">{avgRating.toFixed(1)}</span>
+          <span className="text-sm text-gray-500">({reviews.length} review{reviews.length !== 1 ? 's' : ''})</span>
+        </div>
+      </div>
+      <div className="space-y-4">
+        {reviews.map((review: any) => (
+          <div key={review.id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center font-bold text-amber-800 text-sm shrink-0">
+                  {(review.user_name || 'U')[0].toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-navy text-sm">{review.user_name || 'Customer'}</span>
+                    {review.order_id && (
+                      <span className="flex items-center gap-0.5 text-xs text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-200">
+                        <CheckCircle className="h-3 w-3" /> Verified Purchase
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-0.5 mt-0.5">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} className={`h-3.5 w-3.5 ${s <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {review.approved_at && (
+                <span className="text-xs text-gray-400 shrink-0">
+                  {new Date(review.approved_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Quote className="h-4 w-4 text-amber-300 shrink-0 mt-0.5" />
+              <p className="text-gray-700 text-sm leading-relaxed">{review.review_text}</p>
+            </div>
+            {review.image_url && (
+              <img src={review.image_url} alt="Review" className="mt-3 h-24 w-24 object-cover rounded-xl border border-gray-100" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -314,6 +407,9 @@ export default function ProductDetail() {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Customer Reviews Section */}
+        <ProductReviews productId={parseInt(id!)} />
       </div>
       <Footer />
       <MobileNav />

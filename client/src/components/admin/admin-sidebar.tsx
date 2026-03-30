@@ -13,7 +13,8 @@ import {
   Home,
   CreditCard,
   Wallet,
-  CheckCircle
+  CheckCircle,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
@@ -69,6 +70,11 @@ const adminNavItems = [
     title: 'Analytics',
     href: '/admin/analytics',
     icon: BarChart3,
+  },
+  {
+    title: 'Testimonials',
+    href: '/admin/testimonials',
+    icon: MessageSquare,
   },
 ];
 

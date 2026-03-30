@@ -32,6 +32,7 @@ import AdminSettings from "@/pages/admin/settings";
 import AdminPayments from "@/pages/admin/payments";
 import AdminPaymentGateway from "@/pages/admin/payment-gateway";
 import AdminVerifiedCustomers from "@/pages/admin/verified-customers";
+import AdminTestimonials from "@/pages/admin/testimonials";
 import SuperAdminLogin from "@/pages/super-admin/login";
 import SuperAdminDashboard from "@/pages/super-admin/dashboard";
 import LogoManager from "@/pages/super-admin/logo-manager";
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/payment-gateway" component={AdminPaymentGateway} />
       <Route path="/admin/verified-customers" component={AdminVerifiedCustomers} />
+      <Route path="/admin/testimonials" component={AdminTestimonials} />
       <Route path="/super-admin/login" component={SuperAdminLogin} />
       <Route path="/super-admin" component={SuperAdminDashboard} />
       <Route path="/super-admin/logo-manager" component={LogoManager} />

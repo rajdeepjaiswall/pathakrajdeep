@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User, ArrowLeft, Home, PhoneCall, CreditCard, AlertCircle, MessageCircle, Loader2 } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, X, Eye, Phone, User, ArrowLeft, Home, PhoneCall, CreditCard, AlertCircle, MessageCircle, Loader2, Star, Send, PenLine, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Header from '@/components/layout/header';
@@ -118,6 +119,42 @@ export default function CustomerOrders() {
   });
 
   const [utrInputs, setUtrInputs] = useState<{ [orderId: number]: string }>({});
+
+  // Review form state
+  const [reviewOpenOrderId, setReviewOpenOrderId] = useState<number | null>(null);
+  const [reviewProductId, setReviewProductId] = useState<number | null>(null);
+  const [reviewProductName, setReviewProductName] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewHoverRating, setReviewHoverRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewSubmitted, setReviewSubmitted] = useState<{ [key: string]: boolean }>({});
+
+  const submitReviewMutation = useMutation({
+    mutationFn: async ({ orderId, productId, productName, rating, reviewText }: any) => {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orderId, productId, productName, rating, reviewText }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to submit review');
+      }
+      return res.json();
+    },
+    onSuccess: (_data, vars) => {
+      toast({ title: 'Review submitted!', description: 'It will appear after admin approval.' });
+      setReviewSubmitted(prev => ({ ...prev, [`${vars.orderId}-${vars.productId}`]: true }));
+      setReviewOpenOrderId(null);
+      setReviewText('');
+      setReviewRating(5);
+      setReviewProductId(null);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
 
   const submitUTRMutation = useMutation({
     mutationFn: async ({ orderId, utr }: { orderId: number; utr: string }) => {
@@ -430,6 +467,115 @@ export default function CustomerOrders() {
                       </div>
                     )}
                   </div>
+
+                  {/* Write a Review — for delivered orders */}
+                  {order.status === 'delivered' && (
+                    <div className="mb-4">
+                      {reviewOpenOrderId === order.id ? (
+                        <div className="border border-amber-200 rounded-xl p-4 bg-amber-50">
+                          <h4 className="font-semibold text-navy mb-3 flex items-center gap-2">
+                            <PenLine className="h-4 w-4" /> Write a Review
+                          </h4>
+                          {/* Product selector */}
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500 mb-1.5 font-medium">Select product to review:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {order.orderItems?.map((item: any) => {
+                                const key = `${order.id}-${item.product_id}`;
+                                const done = reviewSubmitted[key];
+                                return (
+                                  <button
+                                    key={item.id}
+                                    disabled={done}
+                                    onClick={() => {
+                                      setReviewProductId(item.product_id);
+                                      setReviewProductName(item.product?.name || item.name || 'Product');
+                                    }}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                                      done
+                                        ? 'bg-green-100 text-green-700 border-green-300 cursor-default'
+                                        : reviewProductId === item.product_id
+                                        ? 'bg-amber-700 text-white border-amber-700'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:border-amber-400'
+                                    }`}
+                                  >
+                                    {done ? '✓ ' : ''}{item.product?.name || 'Product'}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          {/* Star rating */}
+                          {reviewProductId && (
+                            <>
+                              <div className="mb-3">
+                                <p className="text-xs text-gray-500 mb-1.5 font-medium">Your rating:</p>
+                                <div className="flex gap-1">
+                                  {[1, 2, 3, 4, 5].map(star => (
+                                    <button
+                                      key={star}
+                                      onMouseEnter={() => setReviewHoverRating(star)}
+                                      onMouseLeave={() => setReviewHoverRating(0)}
+                                      onClick={() => setReviewRating(star)}
+                                    >
+                                      <Star
+                                        className={`h-7 w-7 transition-colors ${
+                                          star <= (reviewHoverRating || reviewRating)
+                                            ? 'text-amber-400 fill-amber-400'
+                                            : 'text-gray-300'
+                                        }`}
+                                      />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <Textarea
+                                placeholder="Share your experience with this product... (at least 10 characters)"
+                                value={reviewText}
+                                onChange={e => setReviewText(e.target.value)}
+                                className="mb-3 resize-none bg-white"
+                                rows={3}
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-amber-700 hover:bg-amber-800 text-white"
+                                  disabled={reviewText.trim().length < 10 || submitReviewMutation.isPending}
+                                  onClick={() => submitReviewMutation.mutate({
+                                    orderId: order.id,
+                                    productId: reviewProductId,
+                                    productName: reviewProductName,
+                                    rating: reviewRating,
+                                    reviewText,
+                                  })}
+                                >
+                                  {submitReviewMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-3.5 w-3.5 mr-1.5" />Submit Review</>}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => { setReviewOpenOrderId(null); setReviewProductId(null); setReviewText(''); }}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-amber-300 text-amber-800 hover:bg-amber-50"
+                          onClick={() => {
+                            setReviewOpenOrderId(order.id);
+                            setReviewProductId(null);
+                            setReviewText('');
+                            setReviewRating(5);
+                          }}
+                        >
+                          <PenLine className="h-4 w-4 mr-2" />
+                          Write a Review
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   <div className="flex flex-col md:flex-row gap-3">

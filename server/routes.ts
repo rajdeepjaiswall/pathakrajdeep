@@ -2773,14 +2773,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/testimonials", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const { status } = req.query;
-      const whereClause = status && status !== 'all' ? `WHERE t.status = '${status}'` : '';
-      const result = await pool.query(
-        `SELECT t.*, p.name as product_name_actual
-         FROM testimonials t
-         LEFT JOIN products p ON t.product_id = p.id
-         ${whereClause}
-         ORDER BY t.created_at DESC`
-      );
+      let result;
+      if (status && status !== 'all') {
+        result = await pool.query(
+          `SELECT t.*, p.name as product_name_actual
+           FROM testimonials t
+           LEFT JOIN products p ON t.product_id = p.id
+           WHERE t.status = $1
+           ORDER BY t.created_at DESC`,
+          [status]
+        );
+      } else {
+        result = await pool.query(
+          `SELECT t.*, p.name as product_name_actual
+           FROM testimonials t
+           LEFT JOIN products p ON t.product_id = p.id
+           ORDER BY t.created_at DESC`
+        );
+      }
       res.json(result.rows);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

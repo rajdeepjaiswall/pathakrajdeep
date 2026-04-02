@@ -41,3 +41,7 @@ integrations = ["javascript_websocket:1.0.0"]
 [userenv]
 
 [userenv.shared]
+
+[userenv.development]
+
+[userenv.production]

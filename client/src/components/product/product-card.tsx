@@ -128,15 +128,13 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
                   autoPlay
                   muted
                   loop
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover scale-100 lg:scale-[1.1] lg:group-hover:scale-100 transition-transform duration-[400ms] ease-in-out"
                 />
               ) : (
                 <OptimizedImage
                   src={mediaItems[currentImageIndex].url} 
                   alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  width={320}
-                  height={160}
+                  className="w-full h-full object-cover scale-100 lg:scale-[1.1] lg:group-hover:scale-100 transition-transform duration-[400ms] ease-in-out"
                   placeholder="blur"
                 />
               )}
@@ -206,7 +204,7 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
               )}
             </div>
             
-            <h3 className="font-semibold text-navy mb-1 text-sm">{product.name}</h3>
+            <h3 className="font-semibold text-navy mb-1 text-sm lg:text-base lg:font-bold">{product.name}</h3>
             <p className="text-gray-600 text-xs mb-2 line-clamp-2">{product.description}</p>
             
             <div className="flex items-center justify-between">

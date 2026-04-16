@@ -7,7 +7,7 @@ import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, RefreshCw, Send } from 'lucide-react';
+import { AlertCircle, CheckCircle, RefreshCw, Send, Download } from 'lucide-react';
 
 export default function AdminSettings() {
   const { user } = useAuth();
@@ -190,6 +190,36 @@ export default function AdminSettings() {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Database Export Card */}
+        <Card className="mt-6 border-0 shadow-lg">
+          <CardHeader className="bg-amber-50 border-b">
+            <CardTitle className="text-navy flex items-center gap-2">
+              <Download className="h-5 w-5 text-amber-600" />
+              Download Full Database Backup
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Downloads all your data — products, orders, customers, categories, banners, and more — as a single JSON file. You can open this on any device or use it to restore/migrate your database later.
+              </p>
+              <a
+                href="/api/admin/export-database"
+                download
+                className="block"
+              >
+                <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 flex items-center justify-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Download Database Backup
+                </Button>
+              </a>
+              <p className="text-xs text-gray-400 text-center">
+                File will be named: pathak-bhandar-db-export-{new Date().toISOString().slice(0, 10)}.json
+              </p>
+            </div>
           </CardContent>
         </Card>
 

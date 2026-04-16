@@ -2868,6 +2868,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Super Admin — export full database as downloadable JSON
+  app.get("/api/admin/export-database", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const tables = [
+        "users", "categories", "products", "addresses", "orders",
+        "order_items", "cart_items", "wishlist_items", "coupons",
+        "reviews", "banners", "sessions", "otps", "manual_payment_config",
+        "manual_payment_details", "payment_gateway_config", "page_content",
+        "popup_banners", "phonepe_transactions", "event_inquiries", "testimonials"
+      ];
+
+      const exportData: Record<string, any[]> = {};
+
+      for (const table of tables) {
+        try {
+          const result = await pool.query(`SELECT * FROM ${table} ORDER BY id ASC`);
+          exportData[table] = result.rows;
+        } catch {
+          exportData[table] = [];
+        }
+      }
+
+      const filename = `pathak-bhandar-db-export-${new Date().toISOString().slice(0, 10)}.json`;
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify({ exportedAt: new Date().toISOString(), tables: exportData }, null, 2));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

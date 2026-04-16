@@ -2868,7 +2868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Super Admin — export full database as downloadable JSON
+  // Super Admin — export full database as MySQL .sql dump
   app.get("/api/admin/export-database", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const tables = [
@@ -2879,21 +2879,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "popup_banners", "phonepe_transactions", "event_inquiries", "testimonials"
       ];
 
-      const exportData: Record<string, any[]> = {};
+      const escapeMySQLValue = (val: any): string => {
+        if (val === null || val === undefined) return 'NULL';
+        if (typeof val === 'boolean') return val ? '1' : '0';
+        if (typeof val === 'number') return String(val);
+        if (val instanceof Date) return `'${val.toISOString().slice(0, 19).replace('T', ' ')}'`;
+        if (typeof val === 'object') {
+          // arrays and JSON objects → JSON string
+          return `'${JSON.stringify(val).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+        }
+        return `'${String(val).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+      };
+
+      const dateStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const lines: string[] = [
+        `-- Pathak Bhandar MySQL Database Export`,
+        `-- Generated: ${dateStr}`,
+        `-- ------------------------------------------------`,
+        ``,
+        `SET FOREIGN_KEY_CHECKS=0;`,
+        `SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';`,
+        `SET NAMES utf8mb4;`,
+        ``
+      ];
 
       for (const table of tables) {
         try {
           const result = await pool.query(`SELECT * FROM ${table} ORDER BY id ASC`);
-          exportData[table] = result.rows;
+          const rows = result.rows;
+
+          lines.push(`-- Table: \`${table}\``);
+          lines.push(`TRUNCATE TABLE \`${table}\`;`);
+
+          if (rows.length > 0) {
+            const columns = Object.keys(rows[0]).map(c => `\`${c}\``).join(', ');
+            for (const row of rows) {
+              const values = Object.values(row).map(escapeMySQLValue).join(', ');
+              lines.push(`INSERT INTO \`${table}\` (${columns}) VALUES (${values});`);
+            }
+          }
+
+          lines.push(``);
         } catch {
-          exportData[table] = [];
+          lines.push(`-- Skipped table \`${table}\` (not found or error)`);
+          lines.push(``);
         }
       }
 
-      const filename = `pathak-bhandar-db-export-${new Date().toISOString().slice(0, 10)}.json`;
+      lines.push(`SET FOREIGN_KEY_CHECKS=1;`);
+
+      const filename = `pathak-bhandar-db-export-${new Date().toISOString().slice(0, 10)}.sql`;
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("Content-Type", "application/json");
-      res.send(JSON.stringify({ exportedAt: new Date().toISOString(), tables: exportData }, null, 2));
+      res.setHeader("Content-Type", "application/sql");
+      res.send(lines.join('\n'));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

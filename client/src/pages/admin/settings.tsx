@@ -204,7 +204,7 @@ export default function AdminSettings() {
           <CardContent className="pt-6">
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Downloads all your data — products, orders, customers, categories, banners, and more — as a single JSON file. You can open this on any device or use it to restore/migrate your database later.
+                Downloads all your data — products, orders, customers, categories, banners, and more — as a MySQL <code className="bg-gray-100 px-1 rounded text-xs">.sql</code> file. You can import it directly into any MySQL or cPanel database.
               </p>
               <a
                 href="/api/admin/export-database"
@@ -213,11 +213,11 @@ export default function AdminSettings() {
               >
                 <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 flex items-center justify-center gap-2">
                   <Download className="h-4 w-4" />
-                  Download Database Backup
+                  Download MySQL Backup (.sql)
                 </Button>
               </a>
               <p className="text-xs text-gray-400 text-center">
-                File will be named: pathak-bhandar-db-export-{new Date().toISOString().slice(0, 10)}.json
+                File will be named: pathak-bhandar-db-export-{new Date().toISOString().slice(0, 10)}.sql
               </p>
             </div>
           </CardContent>

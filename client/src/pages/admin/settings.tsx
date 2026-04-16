@@ -206,16 +206,32 @@ export default function AdminSettings() {
               <p className="text-sm text-gray-600">
                 Downloads all your data — products, orders, customers, categories, banners, and more — as a MySQL <code className="bg-gray-100 px-1 rounded text-xs">.sql</code> file. You can import it directly into any MySQL or cPanel database.
               </p>
-              <a
-                href="/api/admin/export-database"
-                download
-                className="block"
+              <Button
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 flex items-center justify-center gap-2"
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch('/api/admin/export-database', {
+                      headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (!res.ok) throw new Error('Download failed');
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `pathak-bhandar-db-export-${new Date().toISOString().slice(0, 10)}.sql`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    alert('Download failed. Please make sure you are logged in as admin.');
+                  }
+                }}
               >
-                <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 flex items-center justify-center gap-2">
-                  <Download className="h-4 w-4" />
-                  Download MySQL Backup (.sql)
-                </Button>
-              </a>
+                <Download className="h-4 w-4" />
+                Download MySQL Backup (.sql)
+              </Button>
               <p className="text-xs text-gray-400 text-center">
                 File will be named: pathak-bhandar-db-export-{new Date().toISOString().slice(0, 10)}.sql
               </p>

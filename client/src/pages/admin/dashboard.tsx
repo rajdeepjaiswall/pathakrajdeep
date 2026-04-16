@@ -20,7 +20,8 @@ import {
   Upload,
   ToggleLeft,
   ToggleRight,
-  CreditCard
+  CreditCard,
+  Download
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -438,6 +439,12 @@ export default function AdminDashboard() {
               <TrendingUp className="h-6 w-6" />
               <span>Reports</span>
             </Button>
+            <a href="/api/admin/export-database" download className="contents">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-green-600 text-green-700 hover:bg-green-600 hover:text-white w-full" data-testid="button-download-db">
+                <Download className="h-6 w-6" />
+                <span className="text-xs text-center leading-tight">Download DB</span>
+              </Button>
+            </a>
           </div>
 
           {/* Analytics Cards - 4x2 Grid */}

@@ -20,8 +20,7 @@ import {
   Upload,
   ToggleLeft,
   ToggleRight,
-  CreditCard,
-  Download
+  CreditCard
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -438,34 +437,6 @@ export default function AdminDashboard() {
             <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-reports">
               <TrendingUp className="h-6 w-6" />
               <span>Reports</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-20 flex-col gap-2 border-green-600 text-green-700 hover:bg-green-600 hover:text-white w-full"
-              data-testid="button-download-db"
-              onClick={async () => {
-                try {
-                  const token = localStorage.getItem('token');
-                  const res = await fetch('/api/admin/export-database', {
-                    headers: { Authorization: `Bearer ${token}` }
-                  });
-                  if (!res.ok) throw new Error('Download failed');
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `pathak-bhandar-db-export-${new Date().toISOString().slice(0, 10)}.sql`;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  URL.revokeObjectURL(url);
-                } catch {
-                  alert('Download failed. Please make sure you are logged in as admin.');
-                }
-              }}
-            >
-              <Download className="h-6 w-6" />
-              <span className="text-xs text-center leading-tight">Download DB</span>
             </Button>
           </div>
 

@@ -17,6 +17,7 @@ import TrendingSection from '@/components/TrendingSection';
 import ProductOfDay from '@/components/ProductOfDay';
 import ChefEditorial from '@/components/ChefEditorial';
 import Testimonials from '@/components/Testimonials';
+import CollapsibleSection from '@/components/CollapsibleSection';
 
 import { useAuth } from '@/hooks/use-auth';
 import { CATEGORIES } from '@/lib/constants';
@@ -105,49 +106,51 @@ export default function Home() {
       <CartReminder />
 
       {/* Featured Products - above Trending section */}
-      <section className="pt-2 pb-10 lg:py-12 bg-[#F8F4F1]">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-6 lg:mb-8">
-            <div>
-              <h2 className="text-2xl lg:text-4xl font-bold text-navy">Featured Products</h2>
-              <p className="text-sm lg:text-base text-gray-500 mt-1">Our most popular and loved items</p>
-            </div>
-            <Link href="/products">
-              <Button variant="ghost" className="hidden md:flex text-champagne font-semibold hover:text-navy">
-                View All Products <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
-
-          {/* Mobile: 2 cols | Tablet+Desktop: exactly 3 rectangle cards per row */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
-            {productsLoading ? (
-              <LoadingSkeleton type="product" count={6} className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6" />
-            ) : featuredProducts.length > 0 ? (
-              featuredProducts.slice(0, 9).map((product: any) => (
-                <ProductCard 
-                  key={product.id} 
-                  product={product}
-                  isPreviouslyOrdered={Array.isArray(previouslyOrderedProducts) ? previouslyOrderedProducts.includes(product.id) : false}
-                />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <p className="text-gray-500 text-lg">No products available at the moment.</p>
-                <p className="text-gray-400 text-sm mt-2">Please check back later or contact support.</p>
+      <CollapsibleSection collapsedHeight={560} collapsedHeightDesktop={780} label="featured products">
+        <section className="pt-2 pb-10 lg:py-12 bg-[#F8F4F1]">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center mb-6 lg:mb-8">
+              <div>
+                <h2 className="text-2xl lg:text-4xl font-bold text-navy">Featured Products</h2>
+                <p className="text-sm lg:text-base text-gray-500 mt-1">Our most popular and loved items</p>
               </div>
-            )}
-          </div>
+              <Link href="/products">
+                <Button variant="ghost" className="hidden md:flex text-champagne font-semibold hover:text-navy">
+                  View All Products <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
 
-          <div className="text-center mt-8 md:hidden">
-            <Link href="/products">
-              <Button variant="ghost" className="text-champagne font-semibold">
-                View All Products <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
+            {/* Mobile: 2 cols | Tablet+Desktop: exactly 3 rectangle cards per row */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+              {productsLoading ? (
+                <LoadingSkeleton type="product" count={6} className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6" />
+              ) : featuredProducts.length > 0 ? (
+                featuredProducts.slice(0, 9).map((product: any) => (
+                  <ProductCard 
+                    key={product.id} 
+                    product={product}
+                    isPreviouslyOrdered={Array.isArray(previouslyOrderedProducts) ? previouslyOrderedProducts.includes(product.id) : false}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-gray-500 text-lg">No products available at the moment.</p>
+                  <p className="text-gray-400 text-sm mt-2">Please check back later or contact support.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="text-center mt-8 md:hidden">
+              <Link href="/products">
+                <Button variant="ghost" className="text-champagne font-semibold">
+                  View All Products <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </CollapsibleSection>
 
       {/* Banner Block: After Featured */}
       <section className="px-4 sm:px-6 lg:px-8 pt-2">
@@ -157,7 +160,9 @@ export default function Home() {
       </section>
 
       {/* Trending in Prayagraj — below Featured Products */}
-      <TrendingSection />
+      <CollapsibleSection collapsedHeight={620} collapsedHeightDesktop={820} label="trending" noFade>
+        <TrendingSection />
+      </CollapsibleSection>
 
       {/* Banner Block: After Trending */}
       <section className="px-4 sm:px-6 lg:px-8 pt-2">
@@ -184,7 +189,9 @@ export default function Home() {
       </section>
 
       {/* Chef Editorial Picks */}
-      <ChefEditorial />
+      <CollapsibleSection collapsedHeight={500} collapsedHeightDesktop={520} label="chef's picks">
+        <ChefEditorial />
+      </CollapsibleSection>
 
       {/* Banner Block: After Chef Editorial */}
       <section className="px-4 sm:px-6 lg:px-8 pt-2">
@@ -194,7 +201,9 @@ export default function Home() {
       </section>
 
       {/* Customer Testimonials */}
-      <Testimonials />
+      <CollapsibleSection collapsedHeight={520} collapsedHeightDesktop={620} label="reviews">
+        <Testimonials />
+      </CollapsibleSection>
 
       {/* Trust Indicators — slim 4-icon bar */}
       <section className="py-4 bg-[#F5EFE6] border-t border-[#D4B896]/50">

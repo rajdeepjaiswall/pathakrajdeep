@@ -2561,6 +2561,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ================= ABOUT US SECTIONS =================
+  // Helper to upload any base64 data URLs in a media array to R2
+  const processAboutMedia = async (media: any): Promise<string[]> => {
+    if (!Array.isArray(media)) return [];
+    const out: string[] = [];
+    for (const item of media) {
+      if (typeof item !== 'string' || !item.trim()) continue;
+      if (isR2Configured() && item.startsWith('data:')) {
+        try {
+          const url = await uploadBase64ToR2(item, 'about-sections');
+          out.push(url);
+        } catch (e) {
+          // skip failed upload, keep going
+        }
+      } else {
+        out.push(item);
+      }
+    }
+    return out;
+  };
+
+  // Public read — active sections only, ordered by displayOrder
+  app.get("/api/about-sections", async (_req, res) => {
+    try {
+      const sections = await storage.getAboutSections(true);
+      res.json(sections);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin CRUD
+  app.get("/api/admin/about-sections", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const sections = await storage.getAboutSections(false);
+      res.json(sections);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/about-sections", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const body = { ...req.body };
+      if (body.media) {
+        body.media = await processAboutMedia(body.media);
+      }
+      const section = await storage.createAboutSection(body);
+      res.json(section);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/about-sections/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const body = { ...req.body };
+      if (body.media) {
+        body.media = await processAboutMedia(body.media);
+      }
+      const section = await storage.updateAboutSection(id, body);
+      res.json(section);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/about-sections/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteAboutSection(id);
+      res.json({ message: "About section deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin Management - Super Admin only
   app.get("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {

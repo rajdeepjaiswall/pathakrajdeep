@@ -20,7 +20,8 @@ import {
   Upload,
   ToggleLeft,
   ToggleRight,
-  CreditCard
+  CreditCard,
+  Store
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -420,6 +421,12 @@ export default function AdminDashboard() {
               <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-banners">
                 <TrendingUp className="h-6 w-6" />
                 <span>Banners</span>
+              </Button>
+            </Link>
+            <Link href="/admin/about">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-about">
+                <Store className="h-6 w-6" />
+                <span>About Us</span>
               </Button>
             </Link>
             <Link href="/admin/categories">

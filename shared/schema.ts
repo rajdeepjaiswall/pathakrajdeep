@@ -288,6 +288,21 @@ export const popupBanners = pgTable("popup_banners", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// About Us dynamic sections
+export const aboutSections = pgTable("about_sections", {
+  id: serial("id").primaryKey(),
+  sectionType: text("section_type").notNull(), // hero, founder, story, gallery, team
+  title: text("title"),
+  subtitle: text("subtitle"),
+  description: text("description"),
+  media: text("media").array().default([]),
+  ctaText: text("cta_text"),
+  ctaLink: text("cta_link"),
+  isActive: boolean("is_active").default(true),
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // PhonePe Transactions table
 export const phonePeTransactions = pgTable("phonepe_transactions", {
   id: serial("id").primaryKey(),
@@ -525,6 +540,11 @@ export const insertPopupBannerSchema = createInsertSchema(popupBanners).omit({
   updatedAt: true,
 });
 
+export const insertAboutSectionSchema = createInsertSchema(aboutSections).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertPhonePeTransactionSchema = createInsertSchema(phonePeTransactions).omit({
   id: true,
   createdAt: true,
@@ -592,6 +612,7 @@ export type ManualPaymentDetails = typeof manualPaymentDetails.$inferSelect;
 export type PaymentGatewayConfig = typeof paymentGatewayConfig.$inferSelect;
 export type PageContent = typeof pageContent.$inferSelect;
 export type PopupBanner = typeof popupBanners.$inferSelect;
+export type AboutSection = typeof aboutSections.$inferSelect;
 export type PhonePeTransaction = typeof phonePeTransactions.$inferSelect;
 
 // Insert types
@@ -613,6 +634,7 @@ export type InsertManualPaymentDetails = z.infer<typeof insertManualPaymentDetai
 export type InsertPaymentGatewayConfig = z.infer<typeof insertPaymentGatewayConfigSchema>;
 export type InsertPageContent = z.infer<typeof insertPageContentSchema>;
 export type InsertPopupBanner = z.infer<typeof insertPopupBannerSchema>;
+export type InsertAboutSection = z.infer<typeof insertAboutSectionSchema>;
 export type InsertPhonePeTransaction = z.infer<typeof insertPhonePeTransactionSchema>;
 export type EventInquiry = typeof eventInquiries.$inferSelect;
 export type InsertEventInquiry = z.infer<typeof insertEventInquirySchema>;

@@ -8,6 +8,7 @@ import {
   type ManualPaymentConfig, type InsertManualPaymentConfig, type ManualPaymentDetails, type InsertManualPaymentDetails,
   type PaymentGatewayConfig, type InsertPaymentGatewayConfig,
   type PageContent, type InsertPageContent, type PopupBanner, type InsertPopupBanner,
+  aboutSections, type AboutSection, type InsertAboutSection,
   type PhonePeTransaction, type InsertPhonePeTransaction
 } from "@shared/schema";
 import { db } from "./db";
@@ -137,6 +138,12 @@ export interface IStorage {
   createPopupBanner(banner: InsertPopupBanner): Promise<PopupBanner>;
   updatePopupBanner(id: number, banner: Partial<InsertPopupBanner>): Promise<PopupBanner>;
   deletePopupBanner(id: number): Promise<void>;
+
+  getAboutSections(activeOnly?: boolean): Promise<AboutSection[]>;
+  getAboutSection(id: number): Promise<AboutSection | undefined>;
+  createAboutSection(section: InsertAboutSection): Promise<AboutSection>;
+  updateAboutSection(id: number, section: Partial<InsertAboutSection>): Promise<AboutSection>;
+  deleteAboutSection(id: number): Promise<void>;
 
   // Admin management methods
   getAdminUsers(): Promise<User[]>;
@@ -1125,6 +1132,50 @@ export class DatabaseStorage implements IStorage {
 
   async deletePopupBanner(id: number): Promise<void> {
     await db.delete(popupBanners).where(eq(popupBanners.id, id));
+  }
+
+  // About Section methods
+  async getAboutSections(activeOnly: boolean = false): Promise<AboutSection[]> {
+    if (activeOnly) {
+      return db
+        .select()
+        .from(aboutSections)
+        .where(eq(aboutSections.isActive, true))
+        .orderBy(asc(aboutSections.displayOrder), asc(aboutSections.id));
+    }
+    return db
+      .select()
+      .from(aboutSections)
+      .orderBy(asc(aboutSections.displayOrder), asc(aboutSections.id));
+  }
+
+  async getAboutSection(id: number): Promise<AboutSection | undefined> {
+    const [section] = await db
+      .select()
+      .from(aboutSections)
+      .where(eq(aboutSections.id, id));
+    return section || undefined;
+  }
+
+  async createAboutSection(section: InsertAboutSection): Promise<AboutSection> {
+    const [created] = await db
+      .insert(aboutSections)
+      .values(section)
+      .returning();
+    return created;
+  }
+
+  async updateAboutSection(id: number, section: Partial<InsertAboutSection>): Promise<AboutSection> {
+    const [updated] = await db
+      .update(aboutSections)
+      .set(section)
+      .where(eq(aboutSections.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAboutSection(id: number): Promise<void> {
+    await db.delete(aboutSections).where(eq(aboutSections.id, id));
   }
 
   // Admin management methods

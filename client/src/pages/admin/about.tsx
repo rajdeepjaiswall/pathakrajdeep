@@ -1,16 +1,41 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Plus, Edit, Trash2, X, ArrowUp, ArrowDown, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Plus,
+  Trash2,
+  X,
+  ArrowUp,
+  ArrowDown,
+  Image as ImageIcon,
+  Eye,
+  EyeOff,
+  Save,
+  Upload,
+  ExternalLink,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
@@ -18,39 +43,40 @@ import { useAuth } from '@/hooks/use-auth';
 import type { AboutSection } from '@shared/schema';
 
 const SECTION_TYPES: { value: string; label: string; description: string }[] = [
-  { value: 'hero', label: 'Hero', description: 'Big top banner with title, subtitle, image carousel and CTA' },
-  { value: 'founder', label: 'Founder / Legacy', description: 'Circular portrait + quote — one card per section' },
-  { value: 'story', label: 'Story', description: 'Image grid (up to 4) on one side and a written story on the other' },
-  { value: 'gallery', label: 'Image Grid', description: 'Multi-image gallery with optional heading and CTA' },
-  { value: 'team', label: 'Team / Workplace', description: 'Hero image, secondary image and a quote card' },
+  {
+    value: 'hero',
+    label: 'Hero Banner',
+    description:
+      'Top of the page. Big title, short subtitle, one-line description, image carousel (1–3 images) and a CTA button.',
+  },
+  {
+    value: 'founder',
+    label: 'Founder / Legacy',
+    description:
+      'A circular portrait with the founder name, role/year and a short quote. Add one section per founder.',
+  },
+  {
+    value: 'story',
+    label: 'Story',
+    description:
+      'Long-form story with up to 4 photos forming a collage. Use line breaks in the description to create paragraphs.',
+  },
+  {
+    value: 'gallery',
+    label: 'Image Grid',
+    description:
+      'A wall of photos. The first image becomes a large feature card. Optional CTA at the bottom.',
+  },
+  {
+    value: 'team',
+    label: 'Team / Workplace',
+    description:
+      'Hero image + secondary image + a quote card. Subtitle format: "100+ — Master Bakers". Description supports ||| to split body and quote.',
+  },
 ];
 
-const sectionLabel = (t: string) => SECTION_TYPES.find((s) => s.value === t)?.label || t;
-const sectionDescription = (t: string) => SECTION_TYPES.find((s) => s.value === t)?.description || '';
-
-type FormState = {
-  sectionType: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  media: string[];
-  ctaText: string;
-  ctaLink: string;
-  isActive: boolean;
-  displayOrder: number;
-};
-
-const emptyForm = (sectionType = 'hero', displayOrder = 0): FormState => ({
-  sectionType,
-  title: '',
-  subtitle: '',
-  description: '',
-  media: [],
-  ctaText: '',
-  ctaLink: '',
-  isActive: true,
-  displayOrder,
-});
+const sectionLabel = (t: string) =>
+  SECTION_TYPES.find((s) => s.value === t)?.label || t;
 
 const friendlyAuthError = (error: any) => {
   const msg = error?.message || '';
@@ -67,16 +93,96 @@ const fileToDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+type BlockState = {
+  title: string;
+  subtitle: string;
+  description: string;
+  media: string[];
+  ctaText: string;
+  ctaLink: string;
+  isActive: boolean;
+};
+
+const fromSection = (s: AboutSection): BlockState => ({
+  title: s.title || '',
+  subtitle: s.subtitle || '',
+  description: s.description || '',
+  media: (s.media || []).filter((m): m is string => typeof m === 'string'),
+  ctaText: s.ctaText || '',
+  ctaLink: s.ctaLink || '',
+  isActive: s.isActive ?? true,
+});
+
+const equal = (a: BlockState, b: BlockState) =>
+  a.title === b.title &&
+  a.subtitle === b.subtitle &&
+  a.description === b.description &&
+  a.ctaText === b.ctaText &&
+  a.ctaLink === b.ctaLink &&
+  a.isActive === b.isActive &&
+  a.media.length === b.media.length &&
+  a.media.every((m, i) => m === b.media[i]);
+
+const helperFor = (type: string) => {
+  switch (type) {
+    case 'hero':
+      return 'Tip: subtitle becomes the small overline text. Title is the giant headline. Add 1–3 background photos for the auto-rotating carousel.';
+    case 'founder':
+      return 'Tip: Title = founder name. Subtitle = role/year. Description = quote (no need for quote marks). Upload one portrait photo.';
+    case 'story':
+      return 'Tip: Add up to 4 photos for the collage. Use blank lines in the description to separate paragraphs.';
+    case 'gallery':
+      return 'Tip: Add as many photos as you like. The first one becomes the large feature card; the rest fill the grid.';
+    case 'team':
+      return 'Tip: Subtitle format "100+ — Master Bakers". In the description use ||| to split body text from the quote card text.';
+    default:
+      return '';
+  }
+};
+
 export default function AdminAbout() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm());
-  const [mediaInput, setMediaInput] = useState('');
+  const [drafts, setDrafts] = useState<Record<number, BlockState>>({});
+  const [addOpen, setAddOpen] = useState(false);
+  const [newType, setNewType] = useState<string>('hero');
+
+  const { data: sections = [], isLoading } = useQuery<AboutSection[]>({
+    queryKey: ['/api/admin/about-sections'],
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
+  });
+
+  const sortedSections = useMemo(
+    () =>
+      [...sections].sort(
+        (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+      ),
+    [sections],
+  );
+
+  // Sync server data into local drafts (only for blocks with no unsaved local changes)
+  useEffect(() => {
+    setDrafts((prev) => {
+      const next = { ...prev };
+      const ids = new Set(sortedSections.map((s) => s.id));
+      // Drop drafts for sections that were deleted
+      Object.keys(next).forEach((k) => {
+        if (!ids.has(Number(k))) delete next[Number(k)];
+      });
+      // Add or refresh drafts for fresh data when no unsaved changes
+      sortedSections.forEach((s) => {
+        const server = fromSection(s);
+        const existing = next[s.id];
+        if (!existing || equal(existing, server)) {
+          next[s.id] = server;
+        }
+      });
+      return next;
+    });
+  }, [sortedSections]);
 
   if (authLoading) {
     return (
@@ -90,49 +196,44 @@ export default function AdminAbout() {
     return null;
   }
 
-  const { data: sections = [], isLoading } = useQuery<AboutSection[]>({
-    queryKey: ['/api/admin/about-sections'],
-  });
-
-  const sortedSections = [...sections].sort(
-    (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
-  );
-  const nextOrder = sortedSections.length
-    ? Math.max(...sortedSections.map((s) => s.displayOrder ?? 0)) + 1
-    : 0;
-
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/about-sections'] });
     queryClient.invalidateQueries({ queryKey: ['/api/about-sections'] });
   };
 
   const createMutation = useMutation({
-    mutationFn: async (data: FormState) => {
+    mutationFn: async (data: any) => {
       const res = await apiRequest('POST', '/api/admin/about-sections', data);
       return res.json();
     },
     onSuccess: () => {
       invalidate();
-      toast({ title: 'Section added', description: 'The new section is live.' });
-      closeDialog();
+      toast({ title: 'Section added', description: 'A new block was added at the bottom.' });
+      setAddOpen(false);
     },
     onError: (error: any) => {
-      toast({ title: 'Could not add section', description: friendlyAuthError(error), variant: 'destructive' });
+      toast({
+        title: 'Could not add section',
+        description: friendlyAuthError(error),
+        variant: 'destructive',
+      });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<FormState> }) => {
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
       const res = await apiRequest('PATCH', `/api/admin/about-sections/${id}`, data);
       return res.json();
     },
     onSuccess: () => {
       invalidate();
-      toast({ title: 'Section saved' });
-      closeDialog();
     },
     onError: (error: any) => {
-      toast({ title: 'Could not save section', description: friendlyAuthError(error), variant: 'destructive' });
+      toast({
+        title: 'Could not save',
+        description: friendlyAuthError(error),
+        variant: 'destructive',
+      });
     },
   });
 
@@ -146,195 +247,199 @@ export default function AdminAbout() {
       toast({ title: 'Section deleted' });
     },
     onError: (error: any) => {
-      toast({ title: 'Could not delete section', description: friendlyAuthError(error), variant: 'destructive' });
+      toast({
+        title: 'Could not delete',
+        description: friendlyAuthError(error),
+        variant: 'destructive',
+      });
     },
   });
 
-  const toggleActive = (s: AboutSection) => {
-    updateMutation.mutate({ id: s.id, data: { isActive: !s.isActive } as any });
+  const isDirty = (s: AboutSection) => {
+    const d = drafts[s.id];
+    if (!d) return false;
+    return !equal(d, fromSection(s));
+  };
+
+  const updateDraft = (id: number, patch: Partial<BlockState>) => {
+    setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  };
+
+  const saveBlock = (s: AboutSection) => {
+    const d = drafts[s.id];
+    if (!d) return;
+    updateMutation.mutate(
+      { id: s.id, data: d },
+      {
+        onSuccess: () => {
+          toast({ title: 'Saved', description: `"${d.title || sectionLabel(s.sectionType)}" updated.` });
+        },
+      },
+    );
+  };
+
+  const resetBlock = (s: AboutSection) => {
+    setDrafts((prev) => ({ ...prev, [s.id]: fromSection(s) }));
+  };
+
+  const toggleActive = (s: AboutSection, value: boolean) => {
+    updateDraft(s.id, { isActive: value });
+    updateMutation.mutate({ id: s.id, data: { isActive: value } });
   };
 
   const moveSection = (s: AboutSection, dir: -1 | 1) => {
     const idx = sortedSections.findIndex((x) => x.id === s.id);
     const swap = sortedSections[idx + dir];
     if (!swap) return;
-    updateMutation.mutate({ id: s.id, data: { displayOrder: swap.displayOrder ?? 0 } as any });
-    updateMutation.mutate({ id: swap.id, data: { displayOrder: s.displayOrder ?? 0 } as any });
+    updateMutation.mutate({ id: s.id, data: { displayOrder: swap.displayOrder ?? 0 } });
+    updateMutation.mutate({ id: swap.id, data: { displayOrder: s.displayOrder ?? 0 } });
   };
 
-  const openCreate = () => {
-    setEditingId(null);
-    setForm(emptyForm('hero', nextOrder));
-    setMediaInput('');
-    setDialogOpen(true);
+  const addMediaUrl = (id: number, url: string) => {
+    const v = url.trim();
+    if (!v) return;
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], media: [...(prev[id]?.media || []), v] },
+    }));
   };
 
-  const openEdit = (s: AboutSection) => {
-    setEditingId(s.id);
-    setForm({
-      sectionType: s.sectionType,
-      title: s.title || '',
-      subtitle: s.subtitle || '',
-      description: s.description || '',
-      media: (s.media || []).filter((m) => typeof m === 'string'),
-      ctaText: s.ctaText || '',
-      ctaLink: s.ctaLink || '',
-      isActive: s.isActive ?? true,
-      displayOrder: s.displayOrder ?? 0,
-    });
-    setMediaInput('');
-    setDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
-    setEditingId(null);
-    setForm(emptyForm());
-    setMediaInput('');
-  };
-
-  const onMediaFile = async (file: File) => {
+  const onMediaFile = async (id: number, file: File) => {
     try {
       const dataUrl = await fileToDataUrl(file);
-      setForm((prev) => ({ ...prev, media: [...prev.media, dataUrl] }));
-    } catch (e) {
+      setDrafts((prev) => ({
+        ...prev,
+        [id]: { ...prev[id], media: [...(prev[id]?.media || []), dataUrl] },
+      }));
+    } catch {
       toast({ title: 'Could not read image', variant: 'destructive' });
     }
   };
 
-  const addMediaUrl = () => {
-    const v = mediaInput.trim();
-    if (!v) return;
-    setForm((prev) => ({ ...prev, media: [...prev.media, v] }));
-    setMediaInput('');
+  const removeMedia = (id: number, i: number) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], media: prev[id].media.filter((_, idx) => idx !== i) },
+    }));
   };
 
-  const removeMedia = (i: number) => {
-    setForm((prev) => ({ ...prev, media: prev.media.filter((_, idx) => idx !== i) }));
-  };
-
-  const moveMedia = (i: number, dir: -1 | 1) => {
-    setForm((prev) => {
-      const next = [...prev.media];
+  const moveMedia = (id: number, i: number, dir: -1 | 1) => {
+    setDrafts((prev) => {
+      const cur = prev[id];
+      if (!cur) return prev;
+      const next = [...cur.media];
       const j = i + dir;
       if (j < 0 || j >= next.length) return prev;
       [next[i], next[j]] = [next[j], next[i]];
-      return { ...prev, media: next };
+      return { ...prev, [id]: { ...cur, media: next } };
     });
   };
 
-  const saveForm = () => {
-    if (!form.sectionType) {
-      toast({ title: 'Pick a section type', variant: 'destructive' });
-      return;
-    }
-    const payload = { ...form };
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, data: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
-  };
-
-  const helperFor = (type: string) => {
-    switch (type) {
-      case 'hero':
-        return 'Use a short subtitle (e.g. "Honoring Our Origins"), a big title, a one-line description and a CTA. Add 1–3 background images for the carousel.';
-      case 'founder':
-        return 'Title = founder name. Subtitle = role / year. Description = the quote (no need for quote marks). Upload one portrait image.';
-      case 'story':
-        return 'Add up to 4 images (they will fall into a 2-column collage). Use the description for the body text — line breaks are kept.';
-      case 'gallery':
-        return 'Upload as many images as you like. The first one becomes a large feature card.';
-      case 'team':
-        return 'Subtitle format: "100+ — Master Bakers" (number, em dash, label). Use ||| in the description to split body text and the quote card text.';
-      default:
-        return '';
-    }
+  const addSection = () => {
+    const nextOrder = sortedSections.length
+      ? Math.max(...sortedSections.map((s) => s.displayOrder ?? 0)) + 10
+      : 10;
+    createMutation.mutate({
+      sectionType: newType,
+      title: '',
+      subtitle: '',
+      description: '',
+      media: [],
+      ctaText: '',
+      ctaLink: '',
+      isActive: true,
+      displayOrder: nextOrder,
+    });
   };
 
   return (
     <div className="min-h-screen bg-[#F5EFE6]">
       <Header />
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[#47160b]">About Us Editor</h1>
             <p className="text-sm text-[#534340] mt-1">
-              Build the public About Us page section by section. Only active sections with content are shown.
+              Each block below is one section on the public About Us page. Edit text, photos and links right here — changes go live as soon as you save.
             </p>
           </div>
-          <Button onClick={openCreate} className="bg-[#47160b] hover:bg-[#632b1e] text-white">
-            <Plus className="w-4 h-4 mr-2" /> Add Section
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => window.open('/about-us', '_blank')}
+              className="border-[#9b4518] text-[#9b4518] hover:bg-[#9b4518] hover:text-white"
+              data-testid="button-preview-about"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" /> Preview Page
+            </Button>
+            <Button
+              onClick={() => setAddOpen(true)}
+              className="bg-[#47160b] hover:bg-[#632b1e] text-white"
+              data-testid="button-add-section"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Add Block
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-white/60 rounded-xl animate-pulse" />
+              <div key={i} className="h-64 bg-white/60 rounded-xl animate-pulse" />
             ))}
           </div>
         ) : sortedSections.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
               <ImageIcon className="w-10 h-10 mx-auto text-[#9b4518] mb-3" />
-              <p className="text-[#47160b] font-bold text-lg mb-1">No sections yet</p>
+              <p className="text-[#47160b] font-bold text-lg mb-1">No blocks yet</p>
               <p className="text-[#534340] text-sm mb-6">
-                Add your first section to start building the About Us page.
+                Add your first block to start building the About Us page.
               </p>
-              <Button onClick={openCreate} className="bg-[#47160b] hover:bg-[#632b1e] text-white">
-                <Plus className="w-4 h-4 mr-2" /> Add Section
+              <Button
+                onClick={() => setAddOpen(true)}
+                className="bg-[#47160b] hover:bg-[#632b1e] text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add Block
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {sortedSections.map((s, idx) => (
-              <Card key={s.id} data-testid={`about-section-${s.id}`}>
-                <CardContent className="p-4 sm:p-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    {s.media && s.media[0] ? (
-                      <img
-                        src={s.media[0]}
-                        alt=""
-                        className="w-full sm:w-24 h-24 object-cover rounded-lg bg-[#efe7e1]"
-                      />
-                    ) : (
-                      <div className="w-full sm:w-24 h-24 rounded-lg bg-[#efe7e1] flex items-center justify-center">
-                        <ImageIcon className="w-6 h-6 text-[#9b4518]" />
-                      </div>
+          <div className="space-y-6">
+            {sortedSections.map((s, idx) => {
+              const d = drafts[s.id];
+              if (!d) return null;
+              const dirty = isDirty(s);
+              return (
+                <Card key={s.id} className="overflow-hidden" data-testid={`block-${s.id}`}>
+                  {/* Block header */}
+                  <div className="flex flex-wrap items-center gap-2 px-4 sm:px-5 py-3 bg-[#fdf8f3] border-b border-[#efe1d8]">
+                    <Badge className="bg-[#9b4518] text-white hover:bg-[#9b4518]">
+                      {sectionLabel(s.sectionType)}
+                    </Badge>
+                    <span className="text-xs text-[#86736f]">Block #{idx + 1}</span>
+                    {!d.isActive && (
+                      <Badge
+                        variant="outline"
+                        className="border-[#534340] text-[#534340] flex items-center gap-1"
+                      >
+                        <EyeOff className="w-3 h-3" /> Hidden
+                      </Badge>
+                    )}
+                    {dirty && (
+                      <Badge className="bg-amber-500 text-white hover:bg-amber-500">
+                        Unsaved changes
+                      </Badge>
                     )}
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <Badge className="bg-[#9b4518] text-white hover:bg-[#9b4518]">
-                          {sectionLabel(s.sectionType)}
-                        </Badge>
-                        <span className="text-xs text-[#534340]">
-                          Order {s.displayOrder ?? 0} · {(s.media || []).length} media
-                        </span>
-                        {!s.isActive && (
-                          <Badge variant="outline" className="border-[#534340] text-[#534340]">
-                            Hidden
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="font-bold text-[#47160b] truncate">
-                        {s.title || <span className="italic text-[#86736f]">(no title)</span>}
-                      </p>
-                      {s.subtitle && (
-                        <p className="text-sm text-[#534340] truncate">{s.subtitle}</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1 flex-wrap">
+                    <div className="ml-auto flex items-center gap-1 flex-wrap">
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => moveSection(s, -1)}
                         disabled={idx === 0 || updateMutation.isPending}
                         title="Move up"
+                        data-testid={`button-up-${s.id}`}
                       >
                         <ArrowUp className="w-4 h-4" />
                       </Button>
@@ -344,247 +449,291 @@ export default function AdminAbout() {
                         onClick={() => moveSection(s, 1)}
                         disabled={idx === sortedSections.length - 1 || updateMutation.isPending}
                         title="Move down"
+                        data-testid={`button-down-${s.id}`}
                       >
                         <ArrowDown className="w-4 h-4" />
                       </Button>
                       <div className="flex items-center gap-2 px-2">
                         <Switch
-                          checked={s.isActive ?? true}
-                          onCheckedChange={() => toggleActive(s)}
-                          aria-label="Toggle active"
+                          checked={d.isActive}
+                          onCheckedChange={(v) => toggleActive(s, v)}
+                          aria-label="Toggle visible"
+                          data-testid={`switch-active-${s.id}`}
                         />
-                        {s.isActive ? (
+                        {d.isActive ? (
                           <Eye className="w-4 h-4 text-[#9b4518]" />
                         ) : (
                           <EyeOff className="w-4 h-4 text-[#86736f]" />
                         )}
                       </div>
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(s)} title="Edit">
-                        <Edit className="w-4 h-4" />
-                      </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         onClick={() => {
-                          if (confirm('Delete this section? This cannot be undone.')) {
+                          if (
+                            confirm(
+                              `Delete the "${d.title || sectionLabel(s.sectionType)}" block? This cannot be undone.`,
+                            )
+                          ) {
                             deleteMutation.mutate(s.id);
                           }
                         }}
-                        title="Delete"
+                        title="Delete block"
+                        data-testid={`button-delete-${s.id}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+
+                  <CardContent className="p-4 sm:p-6 space-y-5">
+                    <p className="text-xs text-[#534340] bg-[#f8f0e8] rounded-md px-3 py-2 leading-relaxed">
+                      {helperFor(s.sectionType)}
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-[#47160b]">Heading (Title)</Label>
+                        <Input
+                          value={d.title}
+                          onChange={(e) => updateDraft(s.id, { title: e.target.value })}
+                          placeholder="The big headline shown on the page"
+                          className="mt-1"
+                          data-testid={`input-title-${s.id}`}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[#47160b]">Subheading (Subtitle)</Label>
+                        <Input
+                          value={d.subtitle}
+                          onChange={(e) => updateDraft(s.id, { subtitle: e.target.value })}
+                          placeholder="Small overline text above or below the title"
+                          className="mt-1"
+                          data-testid={`input-subtitle-${s.id}`}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-[#47160b]">Paragraph (Description)</Label>
+                      <Textarea
+                        value={d.description}
+                        onChange={(e) => updateDraft(s.id, { description: e.target.value })}
+                        placeholder="Body text. Line breaks are kept as paragraphs."
+                        rows={5}
+                        className="mt-1"
+                        data-testid={`textarea-description-${s.id}`}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-[#47160b]">Photos / Media</Label>
+                        <span className="text-xs text-[#86736f]">
+                          {d.media.length} image{d.media.length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+
+                      {d.media.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+                          {d.media.map((src, i) => (
+                            <div
+                              key={`${src}-${i}`}
+                              className="relative group rounded-lg overflow-hidden border border-[#efe1d8] bg-[#efe7e1]"
+                            >
+                              <img
+                                src={src}
+                                alt=""
+                                className="w-full h-28 object-cover"
+                                data-testid={`media-preview-${s.id}-${i}`}
+                              />
+                              <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] font-bold rounded px-1.5 py-0.5">
+                                #{i + 1}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeMedia(s.id, i)}
+                                className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Remove photo"
+                                data-testid={`button-remove-media-${s.id}-${i}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                              <div className="absolute bottom-1 left-1 right-1 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={() => moveMedia(s.id, i, -1)}
+                                  disabled={i === 0}
+                                  className="bg-black/70 text-white rounded p-0.5 disabled:opacity-30"
+                                  title="Move left"
+                                >
+                                  <ArrowUp className="w-3 h-3 rotate-[-90deg]" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveMedia(s.id, i, 1)}
+                                  disabled={i === d.media.length - 1}
+                                  className="bg-black/70 text-white rounded p-0.5 disabled:opacity-30"
+                                  title="Move right"
+                                >
+                                  <ArrowUp className="w-3 h-3 rotate-90" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <UrlAdder onAdd={(v) => addMediaUrl(s.id, v)} testId={`input-url-${s.id}`} />
+                        <label
+                          className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-[#d8c2bd] rounded-md cursor-pointer hover:bg-[#f5ece7] transition-colors text-sm text-[#534340] sm:whitespace-nowrap"
+                          data-testid={`label-upload-${s.id}`}
+                        >
+                          <Upload className="w-4 h-4 text-[#9b4518]" />
+                          Upload from device
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) onMediaFile(s.id, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-[#47160b]">Button Text (optional)</Label>
+                        <Input
+                          value={d.ctaText}
+                          onChange={(e) => updateDraft(s.id, { ctaText: e.target.value })}
+                          placeholder="e.g. See Our Journey"
+                          className="mt-1"
+                          data-testid={`input-cta-text-${s.id}`}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[#47160b]">Button Link (optional)</Label>
+                        <Input
+                          value={d.ctaLink}
+                          onChange={(e) => updateDraft(s.id, { ctaLink: e.target.value })}
+                          placeholder="e.g. /products"
+                          className="mt-1"
+                          data-testid={`input-cta-link-${s.id}`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#efe1d8]">
+                      <Button
+                        onClick={() => saveBlock(s)}
+                        disabled={!dirty || updateMutation.isPending}
+                        className="bg-[#47160b] hover:bg-[#632b1e] text-white"
+                        data-testid={`button-save-${s.id}`}
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {dirty ? 'Save Changes' : 'Saved'}
+                      </Button>
+                      {dirty && (
+                        <Button
+                          variant="outline"
+                          onClick={() => resetBlock(s)}
+                          data-testid={`button-discard-${s.id}`}
+                        >
+                          Discard
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Add / Edit dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(o) => (o ? setDialogOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Add new block dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Section' : 'Add Section'}</DialogTitle>
+            <DialogTitle>Add a new block</DialogTitle>
             <DialogDescription>
-              Sections only appear on the About Us page when they are active and have content.
+              Pick the type of block you want to add. You can fill in the heading, photos and text on the next screen.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div>
-              <Label>Section Type</Label>
-              <Select
-                value={form.sectionType}
-                onValueChange={(v) => setForm((p) => ({ ...p, sectionType: v }))}
-                disabled={!!editingId}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SECTION_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{t.label}</span>
-                        <span className="text-xs text-gray-500">{t.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-[#534340] mt-1.5">{helperFor(form.sectionType)}</p>
-            </div>
-
-            <div>
-              <Label>Title</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                placeholder="e.g. Two Generations of Sweet Tradition"
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label>Subtitle</Label>
-              <Input
-                value={form.subtitle}
-                onChange={(e) => setForm((p) => ({ ...p, subtitle: e.target.value }))}
-                placeholder="e.g. Honoring Our Origins"
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label>Description</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                placeholder="Body text — line breaks are preserved"
-                rows={5}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label>Media (images)</Label>
-              <div className="mt-1 space-y-2">
-                {form.media.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {form.media.map((src, i) => (
-                      <div key={i} className="relative group">
-                        <img
-                          src={src}
-                          alt=""
-                          className="w-full h-20 object-cover rounded-md bg-[#efe7e1] border"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeMedia(i)}
-                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Remove"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                        <div className="absolute bottom-1 left-1 right-1 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => moveMedia(i, -1)}
-                            disabled={i === 0}
-                            className="bg-black/60 text-white rounded p-0.5 disabled:opacity-30"
-                          >
-                            <ArrowUp className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveMedia(i, 1)}
-                            disabled={i === form.media.length - 1}
-                            className="bg-black/60 text-white rounded p-0.5 disabled:opacity-30"
-                          >
-                            <ArrowDown className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Input
-                    type="url"
-                    placeholder="Paste an image URL"
-                    value={mediaInput}
-                    onChange={(e) => setMediaInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addMediaUrl();
-                      }
-                    }}
-                  />
-                  <Button type="button" variant="outline" onClick={addMediaUrl}>
-                    Add
-                  </Button>
-                </div>
-
-                <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-[#d8c2bd] rounded-md cursor-pointer hover:bg-[#f5ece7] transition-colors">
-                  <ImageIcon className="w-4 h-4 text-[#9b4518]" />
-                  <span className="text-sm text-[#534340]">Or upload an image from your device</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) onMediaFile(file);
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label>CTA Text (optional)</Label>
-                <Input
-                  value={form.ctaText}
-                  onChange={(e) => setForm((p) => ({ ...p, ctaText: e.target.value }))}
-                  placeholder="e.g. See Our Journey"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>CTA Link (optional)</Label>
-                <Input
-                  value={form.ctaLink}
-                  onChange={(e) => setForm((p) => ({ ...p, ctaLink: e.target.value }))}
-                  placeholder="e.g. /products"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label>Display Order</Label>
-                <Input
-                  type="number"
-                  value={form.displayOrder}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, displayOrder: parseInt(e.target.value || '0', 10) }))
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex items-center gap-3 pt-6">
-                <Switch
-                  checked={form.isActive}
-                  onCheckedChange={(v) => setForm((p) => ({ ...p, isActive: v }))}
-                />
-                <Label>Active (visible on site)</Label>
-              </div>
-            </div>
+          <div className="space-y-3">
+            <Label>Block type</Label>
+            <Select value={newType} onValueChange={setNewType}>
+              <SelectTrigger data-testid="select-new-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SECTION_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    <div className="flex flex-col text-left">
+                      <span className="font-medium">{t.label}</span>
+                      <span className="text-xs text-gray-500">{t.description}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
               Cancel
             </Button>
             <Button
-              onClick={saveForm}
-              disabled={createMutation.isPending || updateMutation.isPending}
+              onClick={addSection}
+              disabled={createMutation.isPending}
               className="bg-[#47160b] hover:bg-[#632b1e] text-white"
+              data-testid="button-confirm-add"
             >
-              {editingId ? 'Save Changes' : 'Add Section'}
+              <Plus className="w-4 h-4 mr-2" /> Add Block
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function UrlAdder({ onAdd, testId }: { onAdd: (v: string) => void; testId?: string }) {
+  const [v, setV] = useState('');
+  return (
+    <div className="flex gap-2 flex-1">
+      <Input
+        type="url"
+        placeholder="Paste an image URL"
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onAdd(v);
+            setV('');
+          }
+        }}
+        data-testid={testId}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          onAdd(v);
+          setV('');
+        }}
+      >
+        Add URL
+      </Button>
     </div>
   );
 }

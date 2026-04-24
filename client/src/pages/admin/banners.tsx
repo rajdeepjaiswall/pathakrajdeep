@@ -117,6 +117,17 @@ export default function AdminBanners() {
     },
   });
 
+  const friendlyAuthError = (error: any) => {
+    const msg = error?.message || '';
+    if (msg.startsWith('401')) {
+      return 'Your admin session has expired. Please log in again.';
+    }
+    if (msg.startsWith('403')) {
+      return 'You do not have permission to do this.';
+    }
+    return msg || 'Something went wrong. Please try again.';
+  };
+
   // Update banner mutation
   const updateBannerMutation = useMutation({
     mutationFn: async ({ id, ...bannerData }: any) => {
@@ -131,12 +142,44 @@ export default function AdminBanners() {
         description: 'The banner has been updated successfully',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const description = friendlyAuthError(error);
       toast({
         title: 'Error updating banner',
-        description: error.message,
+        description,
         variant: 'destructive',
       });
+      if ((error?.message || '').startsWith('401')) {
+        setTimeout(() => setLocation('/admin/login'), 1500);
+      }
+    },
+  });
+
+  // Toggle active mutation (inline switch — does not exit edit/view mode)
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      const response = await apiRequest('PATCH', `/api/admin/banners/${id}`, { isActive });
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
+      toast({
+        title: variables.isActive ? 'Banner turned ON' : 'Banner turned OFF',
+        description: variables.isActive
+          ? 'This banner is now visible on the homepage.'
+          : 'This banner is now hidden from the homepage.',
+      });
+    },
+    onError: (error: any) => {
+      const description = friendlyAuthError(error);
+      toast({
+        title: 'Could not update banner',
+        description,
+        variant: 'destructive',
+      });
+      if ((error?.message || '').startsWith('401')) {
+        setTimeout(() => setLocation('/admin/login'), 1500);
+      }
     },
   });
 
@@ -153,14 +196,26 @@ export default function AdminBanners() {
         description: 'The banner has been deleted successfully',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const description = friendlyAuthError(error);
       toast({
         title: 'Error deleting banner',
-        description: error.message,
+        description,
         variant: 'destructive',
       });
+      if ((error?.message || '').startsWith('401')) {
+        setTimeout(() => setLocation('/admin/login'), 1500);
+      }
     },
   });
+
+  const handleDeleteBanner = (banner: Banner) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${banner.title}"?\n\nThis cannot be undone.`,
+    );
+    if (!confirmed) return;
+    deleteBannerMutation.mutate(banner.id);
+  };
 
   const handleImageUpload = (file: File, isNew = false) => {
     const reader = new FileReader();
@@ -419,16 +474,38 @@ export default function AdminBanners() {
               </div>
             )}
             <div className="flex-1">
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-start mb-2 flex-wrap gap-2">
                 <h3 className="text-xl font-bold text-navy">{banner.title}</h3>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-md border border-gray-200">
+                    <Switch
+                      id={`toggle-active-${banner.id}`}
+                      checked={banner.isActive}
+                      disabled={
+                        toggleActiveMutation.isPending &&
+                        toggleActiveMutation.variables?.id === banner.id
+                      }
+                      onCheckedChange={(checked) =>
+                        toggleActiveMutation.mutate({ id: banner.id, isActive: checked })
+                      }
+                    />
+                    <Label
+                      htmlFor={`toggle-active-${banner.id}`}
+                      className={`text-xs font-semibold cursor-pointer ${
+                        banner.isActive ? 'text-green-700' : 'text-gray-500'
+                      }`}
+                    >
+                      {banner.isActive ? 'ON' : 'OFF'}
+                    </Label>
+                  </div>
                   <Button variant="outline" size="sm" onClick={() => setEditingBanner(banner)}>
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => deleteBannerMutation.mutate(banner.id)}
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
+                    onClick={() => handleDeleteBanner(banner)}
                     disabled={deleteBannerMutation.isPending}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -449,8 +526,7 @@ export default function AdminBanners() {
                   </a>
                 </p>
               )}
-              <div className="flex gap-4 text-sm text-gray-500">
-                <span>Status: {banner.isActive ? 'Active' : 'Inactive'}</span>
+              <div className="flex gap-4 text-sm text-gray-500 flex-wrap">
                 <span>Order: {banner.displayOrder}</span>
                 <span>Placement: {placementLabel(banner.placement)}</span>
               </div>

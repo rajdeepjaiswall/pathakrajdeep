@@ -21,9 +21,10 @@ const ABOUT_STYLES = `
   .about-scroll-reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1), transform 0.8s cubic-bezier(0.4,0,0.2,1); }
   .about-scroll-reveal.is-visible { opacity: 1; transform: translateY(0); }
 
-  .about-fade-stack { position: relative; }
   .about-fade-stack > .about-fade-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s ease-in-out; }
   .about-fade-stack > .about-fade-slide.is-active { opacity: 1; }
+  .about-fade-stack > .about-fade-slide > img,
+  .about-fade-stack > .about-fade-slide > video { width: 100%; height: 100%; object-fit: cover; display: block; }
 
   .about-grayscale-img { filter: grayscale(1); }
 

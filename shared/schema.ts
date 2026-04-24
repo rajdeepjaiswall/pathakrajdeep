@@ -296,6 +296,7 @@ export const aboutSections = pgTable("about_sections", {
   subtitle: text("subtitle"),
   description: text("description"),
   media: text("media").array().default([]),
+  mediaTypes: text("media_types").array().default([]),
   ctaText: text("cta_text"),
   ctaLink: text("cta_link"),
   isActive: boolean("is_active").default(true),

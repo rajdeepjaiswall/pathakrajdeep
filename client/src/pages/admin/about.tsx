@@ -8,11 +8,13 @@ import {
   ArrowUp,
   ArrowDown,
   Image as ImageIcon,
+  Video as VideoIcon,
   Eye,
   EyeOff,
   Save,
   Upload,
   ExternalLink,
+  Play,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -93,25 +95,45 @@ const fileToDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+type MediaType = 'image' | 'video';
 type BlockState = {
   title: string;
   subtitle: string;
   description: string;
   media: string[];
+  mediaTypes: MediaType[];
   ctaText: string;
   ctaLink: string;
   isActive: boolean;
 };
 
-const fromSection = (s: AboutSection): BlockState => ({
-  title: s.title || '',
-  subtitle: s.subtitle || '',
-  description: s.description || '',
-  media: (s.media || []).filter((m): m is string => typeof m === 'string'),
-  ctaText: s.ctaText || '',
-  ctaLink: s.ctaLink || '',
-  isActive: s.isActive ?? true,
-});
+const detectTypeFromUrl = (url: string): MediaType => {
+  if (!url) return 'image';
+  if (url.startsWith('data:video/')) return 'video';
+  if (url.startsWith('data:image/')) return 'image';
+  const lower = url.split('?')[0].toLowerCase();
+  if (/\.(mp4|webm|mov|m4v|ogv)$/.test(lower)) return 'video';
+  return 'image';
+};
+
+const fromSection = (s: AboutSection): BlockState => {
+  const media = (s.media || []).filter((m): m is string => typeof m === 'string');
+  const rawTypes = (s.mediaTypes || []) as string[];
+  const mediaTypes: MediaType[] = media.map((url, i) => {
+    const t = rawTypes[i];
+    return t === 'video' || t === 'image' ? t : detectTypeFromUrl(url);
+  });
+  return {
+    title: s.title || '',
+    subtitle: s.subtitle || '',
+    description: s.description || '',
+    media,
+    mediaTypes,
+    ctaText: s.ctaText || '',
+    ctaLink: s.ctaLink || '',
+    isActive: s.isActive ?? true,
+  };
+};
 
 const equal = (a: BlockState, b: BlockState) =>
   a.title === b.title &&
@@ -121,12 +143,14 @@ const equal = (a: BlockState, b: BlockState) =>
   a.ctaLink === b.ctaLink &&
   a.isActive === b.isActive &&
   a.media.length === b.media.length &&
-  a.media.every((m, i) => m === b.media[i]);
+  a.media.every((m, i) => m === b.media[i]) &&
+  a.mediaTypes.length === b.mediaTypes.length &&
+  a.mediaTypes.every((m, i) => m === b.mediaTypes[i]);
 
 const helperFor = (type: string) => {
   switch (type) {
     case 'hero':
-      return 'Tip: subtitle becomes the small overline text. Title is the giant headline. Add 1–3 background photos for the auto-rotating carousel.';
+      return 'Tip: subtitle is the small overline text, title is the giant headline, paragraph shows ~3 lines on the page. Add background photos AND/OR videos for the carousel — images stay 3 seconds each, videos play once and then advance to the next slide automatically.';
     case 'founder':
       return 'Tip: Title = founder name. Subtitle = role/year. Description = quote (no need for quote marks). Upload one portrait photo.';
     case 'story':
@@ -298,40 +322,70 @@ export default function AdminAbout() {
   const addMediaUrl = (id: number, url: string) => {
     const v = url.trim();
     if (!v) return;
+    const t = detectTypeFromUrl(v);
     setDrafts((prev) => ({
       ...prev,
-      [id]: { ...prev[id], media: [...(prev[id]?.media || []), v] },
+      [id]: {
+        ...prev[id],
+        media: [...(prev[id]?.media || []), v],
+        mediaTypes: [...(prev[id]?.mediaTypes || []), t],
+      },
     }));
   };
 
   const onMediaFile = async (id: number, file: File) => {
     try {
       const dataUrl = await fileToDataUrl(file);
+      const t: MediaType = file.type.startsWith('video/') ? 'video' : 'image';
       setDrafts((prev) => ({
         ...prev,
-        [id]: { ...prev[id], media: [...(prev[id]?.media || []), dataUrl] },
+        [id]: {
+          ...prev[id],
+          media: [...(prev[id]?.media || []), dataUrl],
+          mediaTypes: [...(prev[id]?.mediaTypes || []), t],
+        },
       }));
     } catch {
-      toast({ title: 'Could not read image', variant: 'destructive' });
+      toast({ title: 'Could not read file', variant: 'destructive' });
     }
   };
 
+  const setMediaType = (id: number, i: number, t: MediaType) => {
+    setDrafts((prev) => {
+      const cur = prev[id];
+      if (!cur) return prev;
+      const next = [...cur.mediaTypes];
+      next[i] = t;
+      return { ...prev, [id]: { ...cur, mediaTypes: next } };
+    });
+  };
+
   const removeMedia = (id: number, i: number) => {
-    setDrafts((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], media: prev[id].media.filter((_, idx) => idx !== i) },
-    }));
+    setDrafts((prev) => {
+      const cur = prev[id];
+      if (!cur) return prev;
+      return {
+        ...prev,
+        [id]: {
+          ...cur,
+          media: cur.media.filter((_, idx) => idx !== i),
+          mediaTypes: cur.mediaTypes.filter((_, idx) => idx !== i),
+        },
+      };
+    });
   };
 
   const moveMedia = (id: number, i: number, dir: -1 | 1) => {
     setDrafts((prev) => {
       const cur = prev[id];
       if (!cur) return prev;
-      const next = [...cur.media];
       const j = i + dir;
-      if (j < 0 || j >= next.length) return prev;
-      [next[i], next[j]] = [next[j], next[i]];
-      return { ...prev, [id]: { ...cur, media: next } };
+      if (j < 0 || j >= cur.media.length) return prev;
+      const nextMedia = [...cur.media];
+      const nextTypes = [...cur.mediaTypes];
+      [nextMedia[i], nextMedia[j]] = [nextMedia[j], nextMedia[i]];
+      [nextTypes[i], nextTypes[j]] = [nextTypes[j], nextTypes[i]];
+      return { ...prev, [id]: { ...cur, media: nextMedia, mediaTypes: nextTypes } };
     });
   };
 
@@ -345,6 +399,7 @@ export default function AdminAbout() {
       subtitle: '',
       description: '',
       media: [],
+      mediaTypes: [],
       ctaText: '',
       ctaLink: '',
       isActive: true,
@@ -528,60 +583,128 @@ export default function AdminAbout() {
                     </div>
 
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Label className="text-[#47160b]">Photos / Media</Label>
+                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                        <Label className="text-[#47160b]">
+                          {s.sectionType === 'hero' ? 'Background Media (photos & videos)' : 'Photos / Media'}
+                        </Label>
                         <span className="text-xs text-[#86736f]">
-                          {d.media.length} image{d.media.length === 1 ? '' : 's'}
+                          {(() => {
+                            const imgs = d.mediaTypes.filter((t) => t === 'image').length;
+                            const vids = d.mediaTypes.filter((t) => t === 'video').length;
+                            const total = d.media.length;
+                            if (total === 0) return 'No media yet';
+                            if (s.sectionType === 'hero' && vids > 0) {
+                              return `${total} item${total === 1 ? '' : 's'} (${imgs} image${imgs === 1 ? '' : 's'}, ${vids} video${vids === 1 ? '' : 's'})`;
+                            }
+                            return `${total} ${total === 1 ? 'item' : 'items'}`;
+                          })()}
                         </span>
                       </div>
 
                       {d.media.length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
-                          {d.media.map((src, i) => (
-                            <div
-                              key={`${src}-${i}`}
-                              className="relative group rounded-lg overflow-hidden border border-[#efe1d8] bg-[#efe7e1]"
-                            >
-                              <img
-                                src={src}
-                                alt=""
-                                className="w-full h-28 object-cover"
-                                data-testid={`media-preview-${s.id}-${i}`}
-                              />
-                              <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] font-bold rounded px-1.5 py-0.5">
-                                #{i + 1}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => removeMedia(s.id, i)}
-                                className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                title="Remove photo"
-                                data-testid={`button-remove-media-${s.id}-${i}`}
+                          {d.media.map((src, i) => {
+                            const t = d.mediaTypes[i] || 'image';
+                            return (
+                              <div
+                                key={`${src}-${i}`}
+                                className="relative group rounded-lg overflow-hidden border border-[#efe1d8] bg-[#efe7e1]"
                               >
-                                <X className="w-3 h-3" />
-                              </button>
-                              <div className="absolute bottom-1 left-1 right-1 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                                {t === 'video' ? (
+                                  <div className="relative w-full h-28">
+                                    <video
+                                      src={src}
+                                      className="w-full h-full object-cover"
+                                      muted
+                                      playsInline
+                                      preload="metadata"
+                                      data-testid={`media-preview-${s.id}-${i}`}
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                                      <div className="bg-white/90 rounded-full p-2">
+                                        <Play className="w-4 h-4 text-[#47160b] fill-[#47160b]" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={src}
+                                    alt=""
+                                    className="w-full h-28 object-cover"
+                                    data-testid={`media-preview-${s.id}-${i}`}
+                                  />
+                                )}
+
+                                <div className="absolute top-1 left-1 flex gap-1">
+                                  <span className="bg-black/60 text-white text-[10px] font-bold rounded px-1.5 py-0.5">
+                                    #{i + 1}
+                                  </span>
+                                  <span
+                                    className={`flex items-center gap-1 text-[10px] font-bold rounded px-1.5 py-0.5 text-white ${
+                                      t === 'video' ? 'bg-purple-600' : 'bg-blue-600'
+                                    }`}
+                                    data-testid={`media-type-badge-${s.id}-${i}`}
+                                  >
+                                    {t === 'video' ? (
+                                      <>
+                                        <VideoIcon className="w-2.5 h-2.5" />
+                                        VIDEO
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ImageIcon className="w-2.5 h-2.5" />
+                                        IMAGE
+                                      </>
+                                    )}
+                                  </span>
+                                </div>
+
                                 <button
                                   type="button"
-                                  onClick={() => moveMedia(s.id, i, -1)}
-                                  disabled={i === 0}
-                                  className="bg-black/70 text-white rounded p-0.5 disabled:opacity-30"
-                                  title="Move left"
+                                  onClick={() => removeMedia(s.id, i)}
+                                  className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Remove"
+                                  data-testid={`button-remove-media-${s.id}-${i}`}
                                 >
-                                  <ArrowUp className="w-3 h-3 rotate-[-90deg]" />
+                                  <X className="w-3 h-3" />
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => moveMedia(s.id, i, 1)}
-                                  disabled={i === d.media.length - 1}
-                                  className="bg-black/70 text-white rounded p-0.5 disabled:opacity-30"
-                                  title="Move right"
-                                >
-                                  <ArrowUp className="w-3 h-3 rotate-90" />
-                                </button>
+
+                                <div className="absolute bottom-1 left-1 right-1 flex justify-between gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => moveMedia(s.id, i, -1)}
+                                      disabled={i === 0}
+                                      className="bg-black/70 text-white rounded p-0.5 disabled:opacity-30"
+                                      title="Move left"
+                                    >
+                                      <ArrowUp className="w-3 h-3 rotate-[-90deg]" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveMedia(s.id, i, 1)}
+                                      disabled={i === d.media.length - 1}
+                                      className="bg-black/70 text-white rounded p-0.5 disabled:opacity-30"
+                                      title="Move right"
+                                    >
+                                      <ArrowUp className="w-3 h-3 rotate-90" />
+                                    </button>
+                                  </div>
+                                  {s.sectionType === 'hero' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setMediaType(s.id, i, t === 'video' ? 'image' : 'video')}
+                                      className="bg-black/70 text-white rounded px-1.5 py-0.5 text-[10px] font-bold"
+                                      title={`Switch to ${t === 'video' ? 'IMAGE' : 'VIDEO'}`}
+                                      data-testid={`button-toggle-type-${s.id}-${i}`}
+                                    >
+                                      → {t === 'video' ? 'IMG' : 'VID'}
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
 
@@ -592,10 +715,10 @@ export default function AdminAbout() {
                           data-testid={`label-upload-${s.id}`}
                         >
                           <Upload className="w-4 h-4 text-[#9b4518]" />
-                          Upload from device
+                          {s.sectionType === 'hero' ? 'Upload image or video' : 'Upload from device'}
                           <input
                             type="file"
-                            accept="image/*"
+                            accept={s.sectionType === 'hero' ? 'image/*,video/*' : 'image/*'}
                             className="hidden"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
@@ -605,6 +728,11 @@ export default function AdminAbout() {
                           />
                         </label>
                       </div>
+                      {s.sectionType === 'hero' && (
+                        <p className="text-[11px] text-[#86736f] mt-2 leading-relaxed">
+                          Carousel rules: images stay <strong>3 seconds</strong> with fade/zoom; videos play <strong>once muted</strong> and auto-advance to the next slide; if a video fails it skips to the next item.
+                        </p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

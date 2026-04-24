@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import Header from '@/components/layout/header';
@@ -26,6 +26,13 @@ const ABOUT_STYLES = `
   .about-fade-stack > .about-fade-slide.is-active { opacity: 1; }
 
   .about-grayscale-img { filter: grayscale(1); }
+
+  .about-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 `;
 
 // ---------------- Hooks ----------------
@@ -63,26 +70,131 @@ const hasContent = (s: AboutSection) => {
 const cleanMedia = (m: string[] | null | undefined): string[] =>
   (m || []).filter((u) => typeof u === 'string' && u.trim().length > 0);
 
+const detectMediaTypeFromUrl = (url: string): 'image' | 'video' => {
+  if (!url) return 'image';
+  if (url.startsWith('data:video/')) return 'video';
+  if (url.startsWith('data:image/')) return 'image';
+  const lower = url.split('?')[0].toLowerCase();
+  if (/\.(mp4|webm|mov|m4v|ogv)$/.test(lower)) return 'video';
+  return 'image';
+};
+
+type HeroSlide = { url: string; type: 'image' | 'video' };
+
+const HERO_IMAGE_DURATION_MS = 3000;
+
 // ---------------- Section renderers ----------------
 
 function HeroSection({ section }: { section: AboutSection }) {
-  const media = cleanMedia(section.media);
-  const slides = media.length > 0 ? media : [''];
-  const [active] = useAutoIndex(slides.length, 6000);
+  const slides: HeroSlide[] = useMemo(() => {
+    const urls = cleanMedia(section.media);
+    const types = (section.mediaTypes || []) as string[];
+    return urls.map((url, i) => {
+      const declared = types[i];
+      const type: 'image' | 'video' =
+        declared === 'video' || declared === 'image'
+          ? declared
+          : detectMediaTypeFromUrl(url);
+      return { url, type };
+    });
+  }, [section.media, section.mediaTypes]);
+
+  const hasSlides = slides.length > 0;
+  const [active, setActive] = useState(0);
+  const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+
+  // Reset position if media list changes
+  useEffect(() => {
+    setActive(0);
+  }, [slides.length]);
+
+  const advance = useCallback(() => {
+    setActive((i) => (slides.length > 0 ? (i + 1) % slides.length : 0));
+  }, [slides.length]);
+
+  // Image autoplay timer (3s). Skipped for videos — they advance on `ended`.
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const cur = slides[active];
+    if (!cur || cur.type !== 'image') return;
+    const t = setTimeout(advance, HERO_IMAGE_DURATION_MS);
+    return () => clearTimeout(t);
+  }, [active, slides, advance]);
+
+  // Drive video playback in sync with active index.
+  useEffect(() => {
+    slides.forEach((s, i) => {
+      const v = videoRefs.current[i];
+      if (!v) return;
+      if (s.type !== 'video') return;
+      if (i === active) {
+        try {
+          v.currentTime = 0;
+          const p = v.play();
+          if (p && typeof p.catch === 'function') {
+            p.catch(() => {
+              // Autoplay blocked or playback failed — skip to next slide
+              if (slides.length > 1) advance();
+            });
+          }
+        } catch {
+          if (slides.length > 1) advance();
+        }
+      } else {
+        try {
+          v.pause();
+        } catch {}
+      }
+    });
+  }, [active, slides, advance]);
 
   return (
-    <section className="relative h-[80vh] md:h-[85vh] overflow-hidden bg-gradient-to-br from-[#47160b] to-[#9b4518]" data-testid="about-hero">
+    <section
+      className="relative h-[80vh] md:h-[85vh] overflow-hidden bg-gradient-to-br from-[#47160b] to-[#9b4518]"
+      data-testid="about-hero"
+    >
       {/* Background carousel */}
       <div className="about-fade-stack absolute inset-0 z-0">
-        {slides.map((src, i) => (
-          <div key={i} className={`about-fade-slide ${i === active ? 'is-active' : ''}`}>
-            {src ? (
-              <img src={src} alt="" className="w-full h-full object-cover about-ken-burns" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#47160b] to-[#9b4518]" />
-            )}
+        {hasSlides ? (
+          slides.map((s, i) => (
+            <div key={`${s.url}-${i}`} className={`about-fade-slide ${i === active ? 'is-active' : ''}`}>
+              {s.type === 'video' ? (
+                <video
+                  ref={(el) => {
+                    videoRefs.current[i] = el;
+                  }}
+                  src={s.url}
+                  className="w-full h-full object-cover"
+                  muted
+                  playsInline
+                  preload="metadata"
+                  autoPlay={i === 0}
+                  onEnded={() => {
+                    if (slides.length > 1) advance();
+                  }}
+                  onError={() => {
+                    if (slides.length > 1) advance();
+                  }}
+                  data-testid={`hero-video-${i}`}
+                />
+              ) : (
+                <img
+                  src={s.url}
+                  alt=""
+                  className="w-full h-full object-cover about-ken-burns"
+                  onError={() => {
+                    if (slides.length > 1 && i === active) advance();
+                  }}
+                  data-testid={`hero-image-${i}`}
+                />
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="about-fade-slide is-active">
+            <div className="w-full h-full bg-gradient-to-br from-[#47160b] to-[#9b4518]" />
           </div>
-        ))}
+        )}
       </div>
       {/* Always-on dark overlay for text legibility */}
       <div className="absolute inset-0 z-[1] bg-black/55" />
@@ -91,7 +203,10 @@ function HeroSection({ section }: { section: AboutSection }) {
       <div className="relative z-10 h-full flex items-center justify-center text-center px-6">
         <div className="max-w-4xl space-y-7 text-white">
           {section.subtitle && (
-            <p className="text-sm md:text-base uppercase tracking-[0.3em] font-bold text-[#ffb595] about-fade-in-up">
+            <p
+              className="text-sm md:text-base uppercase tracking-[0.3em] font-bold text-[#ffb595] about-fade-in-up"
+              data-testid="hero-overline"
+            >
               {section.subtitle}
             </p>
           )}
@@ -99,14 +214,16 @@ function HeroSection({ section }: { section: AboutSection }) {
             <h1
               className="newsreader text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] about-fade-in-up"
               style={{ animationDelay: '100ms' }}
+              data-testid="hero-heading"
             >
               {section.title}
             </h1>
           )}
           {section.description && (
             <p
-              className="text-base md:text-xl max-w-2xl mx-auto opacity-90 about-fade-in-up"
+              className="text-base md:text-xl max-w-2xl mx-auto opacity-90 about-fade-in-up about-clamp-3"
               style={{ animationDelay: '250ms' }}
+              data-testid="hero-description"
             >
               {section.description}
             </p>
@@ -116,6 +233,7 @@ function HeroSection({ section }: { section: AboutSection }) {
               <a
                 href={section.ctaLink || '#'}
                 className="bg-[#47160b] text-white px-8 py-4 md:px-10 md:py-5 rounded-xl font-bold text-base md:text-lg hover:scale-105 transition-all shadow-2xl flex items-center gap-3"
+                data-testid="hero-cta"
               >
                 {section.ctaText}
                 <ArrowRight className="w-5 h-5" />

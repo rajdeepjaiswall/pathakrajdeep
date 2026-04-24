@@ -2562,24 +2562,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ================= ABOUT US SECTIONS =================
-  // Helper to upload any base64 data URLs in a media array to R2
-  const processAboutMedia = async (media: any): Promise<string[]> => {
-    if (!Array.isArray(media)) return [];
-    const out: string[] = [];
-    for (const item of media) {
+  // Detect media type (image/video) from a URL or data URL
+  const detectMediaType = (item: string): 'image' | 'video' => {
+    if (!item) return 'image';
+    if (item.startsWith('data:video/')) return 'video';
+    if (item.startsWith('data:image/')) return 'image';
+    const lower = item.split('?')[0].toLowerCase();
+    if (/\.(mp4|webm|mov|m4v|ogv)$/.test(lower)) return 'video';
+    return 'image';
+  };
+
+  // Process media + parallel mediaTypes arrays. Uploads any base64 data URLs to R2.
+  // Returns aligned arrays so media[i] always pairs with mediaTypes[i].
+  const processAboutMediaPair = async (
+    media: any,
+    mediaTypes: any,
+  ): Promise<{ media: string[]; mediaTypes: string[] }> => {
+    if (!Array.isArray(media)) return { media: [], mediaTypes: [] };
+    const typesIn = Array.isArray(mediaTypes) ? mediaTypes : [];
+    const outMedia: string[] = [];
+    const outTypes: string[] = [];
+    for (let i = 0; i < media.length; i++) {
+      const item = media[i];
       if (typeof item !== 'string' || !item.trim()) continue;
+      const declared = typeof typesIn[i] === 'string' ? typesIn[i] : '';
+      const folder = (declared === 'video' || detectMediaType(item) === 'video')
+        ? 'about-sections/videos'
+        : 'about-sections/images';
+      let finalUrl = item;
       if (isR2Configured() && item.startsWith('data:')) {
         try {
-          const url = await uploadBase64ToR2(item, 'about-sections');
-          out.push(url);
+          finalUrl = await uploadBase64ToR2(item, folder);
         } catch (e) {
-          // skip failed upload, keep going
+          continue; // skip failed upload
         }
-      } else {
-        out.push(item);
       }
+      outMedia.push(finalUrl);
+      outTypes.push(declared === 'video' || declared === 'image' ? declared : detectMediaType(finalUrl));
     }
-    return out;
+    return { media: outMedia, mediaTypes: outTypes };
   };
 
   // Public read — active sections only, ordered by displayOrder
@@ -2606,7 +2627,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const body = { ...req.body };
       if (body.media) {
-        body.media = await processAboutMedia(body.media);
+        const { media, mediaTypes } = await processAboutMediaPair(body.media, body.mediaTypes);
+        body.media = media;
+        body.mediaTypes = mediaTypes;
       }
       const section = await storage.createAboutSection(body);
       res.json(section);
@@ -2620,7 +2643,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const body = { ...req.body };
       if (body.media) {
-        body.media = await processAboutMedia(body.media);
+        const { media, mediaTypes } = await processAboutMediaPair(body.media, body.mediaTypes);
+        body.media = media;
+        body.mediaTypes = mediaTypes;
       }
       const section = await storage.updateAboutSection(id, body);
       res.json(section);

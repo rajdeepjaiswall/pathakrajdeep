@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Save, X, Upload, Video, Image, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Upload, Video, Image, ChevronDown, ChevronRight, Megaphone, Eye, EyeOff, MousePointerClick } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +10,20 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
 import VideoUploader from '@/components/VideoUploader';
+import type { PopupBanner } from '@shared/schema';
 
 interface Banner {
   id: number;
@@ -63,6 +71,18 @@ export default function AdminBanners() {
     placement: 'hero',
   });
   const [bannerType, setBannerType] = useState<'image' | 'video'>('image');
+
+  // Popup ad state
+  const [isPopupDialogOpen, setIsPopupDialogOpen] = useState(false);
+  const [editingPopup, setEditingPopup] = useState<PopupBanner | null>(null);
+  const [popupForm, setPopupForm] = useState({
+    title: '',
+    imageUrl: '',
+    linkUrl: '',
+    triggerType: 'page_load' as 'page_load' | 'login',
+    showOnce: true,
+    isActive: true,
+  });
 
   // Redirect if not admin
   if (authLoading) {
@@ -215,6 +235,169 @@ export default function AdminBanners() {
     );
     if (!confirmed) return;
     deleteBannerMutation.mutate(banner.id);
+  };
+
+  // ===== Popup ad mutations =====
+  const { data: popupBanners = [] } = useQuery<PopupBanner[]>({
+    queryKey: ['/api/admin/popup-banners'],
+  });
+
+  const resetPopupForm = () => {
+    setPopupForm({
+      title: '',
+      imageUrl: '',
+      linkUrl: '',
+      triggerType: 'page_load',
+      showOnce: true,
+      isActive: true,
+    });
+    setEditingPopup(null);
+  };
+
+  const openCreatePopupDialog = () => {
+    resetPopupForm();
+    setIsPopupDialogOpen(true);
+  };
+
+  const openEditPopupDialog = (popup: PopupBanner) => {
+    setEditingPopup(popup);
+    setPopupForm({
+      title: popup.title || '',
+      imageUrl: popup.imageUrl || '',
+      linkUrl: popup.linkUrl || '',
+      triggerType: (popup.triggerType as 'page_load' | 'login') || 'page_load',
+      showOnce: popup.showOnce ?? true,
+      isActive: popup.isActive ?? true,
+    });
+    setIsPopupDialogOpen(true);
+  };
+
+  const handlePopupImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPopupForm((prev) => ({ ...prev, imageUrl: (event.target?.result as string) || '' }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const createPopupMutation = useMutation({
+    mutationFn: async (data: typeof popupForm) => {
+      const res = await apiRequest('POST', '/api/admin/popup-banners', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/popup-banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/popup-banners/active'] });
+      setIsPopupDialogOpen(false);
+      resetPopupForm();
+      toast({ title: 'Popup ad created', description: 'Your popup ad is live now.' });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Could not create popup ad',
+        description: friendlyAuthError(error),
+        variant: 'destructive',
+      });
+      if ((error?.message || '').startsWith('401')) {
+        setTimeout(() => setLocation('/admin/login'), 1500);
+      }
+    },
+  });
+
+  const updatePopupMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<typeof popupForm> }) => {
+      const res = await apiRequest('PATCH', `/api/admin/popup-banners/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/popup-banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/popup-banners/active'] });
+      setIsPopupDialogOpen(false);
+      resetPopupForm();
+      toast({ title: 'Popup ad updated' });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Could not update popup ad',
+        description: friendlyAuthError(error),
+        variant: 'destructive',
+      });
+      if ((error?.message || '').startsWith('401')) {
+        setTimeout(() => setLocation('/admin/login'), 1500);
+      }
+    },
+  });
+
+  const togglePopupActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      const res = await apiRequest('PATCH', `/api/admin/popup-banners/${id}`, { isActive });
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/popup-banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/popup-banners/active'] });
+      toast({
+        title: variables.isActive ? 'Popup ad turned ON' : 'Popup ad turned OFF',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Could not update popup ad',
+        description: friendlyAuthError(error),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deletePopupMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/admin/popup-banners/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/popup-banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/popup-banners/active'] });
+      toast({ title: 'Popup ad deleted' });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Could not delete popup ad',
+        description: friendlyAuthError(error),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSavePopup = () => {
+    if (!popupForm.title.trim()) {
+      toast({
+        title: 'Title required',
+        description: 'Please give the popup ad a title.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!popupForm.imageUrl) {
+      toast({
+        title: 'Image required',
+        description: 'Please upload an image for the popup ad.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (editingPopup) {
+      updatePopupMutation.mutate({ id: editingPopup.id, data: popupForm });
+    } else {
+      createPopupMutation.mutate(popupForm);
+    }
+  };
+
+  const handleDeletePopup = (popup: PopupBanner) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the popup ad "${popup.title}"?\n\nThis cannot be undone.`,
+    );
+    if (!confirmed) return;
+    deletePopupMutation.mutate(popup.id);
   };
 
   const handleImageUpload = (file: File, isNew = false) => {
@@ -550,13 +733,41 @@ export default function AdminBanners() {
               Manage the hero carousel and modular banner blocks across the homepage
             </p>
           </div>
-          <Button
-            onClick={() => startCreating('hero')}
-            className="bg-champagne text-navy hover:bg-champagne/80"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Banner Block
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-champagne text-navy hover:bg-champagne/80">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Banner
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuItem
+                onClick={() => startCreating('hero')}
+                className="cursor-pointer py-3"
+              >
+                <Image className="h-4 w-4 mr-3 text-navy" />
+                <div>
+                  <div className="font-semibold text-navy">Banner Block</div>
+                  <div className="text-xs text-gray-500">
+                    Hero carousel or in-page section banner
+                  </div>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={openCreatePopupDialog}
+                className="cursor-pointer py-3"
+              >
+                <Megaphone className="h-4 w-4 mr-3 text-navy" />
+                <div>
+                  <div className="font-semibold text-navy">Popup Ad</div>
+                  <div className="text-xs text-gray-500">
+                    Dismissible popup shown to customers
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Create Banner Form */}
@@ -805,8 +1016,320 @@ export default function AdminBanners() {
               </div>
             );
           })}
+
+          {/* ===== Popup Ads section ===== */}
+          <div className="border-2 border-gray-200 rounded-xl p-4 bg-white mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Megaphone className="h-6 w-6 text-navy" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-navy">Popup Ads</h2>
+                    <Badge variant="secondary" className="bg-navy text-white">
+                      {popupBanners.length}{' '}
+                      {popupBanners.length === 1 ? 'item' : 'items'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Dismissible popup ads shown to customers automatically or after sign in
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={openCreatePopupDialog}
+                variant="outline"
+                size="sm"
+                className="border-champagne text-navy hover:bg-champagne/20"
+                data-testid="button-add-popup-ad"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Popup Ad
+              </Button>
+            </div>
+
+            {popupBanners.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-lg">
+                No popup ads yet
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {popupBanners.map((popup) => (
+                  <div
+                    key={popup.id}
+                    data-testid={`card-popup-${popup.id}`}
+                    className="border rounded-lg overflow-hidden bg-white"
+                  >
+                    {popup.imageUrl ? (
+                      <img
+                        src={popup.imageUrl}
+                        alt={popup.title}
+                        className="w-full h-40 object-cover bg-gray-50"
+                      />
+                    ) : (
+                      <div className="w-full h-40 bg-gray-50 flex items-center justify-center text-gray-300">
+                        <Image className="h-10 w-10" />
+                      </div>
+                    )}
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold text-navy line-clamp-1">
+                          {popup.title}
+                        </h3>
+                        {popup.isActive ? (
+                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 shrink-0">
+                            <Eye className="h-3 w-3 mr-1" />
+                            On
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="shrink-0">
+                            <EyeOff className="h-3 w-3 mr-1" />
+                            Off
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <div>
+                          Trigger:{' '}
+                          <span className="font-medium text-navy">
+                            {popup.triggerType === 'login'
+                              ? 'After Sign In'
+                              : 'Automatic Display'}
+                          </span>
+                        </div>
+                        {popup.linkUrl && (
+                          <div className="flex items-center gap-1 truncate">
+                            <MousePointerClick className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{popup.linkUrl}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={popup.isActive ?? false}
+                            onCheckedChange={(checked) =>
+                              togglePopupActiveMutation.mutate({
+                                id: popup.id,
+                                isActive: checked,
+                              })
+                            }
+                            disabled={togglePopupActiveMutation.isPending}
+                            data-testid={`switch-popup-active-${popup.id}`}
+                          />
+                          <span className="text-xs text-gray-600">
+                            {popup.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditPopupDialog(popup)}
+                            data-testid={`button-edit-popup-${popup.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => handleDeletePopup(popup)}
+                            data-testid={`button-delete-popup-${popup.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* ===== Popup Ad Create / Edit Dialog ===== */}
+      <Dialog
+        open={isPopupDialogOpen}
+        onOpenChange={(open) => {
+          setIsPopupDialogOpen(open);
+          if (!open) resetPopupForm();
+        }}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPopup ? 'Edit Popup Ad' : 'Create Popup Ad'}
+            </DialogTitle>
+            <DialogDescription>
+              Upload a banner image, add a link, and choose when to show it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label htmlFor="popup-title">Title</Label>
+              <Input
+                id="popup-title"
+                value={popupForm.title}
+                onChange={(e) =>
+                  setPopupForm({ ...popupForm, title: e.target.value })
+                }
+                placeholder="e.g. Diwali Special Offer"
+                data-testid="input-popup-title"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                For internal use — won't be shown if an image is uploaded.
+              </p>
+            </div>
+
+            <div>
+              <Label>Banner Image</Label>
+              {popupForm.imageUrl ? (
+                <div className="relative mt-2 rounded-lg overflow-hidden border">
+                  <img
+                    src={popupForm.imageUrl}
+                    alt="Preview"
+                    className="w-full max-h-64 object-contain bg-gray-50"
+                    data-testid="img-popup-preview"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 bg-white/90 hover:bg-white"
+                    onClick={() =>
+                      setPopupForm({ ...popupForm, imageUrl: '' })
+                    }
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="mt-2 flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-500">
+                    Click to upload an image
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handlePopupImageUpload(file);
+                    }}
+                    data-testid="input-popup-image"
+                  />
+                </label>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="popup-link">Link URL</Label>
+              <Input
+                id="popup-link"
+                value={popupForm.linkUrl}
+                onChange={(e) =>
+                  setPopupForm({ ...popupForm, linkUrl: e.target.value })
+                }
+                placeholder="https://... or /shop/diwali"
+                data-testid="input-popup-link"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Where customers will go when they click the popup. Leave blank for no link.
+              </p>
+            </div>
+
+            <div>
+              <Label>When to show</Label>
+              <Select
+                value={popupForm.triggerType}
+                onValueChange={(v) =>
+                  setPopupForm({
+                    ...popupForm,
+                    triggerType: v as 'page_load' | 'login',
+                  })
+                }
+              >
+                <SelectTrigger
+                  className="mt-1"
+                  data-testid="select-popup-trigger"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="page_load">
+                    Automatic display (when page loads)
+                  </SelectItem>
+                  <SelectItem value="login">After sign in</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label className="text-sm">Show only once per customer</Label>
+                <p className="text-xs text-gray-500">
+                  After they close it, it won't show again.
+                </p>
+              </div>
+              <Switch
+                checked={popupForm.showOnce}
+                onCheckedChange={(checked) =>
+                  setPopupForm({ ...popupForm, showOnce: checked })
+                }
+                data-testid="switch-popup-show-once"
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label className="text-sm">Active</Label>
+                <p className="text-xs text-gray-500">
+                  Turn off to hide the popup without deleting it.
+                </p>
+              </div>
+              <Switch
+                checked={popupForm.isActive}
+                onCheckedChange={(checked) =>
+                  setPopupForm({ ...popupForm, isActive: checked })
+                }
+                data-testid="switch-popup-is-active"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setIsPopupDialogOpen(false);
+                  resetPopupForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-champagne text-navy hover:bg-champagne/80"
+                onClick={handleSavePopup}
+                disabled={
+                  createPopupMutation.isPending || updatePopupMutation.isPending
+                }
+                data-testid="button-save-popup"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {createPopupMutation.isPending || updatePopupMutation.isPending
+                  ? 'Saving...'
+                  : editingPopup
+                  ? 'Update Popup Ad'
+                  : 'Create Popup Ad'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

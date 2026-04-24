@@ -2514,6 +2514,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Popup Banners - Admin management (mirrors super-admin endpoints; available to admin + super_admin)
+  app.get("/api/admin/popup-banners", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const banners = await storage.getPopupBanners();
+      res.json(banners);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/popup-banners", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const body = { ...req.body };
+      if (isR2Configured() && body.imageUrl && typeof body.imageUrl === 'string' && body.imageUrl.startsWith('data:')) {
+        body.imageUrl = await uploadBase64ToR2(body.imageUrl, 'popup-banners');
+      }
+      const banner = await storage.createPopupBanner({ ...body, createdBy: req.user.id });
+      res.json(banner);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/popup-banners/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const body = { ...req.body };
+      if (isR2Configured() && body.imageUrl && typeof body.imageUrl === 'string' && body.imageUrl.startsWith('data:')) {
+        body.imageUrl = await uploadBase64ToR2(body.imageUrl, 'popup-banners');
+      }
+      const banner = await storage.updatePopupBanner(id, body);
+      res.json(banner);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/popup-banners/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deletePopupBanner(id);
+      res.json({ message: "Popup banner deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin Management - Super Admin only
   app.get("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {

@@ -179,6 +179,7 @@ export const banners = pgTable("banners", {
   linkId: integer("link_id"), // Product or category ID if applicable
   isActive: boolean("is_active").default(true),
   displayOrder: integer("display_order").default(0),
+  placement: text("placement").default("hero").notNull(), // "hero", "after_featured", "after_trending", "after_zero_products", "after_chef_editorial"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

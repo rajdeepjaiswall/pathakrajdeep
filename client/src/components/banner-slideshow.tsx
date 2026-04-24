@@ -18,11 +18,17 @@ interface Banner {
   linkId: number | null;
   isActive: boolean;
   displayOrder: number;
+  placement?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export default function BannerSlideshow() {
+interface BannerSlideshowProps {
+  placement?: string;
+  hideWhenEmpty?: boolean;
+}
+
+export default function BannerSlideshow({ placement = 'hero', hideWhenEmpty = false }: BannerSlideshowProps = {}) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [videoEndTimer, setVideoEndTimer] = useState<NodeJS.Timeout | null>(null);
@@ -32,7 +38,9 @@ export default function BannerSlideshow() {
     queryKey: ['/api/banners'],
   });
 
-  const activeBanners = (banners as Banner[]).filter((banner: Banner) => banner.isActive);
+  const activeBanners = (banners as Banner[])
+    .filter((banner: Banner) => banner.isActive)
+    .filter((banner: Banner) => (banner.placement || 'hero') === placement);
 
   // Clear existing interval when setting up new one
   const clearAutoSlide = () => {
@@ -157,10 +165,12 @@ export default function BannerSlideshow() {
   };
 
   if (isLoading) {
+    if (hideWhenEmpty) return null;
     return <LoadingSkeleton type="banner" className="h-[200px] md:h-[250px]" />;
   }
 
   if (activeBanners.length === 0) {
+    if (hideWhenEmpty) return null;
     return (
       <div className="h-[200px] md:h-[250px] bg-gradient-to-br from-almond to-cream flex items-center justify-center rounded-lg">
         <div className="text-center text-navy/60 p-8">

@@ -149,8 +149,22 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Banner Block: After Featured */}
+      <section className="px-4 sm:px-6 lg:px-8 pt-2">
+        <div className="max-w-7xl mx-auto">
+          <BannerSlideshow placement="after_featured" hideWhenEmpty />
+        </div>
+      </section>
+
       {/* Trending in Prayagraj — below Featured Products */}
       <TrendingSection />
+
+      {/* Banner Block: After Trending */}
+      <section className="px-4 sm:px-6 lg:px-8 pt-2">
+        <div className="max-w-7xl mx-auto">
+          <BannerSlideshow placement="after_trending" hideWhenEmpty />
+        </div>
+      </section>
 
       {/* Mini Banner Slideshow */}
       <div className="pt-2 pb-3 bg-background">
@@ -162,8 +176,22 @@ export default function Home() {
       {/* Deal of the Day */}
       <ProductOfDay />
 
+      {/* Banner Block: After Zero Products (after Product of the Day) */}
+      <section className="px-4 sm:px-6 lg:px-8 pt-2">
+        <div className="max-w-7xl mx-auto">
+          <BannerSlideshow placement="after_zero_products" hideWhenEmpty />
+        </div>
+      </section>
+
       {/* Chef Editorial Picks */}
       <ChefEditorial />
+
+      {/* Banner Block: After Chef Editorial */}
+      <section className="px-4 sm:px-6 lg:px-8 pt-2">
+        <div className="max-w-7xl mx-auto">
+          <BannerSlideshow placement="after_chef_editorial" hideWhenEmpty />
+        </div>
+      </section>
 
       {/* Customer Testimonials */}
       <Testimonials />

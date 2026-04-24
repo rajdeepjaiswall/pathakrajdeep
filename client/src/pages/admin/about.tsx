@@ -174,10 +174,16 @@ export default function AdminAbout() {
   const [addOpen, setAddOpen] = useState(false);
   const [newType, setNewType] = useState<string>('hero');
 
-  const { data: sections = [], isLoading } = useQuery<AboutSection[]>({
+  const { data: sections = [], isLoading, isError, error, refetch } = useQuery<AboutSection[]>({
     queryKey: ['/api/admin/about-sections'],
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
   });
+
+  const errorStatus = (() => {
+    const msg = (error as any)?.message || '';
+    const m = msg.match(/^(\d{3}):/);
+    return m ? Number(m[1]) : null;
+  })();
 
   const sortedSections = useMemo(
     () =>
@@ -443,6 +449,46 @@ export default function AdminAbout() {
               <div key={i} className="h-64 bg-white/60 rounded-xl animate-pulse" />
             ))}
           </div>
+        ) : isError ? (
+          <Card className="border-dashed border-red-300 bg-red-50/40">
+            <CardContent className="py-12 text-center">
+              <p className="text-red-700 font-bold text-lg mb-1">
+                {errorStatus === 401 || errorStatus === 403
+                  ? 'Your session has expired'
+                  : 'Could not load the About Us blocks'}
+              </p>
+              <p className="text-[#534340] text-sm mb-6 max-w-md mx-auto">
+                {errorStatus === 401 || errorStatus === 403
+                  ? 'Please sign in again as an admin to load and edit the blocks. Your existing blocks are safe in the database.'
+                  : 'Something went wrong while loading. Please try again. If the problem continues, sign out and sign in again.'}
+              </p>
+              <div className="flex justify-center gap-2 flex-wrap">
+                <Button
+                  onClick={() => refetch()}
+                  variant="outline"
+                  className="border-[#47160b] text-[#47160b] hover:bg-[#47160b] hover:text-white"
+                  data-testid="button-retry-load"
+                >
+                  Try Again
+                </Button>
+                {(errorStatus === 401 || errorStatus === 403) && (
+                  <Button
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                      } catch {}
+                      setLocation('/admin/login');
+                    }}
+                    className="bg-[#47160b] hover:bg-[#632b1e] text-white"
+                    data-testid="button-relogin"
+                  >
+                    Sign In Again
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         ) : sortedSections.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">

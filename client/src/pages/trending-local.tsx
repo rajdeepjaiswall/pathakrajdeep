@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ChevronLeft, ChevronRight, ShoppingCart, X } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
 import Header from '@/components/layout/header';
@@ -64,6 +64,7 @@ type Slide = { url: string; type: 'image' | 'video' };
 function ProductMediaCarousel({ slides, productName }: { slides: Slide[]; productName: string }) {
   const [active, setActive] = useState(0);
   const [failed, setFailed] = useState<Set<number>>(new Set());
+  const [loaded, setLoaded] = useState<Set<number>>(new Set());
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const touchStartX = useRef<number | null>(null);
 
@@ -89,10 +90,18 @@ function ProductMediaCarousel({ slides, productName }: { slides: Slide[]; produc
       return n;
     });
     if (idx === safeActive) {
-      // Auto-advance to next still-visible slide
       const remaining = visibleIdx.filter((i) => i !== idx);
       if (remaining.length > 0) setActive(remaining[0]);
     }
+  };
+
+  const markLoaded = (idx: number) => {
+    setLoaded((prev) => {
+      if (prev.has(idx)) return prev;
+      const n = new Set(prev);
+      n.add(idx);
+      return n;
+    });
   };
 
   // Pause non-active videos; play the active one
@@ -128,21 +137,38 @@ function ProductMediaCarousel({ slides, productName }: { slides: Slide[]; produc
 
   if (visibleCount === 0) return null;
 
+  const activeLoaded = loaded.has(safeActive);
+
   return (
     <div
-      className="relative w-full bg-[#EDE3D3] flex items-center justify-center select-none"
-      style={{ minHeight: '14rem', maxHeight: '70vh' }}
+      className="relative w-full bg-[#EDE3D3] select-none"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
+      {/* Loading spinner — visible until the active slide reports it has loaded */}
+      {!activeLoaded && (
+        <div className="w-full flex items-center justify-center" style={{ minHeight: '18rem' }} data-testid="popup-loader">
+          <Loader2 className="animate-spin h-10 w-10 text-[#3E2723]/50" />
+        </div>
+      )}
+
       {slides.map((s, i) => {
         if (failed.has(i)) return null;
         const isActive = i === safeActive;
+        const isLoaded = loaded.has(i);
+        // Active + not yet loaded → keep the element in DOM but invisible (so onLoad fires) above the spinner
+        // Active + loaded → show normally
+        // Inactive → keep mounted (so they preload and videos stay paused) but hidden via display:none
+        const showBlock = isActive && isLoaded;
+        const wrapperStyle: React.CSSProperties = isActive
+          ? (isLoaded ? {} : { position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' })
+          : { display: 'none' };
+
         return (
           <div
             key={`${s.url}-${i}`}
-            className={`${isActive ? 'relative' : 'absolute inset-0 invisible pointer-events-none'} w-full flex items-center justify-center`}
-            style={{ maxHeight: '70vh' }}
+            className={`w-full ${showBlock ? 'block' : ''}`}
+            style={wrapperStyle}
           >
             {s.type === 'video' ? (
               <video
@@ -150,12 +176,13 @@ function ProductMediaCarousel({ slides, productName }: { slides: Slide[]; produc
                   videoRefs.current[i] = el;
                 }}
                 src={s.url}
-                className="block max-w-full mx-auto"
-                style={{ maxHeight: '70vh', width: 'auto', height: 'auto', objectFit: 'contain' }}
+                className="block w-full h-auto"
                 muted
                 playsInline
                 autoPlay={isActive}
                 controls={false}
+                preload="metadata"
+                onLoadedData={() => markLoaded(i)}
                 onError={() => markFailed(i)}
                 data-testid={`popup-video-${i}`}
               />
@@ -163,8 +190,8 @@ function ProductMediaCarousel({ slides, productName }: { slides: Slide[]; produc
               <img
                 src={s.url}
                 alt={productName}
-                className="block max-w-full mx-auto"
-                style={{ maxHeight: '70vh', width: 'auto', height: 'auto', objectFit: 'contain' }}
+                className="block w-full h-auto"
+                onLoad={() => markLoaded(i)}
                 onError={() => markFailed(i)}
                 data-testid={`popup-image-${i}`}
               />
@@ -236,10 +263,11 @@ function ProductModal({ product, onClose }: { product: any; onClose: () => void 
         className="relative bg-[#F5EFE6] rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 duration-300 overflow-hidden max-h-[95vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        {slides.length > 0 && (
-          <ProductMediaCarousel slides={slides} productName={product.name} />
-        )}
-        <div className="p-6 pb-8 overflow-y-auto">
+        <div className="overflow-y-auto flex-1 min-h-0">
+          {slides.length > 0 && (
+            <ProductMediaCarousel slides={slides} productName={product.name} />
+          )}
+          <div className="p-6 pb-8">
           <h2 className="text-2xl font-extrabold text-[#3E2723] mb-1">{product.name}</h2>
           {product.weight && (
             <p className="text-sm text-[#795548] mb-2">{product.weight}</p>
@@ -272,6 +300,7 @@ function ProductModal({ product, onClose }: { product: any; onClose: () => void 
                 Add to Cart
               </button>
             </div>
+          </div>
           </div>
         </div>
         <button

@@ -114,6 +114,12 @@ export default function ProductDetail() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { addToCart } = useCart();
 
+  // Always start the product page at the very top, regardless of where the
+  // user navigated from (homepage card, modal popup, search, etc.)
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [id]);
+
   const { data: product, isLoading } = useQuery<any>({
     queryKey: [`/api/products/${id}`],
     enabled: !!id,

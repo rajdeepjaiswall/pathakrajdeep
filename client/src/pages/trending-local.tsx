@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ShoppingCart, X } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
 import Header from '@/components/layout/header';
@@ -59,26 +59,183 @@ function MasonryCard({ product, index, onClick }: { product: any; index: number;
   );
 }
 
+type Slide = { url: string; type: 'image' | 'video' };
+
+function ProductMediaCarousel({ slides, productName }: { slides: Slide[]; productName: string }) {
+  const [active, setActive] = useState(0);
+  const [failed, setFailed] = useState<Set<number>>(new Set());
+  const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+  const touchStartX = useRef<number | null>(null);
+
+  // Pick visible slides (skip ones that errored)
+  const visibleIdx = useMemo(
+    () => slides.map((_, i) => i).filter((i) => !failed.has(i)),
+    [slides, failed],
+  );
+  const safeActive = visibleIdx.includes(active) ? active : visibleIdx[0] ?? 0;
+  const visibleCount = visibleIdx.length;
+
+  const goTo = (next: number) => {
+    if (visibleCount === 0) return;
+    const pos = visibleIdx.indexOf(safeActive);
+    const nextPos = ((pos + next) % visibleCount + visibleCount) % visibleCount;
+    setActive(visibleIdx[nextPos]);
+  };
+
+  const markFailed = (idx: number) => {
+    setFailed((prev) => {
+      const n = new Set(prev);
+      n.add(idx);
+      return n;
+    });
+    if (idx === safeActive) {
+      // Auto-advance to next still-visible slide
+      const remaining = visibleIdx.filter((i) => i !== idx);
+      if (remaining.length > 0) setActive(remaining[0]);
+    }
+  };
+
+  // Pause non-active videos; play the active one
+  useEffect(() => {
+    slides.forEach((s, i) => {
+      const v = videoRefs.current[i];
+      if (!v || s.type !== 'video') return;
+      if (i === safeActive) {
+        try {
+          v.currentTime = 0;
+          const p = v.play();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        } catch {}
+      } else {
+        try {
+          v.pause();
+        } catch {}
+      }
+    });
+  }, [safeActive, slides]);
+
+  // Touch swipe (mobile)
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current == null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) < 40 || visibleCount <= 1) return;
+    goTo(dx < 0 ? 1 : -1);
+  };
+
+  if (visibleCount === 0) return null;
+
+  return (
+    <div
+      className="relative w-full bg-[#EDE3D3] flex items-center justify-center select-none"
+      style={{ minHeight: '14rem', maxHeight: '70vh' }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      {slides.map((s, i) => {
+        if (failed.has(i)) return null;
+        const isActive = i === safeActive;
+        return (
+          <div
+            key={`${s.url}-${i}`}
+            className={`${isActive ? 'relative' : 'absolute inset-0 invisible pointer-events-none'} w-full flex items-center justify-center`}
+            style={{ maxHeight: '70vh' }}
+          >
+            {s.type === 'video' ? (
+              <video
+                ref={(el) => {
+                  videoRefs.current[i] = el;
+                }}
+                src={s.url}
+                className="block max-w-full mx-auto"
+                style={{ maxHeight: '70vh', width: 'auto', height: 'auto', objectFit: 'contain' }}
+                muted
+                playsInline
+                autoPlay={isActive}
+                controls={false}
+                onError={() => markFailed(i)}
+                data-testid={`popup-video-${i}`}
+              />
+            ) : (
+              <img
+                src={s.url}
+                alt={productName}
+                className="block max-w-full mx-auto"
+                style={{ maxHeight: '70vh', width: 'auto', height: 'auto', objectFit: 'contain' }}
+                onError={() => markFailed(i)}
+                data-testid={`popup-image-${i}`}
+              />
+            )}
+          </div>
+        );
+      })}
+
+      {visibleCount > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); goTo(-1); }}
+            className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white items-center justify-center backdrop-blur-sm transition-colors"
+            aria-label="Previous"
+            data-testid="popup-prev"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); goTo(1); }}
+            className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white items-center justify-center backdrop-blur-sm transition-colors"
+            aria-label="Next"
+            data-testid="popup-next"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {visibleIdx.map((i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setActive(i); }}
+                className={`h-1.5 rounded-full transition-all ${i === safeActive ? 'w-6 bg-white' : 'w-1.5 bg-white/60'}`}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ProductModal({ product, onClose }: { product: any; onClose: () => void }) {
   const { addToCart } = useCart();
-  const image = product.images?.[0];
   const price = parseFloat(product.price);
+
+  const slides: Slide[] = useMemo(() => {
+    const vids: Slide[] = (product.videos || [])
+      .filter((u: any): u is string => typeof u === 'string' && u.length > 0)
+      .map((url: string) => ({ url, type: 'video' as const }));
+    const imgs: Slide[] = (product.images || [])
+      .filter((u: any): u is string => typeof u === 'string' && u.length > 0)
+      .map((url: string) => ({ url, type: 'image' as const }));
+    return [...vids, ...imgs];
+  }, [product.images, product.videos]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative bg-[#F5EFE6] rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 duration-300 overflow-hidden"
+        className="relative bg-[#F5EFE6] rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 duration-300 overflow-hidden max-h-[95vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        {image && (
-          <img
-            src={image}
-            alt={product.name}
-            className="w-full h-64 object-cover"
-          />
+        {slides.length > 0 && (
+          <ProductMediaCarousel slides={slides} productName={product.name} />
         )}
-        <div className="p-6 pb-8">
+        <div className="p-6 pb-8 overflow-y-auto">
           <h2 className="text-2xl font-extrabold text-[#3E2723] mb-1">{product.name}</h2>
           {product.weight && (
             <p className="text-sm text-[#795548] mb-2">{product.weight}</p>

@@ -178,29 +178,33 @@ function ProductMediaCarousel({ slides, productName }: { slides: Slide[]; produc
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); goTo(-1); }}
-            className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white items-center justify-center backdrop-blur-sm transition-colors"
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center backdrop-blur-sm transition-colors shadow-lg z-10"
             aria-label="Previous"
             data-testid="popup-prev"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-6 w-6" />
           </button>
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); goTo(1); }}
-            className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white items-center justify-center backdrop-blur-sm transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center backdrop-blur-sm transition-colors shadow-lg z-10"
             aria-label="Next"
             data-testid="popup-next"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-6 w-6" />
           </button>
 
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+          <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-black/60 text-white text-xs font-semibold backdrop-blur-sm shadow-md z-10" data-testid="popup-counter">
+            {visibleIdx.indexOf(safeActive) + 1} / {visibleCount}
+          </div>
+
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/55 backdrop-blur-sm shadow-md z-10">
             {visibleIdx.map((i) => (
               <button
                 key={i}
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setActive(i); }}
-                className={`h-1.5 rounded-full transition-all ${i === safeActive ? 'w-6 bg-white' : 'w-1.5 bg-white/60'}`}
+                className={`rounded-full transition-all ${i === safeActive ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/60 hover:bg-white/90'}`}
                 aria-label={`Go to slide ${i + 1}`}
               />
             ))}

@@ -161,13 +161,15 @@ export class OTPService {
       // WhatsApp API URL (Fast2SMS WhatsApp endpoint)
       const whatsappApiUrl = 'https://www.fast2sms.com/dev/whatsapp';
       
-      // WhatsApp template variables: Var1=name, Var2=OTP, Var3=OTP (same as Var2)
-      const variablesValues = `${customerName}|${otpCode}|${otpCode}`;
+      // Template "tonasia" (Message ID 15404) — body:
+      // "{{1}} is your verification code. For your security, do not share this code."
+      // Only ONE variable: the OTP itself.
+      const variablesValues = `${otpCode}`;
       
       // Build request for WhatsApp
       const params = new URLSearchParams({
         authorization: fast2smsConfig.apiKey,
-        message_id: '9780',
+        message_id: '15404',
         phone_number_id: '979454055241619',
         numbers: formattedPhone,
         variables_values: variablesValues

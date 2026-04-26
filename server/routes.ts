@@ -1849,6 +1849,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       const banner = await storage.updateBanner(id, bannerData);
+      if (!banner) {
+        return res.status(404).json({ message: "Banner not found" });
+      }
       res.json(banner);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

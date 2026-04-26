@@ -177,10 +177,24 @@ export default function AdminBanners() {
   });
 
   // Toggle active mutation (inline switch — does not exit edit/view mode)
+  // Optimistic update: switch moves immediately, reverts only on real error.
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
       const response = await apiRequest('PATCH', `/api/admin/banners/${id}`, { isActive });
-      return response.json();
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    },
+    onMutate: async ({ id, isActive }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['/api/banners'] });
+      const previous = queryClient.getQueryData<Banner[]>(['/api/banners']);
+      if (previous) {
+        queryClient.setQueryData<Banner[]>(
+          ['/api/banners'],
+          previous.map((b) => (b.id === id ? { ...b, isActive } : b)),
+        );
+      }
+      return { previous };
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
@@ -191,7 +205,11 @@ export default function AdminBanners() {
           : 'This banner is now hidden from the homepage.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, _variables, context) => {
+      // Roll back to the snapshot we took in onMutate
+      if (context?.previous) {
+        queryClient.setQueryData(['/api/banners'], context.previous);
+      }
       const description = friendlyAuthError(error);
       toast({
         title: 'Could not update banner',

@@ -8,6 +8,7 @@ Preferred communication style: Simple, everyday language.
 No emojis in any communication or files unless explicitly requested.
 
 ## Recent Changes (Apr 26, 2026)
+- **Product Page Media Display**: Replaced the fixed `aspect-square` + `object-cover` (cropping) media frame with a natural-aspect-ratio container (`w-full h-auto max-h-[70vh] object-contain`). Each slide now adapts to its own ratio for both images and videos. Added swipe gestures (touchstart/touchend) on the inline carousel, plus a new full-screen modal viewer (`client/src/components/product/media-viewer-modal.tsx`) opened by clicking any media or the new maximize button. Modal features: backdrop blur + dark overlay, close button (top-right), prev/next arrows (desktop) and swipe (mobile), indicator dots, keyboard navigation (Esc/←/→), body scroll lock; videos autoplay muted with a top-left mute/unmute toggle and pause when the modal closes or media switches; portal-mounted to `document.body` so it overlays everything.
 - **Legal Pages Management**: Privacy Policy and Terms of Service are now fully admin-editable.
   - New `legal_pages` table with `pageType` ("privacy" | "terms"), `level` (2/3 for h2/h3), `title`, `content`, `listItems[]`, `highlight`, `displayOrder`, `isActive`.
   - Public API: `GET /api/legal-pages/:pageType` returns active sections + computed `lastUpdated`.

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'wouter';
-import { Star, Plus, Minus, Heart, Share2, ShoppingCart, Play, Image, ChevronLeft, ChevronRight, CheckCircle, Quote, MessageSquare } from 'lucide-react';
+import { Star, Plus, Minus, Heart, Share2, ShoppingCart, Play, Image, ChevronLeft, ChevronRight, CheckCircle, Quote, MessageSquare, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
+import MediaViewerModal from '@/components/product/media-viewer-modal';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
 
@@ -110,8 +111,10 @@ export default function ProductDetail() {
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const { addToCart } = useCart();
 
   // Always start the product page at the very top, regardless of where the
@@ -133,20 +136,57 @@ export default function ProductDetail() {
   })();
 
   useEffect(() => {
-    if (mediaItems.length <= 1 || isZoomed) return;
+    if (mediaItems.length <= 1 || viewerOpen) return;
 
     const currentMedia = mediaItems[currentIndex];
-    
+
     if (currentMedia?.type === 'image') {
       const timer = setTimeout(() => {
         setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [currentIndex, mediaItems.length, isZoomed]);
+  }, [currentIndex, mediaItems.length, viewerOpen]);
+
+  // Pause inline video when opening the modal so audio doesn't double up
+  useEffect(() => {
+    if (viewerOpen && videoRef.current) {
+      try { videoRef.current.pause(); } catch {}
+    }
+  }, [viewerOpen]);
 
   const handleVideoEnd = () => {
     setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
+  };
+
+  const goToIndex = (i: number) => {
+    setCurrentIndex(i);
+  };
+  const goPrev = () => {
+    if (mediaItems.length <= 1) return;
+    setCurrentIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
+  };
+  const goNext = () => {
+    if (mediaItems.length <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
+  };
+
+  const onMediaTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartX.current = t.clientX;
+    touchStartY.current = t.clientY;
+  };
+  const onMediaTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current == null || touchStartY.current == null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX.current;
+    const dy = t.clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (dx > 0) goPrev();
+      else goNext();
+    }
   };
 
   if (isLoading) {
@@ -199,7 +239,12 @@ export default function ProductDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div className="space-y-4">
-            <div className="relative aspect-square rounded-lg overflow-hidden bg-white shadow-lg group">
+            <div
+              className="relative rounded-lg overflow-hidden bg-white shadow-lg group flex items-center justify-center min-h-[280px]"
+              onTouchStart={onMediaTouchStart}
+              onTouchEnd={onMediaTouchEnd}
+              data-testid="product-media-container"
+            >
               {mediaItems.length > 0 ? (
                 mediaItems[currentIndex].type === 'video' ? (
                   <video
@@ -209,78 +254,84 @@ export default function ProductDetail() {
                     autoPlay
                     muted
                     onEnded={handleVideoEnd}
-                    controls
+                    onClick={() => setViewerOpen(true)}
                     playsInline
-                    className="w-full h-full object-contain bg-black"
+                    className="block w-full h-auto max-h-[70vh] object-contain bg-black cursor-zoom-in"
+                    data-testid="product-video"
                   />
                 ) : (
-                  <div 
-                    className={`w-full h-full transition-transform duration-300 ${isZoomed ? 'scale-150 cursor-zoom-out' : 'scale-100 cursor-zoom-in'}`}
-                    onClick={() => setIsZoomed(!isZoomed)}
-                  >
-                    <img
-                      src={mediaItems[currentIndex].url}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  <img
+                    src={mediaItems[currentIndex].url}
+                    alt={product.name}
+                    onClick={() => setViewerOpen(true)}
+                    className="block w-full h-auto max-h-[70vh] object-contain cursor-zoom-in"
+                    data-testid="product-image"
+                  />
                 )
               ) : (
                 <img
                   src="/placeholder-product.jpg"
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  className="block w-full h-auto max-h-[70vh] object-contain"
                 />
               )}
+
+              {mediaItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setViewerOpen(true)}
+                  className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 sm:opacity-100"
+                  aria-label="View full screen"
+                  data-testid="button-open-viewer"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+              )}
+
               {mediaItems.length > 1 && (
                 <>
                   <button
-                    onClick={() => {
-                      setCurrentIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
-                      setIsZoomed(false);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); goPrev(); }}
                     className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    aria-label="Previous"
+                    data-testid="button-media-prev"
                   >
                     <ChevronLeft className="w-6 h-6 text-navy" />
                   </button>
                   <button
-                    onClick={() => {
-                      setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
-                      setIsZoomed(false);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); goNext(); }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    aria-label="Next"
+                    data-testid="button-media-next"
                   >
                     <ChevronRight className="w-6 h-6 text-navy" />
                   </button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                    {mediaItems.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => goToIndex(index)}
+                        className={`h-2 rounded-full transition-all ${
+                          index === currentIndex ? 'bg-champagne w-4' : 'bg-white/70 w-2 hover:bg-white'
+                        }`}
+                        aria-label={`Go to media ${index + 1}`}
+                        data-testid={`button-media-dot-${index}`}
+                      />
+                    ))}
+                  </div>
                 </>
               )}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                {mediaItems.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setCurrentIndex(index);
-                      setIsZoomed(false);
-                    }}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      index === currentIndex ? 'bg-champagne w-4' : 'bg-white/60'
-                    }`}
-                  />
-                ))}
-              </div>
             </div>
             {mediaItems.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 {mediaItems.map((item, index) => (
                   <button
                     key={index}
-                    onClick={() => {
-                      setCurrentIndex(index);
-                      setIsZoomed(false);
-                    }}
+                    onClick={() => goToIndex(index)}
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
                       currentIndex === index ? 'border-champagne ring-2 ring-champagne/30' : 'border-gray-200'
                     }`}
+                    data-testid={`button-media-thumb-${index}`}
                   >
                     {item.type === 'video' ? (
                       <div className="w-full h-full bg-navy flex items-center justify-center">
@@ -420,6 +471,15 @@ export default function ProductDetail() {
       <Footer />
       <MobileNav />
       <CartSidebar />
+      {viewerOpen && mediaItems.length > 0 && (
+        <MediaViewerModal
+          items={mediaItems}
+          index={currentIndex}
+          onIndexChange={setCurrentIndex}
+          onClose={() => setViewerOpen(false)}
+          alt={product.name}
+        />
+      )}
     </div>
   );
 }

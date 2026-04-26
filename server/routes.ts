@@ -1533,17 +1533,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enrich customers with order stats
       const enrichedCustomers = await Promise.all(allCustomers.map(async (customer) => {
-        const orders = await storage.getOrdersByUserId(customer.id);
-        const totalOrders = orders.length;
-        const totalSpent = orders
-          .filter(o => o.status !== 'cancelled' && o.status !== 'payment_failed')
-          .reduce((sum, o) => sum + Number(o.total), 0);
-        
-        return {
-          ...customer,
-          totalOrders,
-          totalSpent
-        };
+        try {
+          const orders = await storage.getOrders(customer.id);
+          const totalOrders = orders.length;
+          const totalSpent = orders
+            .filter(o => o.status !== 'cancelled' && o.status !== 'payment_failed')
+            .reduce((sum, o) => sum + Number(o.total), 0);
+
+          return {
+            ...customer,
+            totalOrders,
+            totalSpent
+          };
+        } catch (innerErr) {
+          return {
+            ...customer,
+            totalOrders: 0,
+            totalSpent: 0,
+          };
+        }
       }));
 
       res.json(enrichedCustomers);

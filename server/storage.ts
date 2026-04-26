@@ -1246,14 +1246,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Reports methods
-  async getOrdersReport(startDate: Date, endDate: Date): Promise<Order[]> {
+  async getOrdersReport(startDate: Date, endDate: Date, status?: string): Promise<Order[]> {
+    const conditions = [
+      sql`${orders.orderDate} >= ${startDate}`,
+      sql`${orders.orderDate} <= ${endDate}`,
+    ];
+    if (status) {
+      conditions.push(eq(orders.status, status));
+    }
     return db
       .select()
       .from(orders)
-      .where(and(
-        sql`${orders.orderDate} >= ${startDate}`,
-        sql`${orders.orderDate} <= ${endDate}`
-      ))
+      .where(and(...conditions))
       .orderBy(desc(orders.orderDate));
   }
 

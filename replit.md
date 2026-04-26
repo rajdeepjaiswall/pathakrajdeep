@@ -112,3 +112,10 @@ A comprehensive deployment guide is available in `CPANEL_DEPLOYMENT_GUIDE.md` co
 - **Replit/Development**: Uses PostgreSQL (Neon) with `shared/schema.ts`
 - **cPanel/Production**: Uses MySQL with `shared/schema-mysql.ts`
 - Both schemas are maintained in parallel for dual deployment support
+## Reports & GST Sales Report (Apr 2026)
+- Reports page (`client/src/pages/super-admin/reports.tsx`) is mounted at both `/super-admin/reports` and `/admin/reports` so both `admin` and `super_admin` roles can access it. Customers/Payments tabs remain super_admin-only (hidden for admins).
+- Sales tab shows only **delivered** orders within a chosen date range, with quick presets (Today / Yesterday / Last 7 / Last 30 days).
+- Columns: Order #, Date, State, Price (subtotal), CGST, SGST, IGST, Grand Total. A footer row totals every numeric column.
+- GST split logic: bakery's home state is `Uttar Pradesh` (Prayagraj). Intra-state deliveries → `gstAmount` is split equally into CGST + SGST; inter-state deliveries → full `gstAmount` shown as IGST.
+- Backend: `GET /api/admin/reports/orders?startDate=&endDate=&status=delivered` (admin + super_admin), backed by `storage.getOrdersReport(start, end, status?)` which now accepts an optional status filter.
+- Dashboard "Reports" tile now navigates to `/admin/reports`.

@@ -2865,11 +2865,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reports - Super Admin only
   app.get("/api/super-admin/reports/orders", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, status } = req.query;
       if (!startDate || !endDate) {
         return res.status(400).json({ message: "Start and end dates are required" });
       }
-      const orders = await storage.getOrdersReport(new Date(startDate as string), new Date(endDate as string));
+      const orders = await storage.getOrdersReport(
+        new Date(startDate as string),
+        new Date(endDate as string),
+        status ? (status as string) : undefined,
+      );
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Reports - Admin (and Super Admin) sales report with delivered orders + GST split
+  app.get("/api/admin/reports/orders", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { startDate, endDate, status } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start and end dates are required" });
+      }
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+      end.setHours(23, 59, 59, 999);
+      const orders = await storage.getOrdersReport(
+        start,
+        end,
+        status ? (status as string) : undefined,
+      );
       res.json(orders);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

@@ -97,6 +97,7 @@ function Router() {
       <Route path="/super-admin/pages" component={PageEditor} />
       <Route path="/super-admin/popup-banners" component={PopupBannersManager} />
       <Route path="/super-admin/reports" component={Reports} />
+      <Route path="/admin/reports" component={Reports} />
       <Route path="/trending-local" component={TrendingLocalPage} />
       <Route path="/about-us" component={AboutUs} />
       <Route path="/contact-us" component={ContactUs} />

@@ -448,10 +448,12 @@ export default function AdminDashboard() {
                 <span>Legal Pages</span>
               </Button>
             </Link>
-            <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-reports">
-              <TrendingUp className="h-6 w-6" />
-              <span>Reports</span>
-            </Button>
+            <Link href="/admin/reports">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-reports">
+                <TrendingUp className="h-6 w-6" />
+                <span>Reports</span>
+              </Button>
+            </Link>
           </div>
 
           {/* Analytics Cards - 4x2 Grid */}

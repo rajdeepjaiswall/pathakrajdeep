@@ -92,39 +92,46 @@ export default function MobileNav() {
               }`}
             >
               {isLogo ? (
-                <div className={`relative transition-all duration-200 ${isActive ? '-top-10' : '-top-9'}`}>
+                <div className="relative w-full h-10 flex items-center justify-center pointer-events-none">
                   <img 
                     src={pathakLogo} 
                     alt="Pathak Bhandar Since 1957" 
-                    className={`object-contain rounded-full transition-all duration-200 animate-pulse-logo drop-shadow-lg ${isActive ? 'h-24 w-24' : 'h-20 w-20'}`}
+                    className={`absolute left-1/2 -translate-x-1/2 -top-10 object-contain rounded-full drop-shadow-lg animate-pulse-logo transition-all duration-200 ${isActive ? 'h-24 w-24' : 'h-20 w-20'}`}
                   />
                   {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
                   )}
                 </div>
               ) : isAccount && isAuthenticated ? (
-                <div className="relative">
-                  <Avatar className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'}`}>
-                    <AvatarImage src={(user as any)?.profileImageUrl} alt={(user as any)?.firstName || user?.username || 'Profile'} />
-                    <AvatarFallback className="bg-amber-800 text-amber-50 text-[10px] font-semibold">
-                      {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
-                  )}
-                </div>
+                <>
+                  <div className="relative h-6 w-6 flex items-center justify-center">
+                    <Avatar className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'}`}>
+                      <AvatarImage src={(user as any)?.profileImageUrl} alt={(user as any)?.firstName || user?.username || 'Profile'} />
+                      <AvatarFallback className="bg-amber-800 text-amber-50 text-[10px] font-semibold">
+                        {((user as any)?.firstName || user?.username || 'U').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isActive && (
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
+                    )}
+                  </div>
+                  <span className={`text-xs mt-1 leading-none transition-all duration-200 ${isActive ? 'text-amber-800 font-medium' : 'text-amber-700/80'}`}>
+                    {item.label}
+                  </span>
+                </>
               ) : (
-                <div className="relative">
-                  <Icon className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'} ${isActive ? 'text-amber-800' : 'text-amber-700/80'}`} />
-                  {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
-                  )}
-                </div>
+                <>
+                  <div className="relative h-6 w-6 flex items-center justify-center">
+                    <Icon className={`transition-all duration-200 ${isActive ? 'h-6 w-6' : 'h-5 w-5'} ${isActive ? 'text-amber-800' : 'text-amber-700/80'}`} />
+                    {isActive && (
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
+                    )}
+                  </div>
+                  <span className={`text-xs mt-1 leading-none transition-all duration-200 ${isActive ? 'text-amber-800 font-medium' : 'text-amber-700/80'}`}>
+                    {item.label}
+                  </span>
+                </>
               )}
-              <span className={`text-xs mt-1 transition-all duration-200 ${isActive ? 'text-amber-800 font-medium' : 'text-amber-700/80'}`}>
-                {item.label}
-              </span>
               {isCart && summary.itemCount > 0 && (
                 <div className="absolute -top-1 right-2 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-[10px] font-bold">{summary.itemCount > 9 ? '9+' : summary.itemCount}</span>

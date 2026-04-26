@@ -2240,7 +2240,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error('Failed to send success SMS:', smsError);
           }
         }
-        
+
+        // Send Payment Completed WhatsApp (template payment_completed / 9625)
+        if (orderPhone) {
+          try {
+            const paidOrder = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
+            const orderTotal = paidOrder[0]?.total ?? transaction.amount;
+            await otpService.sendPaymentCompletedWhatsApp(orderPhone, orderTotal as any);
+            console.log('Payment Completed WhatsApp sent for order:', orderNumber, 'amount:', orderTotal);
+          } catch (waError) {
+            console.error('Failed to send payment completed WhatsApp:', waError);
+          }
+        }
+
         console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as paid`);
       } else if (status === 'payment_failed') {
         // Payment failed - update order status
@@ -2330,6 +2342,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } catch (smsError) {
             console.error('Failed to send SMS after payment:', smsError);
+          }
+
+          // Send Payment Completed WhatsApp (template payment_completed / 9625)
+          try {
+            const phoneForWa = transaction.phone || (order[0] as any)?.deliveryAddress?.phone;
+            const orderTotal = order[0].total ?? transaction.amount;
+            if (phoneForWa) {
+              await otpService.sendPaymentCompletedWhatsApp(phoneForWa, orderTotal as any);
+              console.log('Payment Completed WhatsApp sent after payment, amount:', orderTotal);
+            }
+          } catch (waError) {
+            console.error('Failed to send payment completed WhatsApp:', waError);
           }
         }
       } else if (status === 'failed') {

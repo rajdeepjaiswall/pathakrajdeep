@@ -490,6 +490,72 @@ export class OTPService {
     }
   }
 
+  // Send WhatsApp notification when a payment completes successfully
+  // Template: payment_completed (Message ID 9625)
+  // Body: "Dear user, Your last payment completed successfully\n\namount: {{1}}\n\nThank you."
+  async sendPaymentCompletedWhatsApp(phoneNumber: string, amount: string | number): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!fast2smsConfig.apiKey) {
+        return {
+          success: false,
+          message: 'WhatsApp API not configured.'
+        };
+      }
+
+      // Format phone number
+      let formattedPhone = phoneNumber.replace(/\D/g, '');
+      if (formattedPhone.startsWith('91') && formattedPhone.length > 10) {
+        formattedPhone = formattedPhone.slice(2);
+      }
+
+      // Format amount as ₹<value> with up to 2 decimals, no trailing zeros
+      const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+      const formattedAmount = isFinite(num)
+        ? `\u20B9${num.toFixed(2).replace(/\.00$/, '')}`
+        : `${amount}`;
+
+      // WhatsApp API URL
+      const whatsappApiUrl = 'https://www.fast2sms.com/dev/whatsapp';
+
+      // Template variables: Var1=amount
+      const variablesValues = `${formattedAmount}`;
+
+      const params = new URLSearchParams({
+        authorization: fast2smsConfig.apiKey,
+        message_id: '9625',
+        phone_number_id: '979454055241619',
+        numbers: formattedPhone,
+        variables_values: variablesValues
+      });
+
+      const url = `${whatsappApiUrl}?${params.toString()}`;
+      console.log(`Sending Payment Completed WhatsApp: URL=${url.replace(fast2smsConfig.apiKey, 'HIDDEN')}`);
+
+      const response = await fetch(url, { method: 'GET' });
+      const responseData = await response.json();
+
+      if (response.ok && responseData.return) {
+        console.log('Payment Completed WhatsApp sent successfully:', responseData);
+        return {
+          success: true,
+          message: 'Payment confirmation sent via WhatsApp'
+        };
+      } else {
+        console.error('Fast2SMS WhatsApp Payment Completed Error:', responseData);
+        return {
+          success: false,
+          message: 'Failed to send payment WhatsApp notification'
+        };
+      }
+    } catch (error) {
+      console.error('Payment Completed WhatsApp Error:', error);
+      return {
+        success: false,
+        message: 'Failed to send payment WhatsApp notification'
+      };
+    }
+  }
+
   // Send WhatsApp notification when rider is assigned to order
   async sendRiderAssignedWhatsApp(
     customerPhone: string, 

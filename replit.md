@@ -119,3 +119,18 @@ A comprehensive deployment guide is available in `CPANEL_DEPLOYMENT_GUIDE.md` co
 - GST split logic: bakery's home state is `Uttar Pradesh` (Prayagraj). Intra-state deliveries → `gstAmount` is split equally into CGST + SGST; inter-state deliveries → full `gstAmount` shown as IGST.
 - Backend: `GET /api/admin/reports/orders?startDate=&endDate=&status=delivered` (admin + super_admin), backed by `storage.getOrdersReport(start, end, status?)` which now accepts an optional status filter.
 - Dashboard "Reports" tile now navigates to `/admin/reports`.
+
+## Admin Account Settings + Password Change OTP Flow (Apr 2026)
+- Page: `/admin/account` (file `client/src/pages/admin/account.tsx`), accessible to both `admin` and `super_admin` roles. Linked from the dashboard tile "My Account".
+- Profile section: edit `firstName`, `lastName`, `phone` (WhatsApp number). `username` is shown disabled (cannot be changed).
+- Password change uses two-step WhatsApp OTP verification:
+  1. Click **Send OTP and Change Password** → backend sends a 6-digit OTP to the admin's WhatsApp **and** to a Super Admin's WhatsApp.
+  2. Admin enters both OTPs, the new password, confirms it, and submits → backend verifies both OTPs (via `otpService.verifyOTP` with type `whatsapp`) and bcrypt-hashes the new password into `users.password`.
+- If the user IS the super_admin, only their own OTP is required (no higher authority to approve).
+- Backend endpoints (in `server/routes.ts`, all behind `authenticateUser + requireAdmin`):
+  - `GET  /api/admin/account` — returns the caller's profile.
+  - `PATCH /api/admin/account` — updates `firstName`, `lastName`, `phone`.
+  - `POST /api/admin/account/change-password/init` — sends OTPs; rejects with friendly errors if the admin or super-admin has no WhatsApp number set.
+  - `POST /api/admin/account/change-password/verify` — body: `{ adminOtp, superAdminOtp?, newPassword }`. Verifies both OTPs and updates the password.
+- WhatsApp delivery uses the existing `otpService.sendWhatsAppOTP(phone, name, purpose)` (Fast2SMS).
+- Initial state: no admin in the DB has a `phone` set. They must save a WhatsApp number in the Profile section before they can use the password-change flow.

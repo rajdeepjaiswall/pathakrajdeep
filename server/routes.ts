@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { OAuth2Client } from "google-auth-library";
-import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders, otps } from "@shared/schema";
+import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders, otps, users } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
 import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
@@ -2921,6 +2921,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(payments);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── Admin Account Settings ──────────────────────────────────────────
+  // Get current admin's profile (name, username, phone, role)
+  app.get("/api/admin/account", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const u = await storage.getUser(userId);
+      if (!u) return res.status(404).json({ message: "Account not found" });
+      res.json({
+        id: u.id,
+        username: u.username,
+        firstName: u.firstName || '',
+        lastName: u.lastName || '',
+        phone: u.phone || '',
+        email: u.email || '',
+        role: u.role,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update own profile (name + WhatsApp phone). Username and role cannot be changed here.
+  app.patch("/api/admin/account", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { firstName, lastName, phone } = req.body || {};
+      const update: any = {};
+      if (typeof firstName === 'string') update.firstName = firstName.trim();
+      if (typeof lastName === 'string') update.lastName = lastName.trim();
+      if (typeof phone === 'string') {
+        const trimmed = phone.trim();
+        if (trimmed && !/^\+?[\d\s\-()]{10,15}$/.test(trimmed)) {
+          return res.status(400).json({ message: "Invalid phone number format" });
+        }
+        update.phone = trimmed;
+      }
+      const updated = await storage.updateUser(userId, update);
+      res.json({
+        id: updated.id,
+        username: updated.username,
+        firstName: updated.firstName || '',
+        lastName: updated.lastName || '',
+        phone: updated.phone || '',
+        email: updated.email || '',
+        role: updated.role,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Step 1: Send OTPs to admin's WhatsApp + super-admin's WhatsApp
+  app.post("/api/admin/account/change-password/init", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const me = await storage.getUser(userId);
+      if (!me) return res.status(404).json({ message: "Account not found" });
+      if (!me.phone || !/^\+?[\d\s\-()]{10,15}$/.test(me.phone.trim())) {
+        return res.status(400).json({
+          message: "Please add your WhatsApp number to your profile before changing your password.",
+        });
+      }
+
+      const isSuperAdmin = me.role === 'super_admin';
+
+      // Find a super-admin (skip self if user is super-admin)
+      let superAdmin: any = null;
+      if (!isSuperAdmin) {
+        const allSuperAdmins = await db.select().from(users).where(eq(users.role, 'super_admin'));
+        superAdmin = allSuperAdmins[0] || null;
+        if (!superAdmin) {
+          return res.status(400).json({
+            message: "No super admin is configured. Cannot proceed with password change.",
+          });
+        }
+        if (!superAdmin.phone || !/^\+?[\d\s\-()]{10,15}$/.test(String(superAdmin.phone).trim())) {
+          return res.status(400).json({
+            message: "Super admin has not registered a WhatsApp number. Ask them to add it before you can change your password.",
+          });
+        }
+      }
+
+      // Send OTP to admin
+      const adminName = `${me.firstName || ''} ${me.lastName || ''}`.trim() || me.username;
+      const myResult = await otpService.sendWhatsAppOTP(me.phone.trim(), adminName, 'password change');
+      if (!myResult.success) {
+        return res.status(400).json({ message: `Failed to send OTP to your WhatsApp: ${myResult.message}` });
+      }
+
+      // Send OTP to super-admin (if needed)
+      let superAdminPhoneMasked: string | null = null;
+      if (!isSuperAdmin && superAdmin) {
+        const saName = `${superAdmin.firstName || ''} ${superAdmin.lastName || ''}`.trim() || superAdmin.username;
+        const saResult = await otpService.sendWhatsAppOTP(
+          String(superAdmin.phone).trim(),
+          saName,
+          `approve password change for ${adminName}`,
+        );
+        if (!saResult.success) {
+          return res.status(400).json({ message: `Failed to send OTP to super admin's WhatsApp: ${saResult.message}` });
+        }
+        const sp = String(superAdmin.phone).trim();
+        superAdminPhoneMasked = sp.replace(/\d(?=\d{4})/g, '*');
+      }
+
+      const myMasked = me.phone.trim().replace(/\d(?=\d{4})/g, '*');
+      res.json({
+        success: true,
+        message: 'OTPs sent successfully.',
+        requiresSuperAdminOtp: !isSuperAdmin,
+        adminPhoneMasked: myMasked,
+        superAdminPhoneMasked,
+      });
+    } catch (error: any) {
+      console.error('change-password/init error:', error);
+      res.status(500).json({ message: error.message || 'Failed to send OTPs' });
+    }
+  });
+
+  // Step 2: Verify OTPs and update password
+  app.post("/api/admin/account/change-password/verify", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { adminOtp, superAdminOtp, newPassword } = req.body || {};
+      if (!adminOtp || typeof adminOtp !== 'string' || adminOtp.length !== 6) {
+        return res.status(400).json({ message: "Your 6-digit OTP is required." });
+      }
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters." });
+      }
+      const me = await storage.getUser(userId);
+      if (!me) return res.status(404).json({ message: "Account not found" });
+      if (!me.phone) return res.status(400).json({ message: "Your WhatsApp number is missing." });
+
+      const isSuperAdmin = me.role === 'super_admin';
+
+      // Verify admin's own OTP
+      const myCheck = await otpService.verifyOTP(me.phone.trim(), adminOtp, 'whatsapp');
+      if (!myCheck.success) {
+        return res.status(400).json({ message: `Your OTP is invalid: ${myCheck.message}` });
+      }
+
+      // Verify super-admin OTP (if applicable)
+      if (!isSuperAdmin) {
+        if (!superAdminOtp || typeof superAdminOtp !== 'string' || superAdminOtp.length !== 6) {
+          return res.status(400).json({ message: "Super admin's 6-digit OTP is required." });
+        }
+        const allSuperAdmins = await db.select().from(
+          (await import('@shared/schema')).users
+        ).where(eq((await import('@shared/schema')).users.role, 'super_admin'));
+        const superAdmin = allSuperAdmins[0];
+        if (!superAdmin || !superAdmin.phone) {
+          return res.status(400).json({ message: "Super admin not found." });
+        }
+        const saCheck = await otpService.verifyOTP(String(superAdmin.phone).trim(), superAdminOtp, 'whatsapp');
+        if (!saCheck.success) {
+          return res.status(400).json({ message: `Super admin's OTP is invalid: ${saCheck.message}` });
+        }
+      }
+
+      // Update password
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await storage.updateUser(userId, { password: hashed });
+
+      res.json({ success: true, message: 'Password updated successfully.' });
+    } catch (error: any) {
+      console.error('change-password/verify error:', error);
+      res.status(500).json({ message: error.message || 'Failed to update password' });
     }
   });
 

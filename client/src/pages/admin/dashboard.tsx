@@ -22,7 +22,8 @@ import {
   ToggleRight,
   CreditCard,
   Store,
-  FileText
+  FileText,
+  UserCog
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -452,6 +453,12 @@ export default function AdminDashboard() {
               <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-reports">
                 <TrendingUp className="h-6 w-6" />
                 <span>Reports</span>
+              </Button>
+            </Link>
+            <Link href="/admin/account">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-account">
+                <UserCog className="h-6 w-6" />
+                <span>My Account</span>
               </Button>
             </Link>
           </div>

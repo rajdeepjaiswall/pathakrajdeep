@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import pathakLogo from '@assets/project_20250528_0859055-02.png';
+import pathakLogo from '@assets/Screenshot_2026-04-26-21-04-52-56_10a3d211b678d435d51c62b8010e_1777218564675.png';
 import { useState, useEffect } from 'react';
 
 export default function MobileNav() {
@@ -92,16 +92,11 @@ export default function MobileNav() {
               }`}
             >
               {isLogo ? (
-                <div className={`relative transition-all duration-200 ${isActive ? '-top-1' : '-top-2'}`}>
+                <div className={`relative transition-all duration-200 ${isActive ? '-top-6' : '-top-5'}`}>
                   <img 
                     src={pathakLogo} 
-                    alt="KB Logo" 
-                    className={`object-contain transition-all duration-200 animate-pulse-logo ${isActive ? 'h-9 w-9' : 'h-8 w-8'}`}
-                    style={{ 
-                      filter: isActive 
-                        ? 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%)' 
-                        : 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%) opacity(0.8)'
-                    }}
+                    alt="Pathak Bhandar Since 1957" 
+                    className={`object-contain rounded-full transition-all duration-200 animate-pulse-logo drop-shadow-md ${isActive ? 'h-14 w-14' : 'h-12 w-12'}`}
                   />
                   {isActive && (
                     <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>

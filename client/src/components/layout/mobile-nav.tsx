@@ -92,11 +92,16 @@ export default function MobileNav() {
               }`}
             >
               {isLogo ? (
-                <div className={`relative transition-all duration-200 ${isActive ? '-top-6' : '-top-5'}`}>
+                <div className={`relative transition-all duration-200 ${isActive ? '-top-9' : '-top-8'}`}>
                   <img 
                     src={pathakLogo} 
                     alt="Pathak Bhandar Since 1957" 
-                    className={`object-contain rounded-full transition-all duration-200 animate-pulse-logo drop-shadow-md ${isActive ? 'h-14 w-14' : 'h-12 w-12'}`}
+                    className={`object-contain rounded-full transition-all duration-200 animate-pulse-logo drop-shadow-md ${isActive ? 'h-20 w-20' : 'h-[72px] w-[72px]'}`}
+                    style={{
+                      filter: isActive
+                        ? 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%)'
+                        : 'brightness(0) saturate(100%) invert(23%) sepia(45%) saturate(2000%) hue-rotate(26deg) brightness(87%) contrast(93%) opacity(0.9)'
+                    }}
                   />
                   {isActive && (
                     <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>

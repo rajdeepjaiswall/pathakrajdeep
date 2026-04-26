@@ -171,7 +171,7 @@ export function setupGoogleAuthRoutes(app: Express) {
         if (user && !user.profileCompleted) {
           res.redirect("/complete-profile");
         } else {
-          res.redirect("/account");
+          res.redirect("/");
         }
       } catch (error) {
         console.error("Google OAuth callback error:", error);

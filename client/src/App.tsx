@@ -107,6 +107,12 @@ function Router() {
       <Route path="/terms-of-service">
         <LegalPageView pageType="terms" pageTitle="Terms of Service" />
       </Route>
+      <Route path="/shipping-policy">
+        <LegalPageView pageType="shipping" pageTitle="Shipping Policy" />
+      </Route>
+      <Route path="/invoice-terms">
+        <LegalPageView pageType="invoice" pageTitle="Invoice Terms" />
+      </Route>
       <Route path="/complete-profile" component={CompleteProfile} />
       <Route path="/phonepe-callback" component={PhonePeCallback} />
       <Route component={NotFound} />

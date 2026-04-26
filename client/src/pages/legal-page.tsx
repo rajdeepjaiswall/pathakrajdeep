@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import MobileNav from '@/components/layout/mobile-nav';
 import type { LegalPage } from '@shared/schema';
 
-type LegalPageType = 'privacy' | 'terms';
+type LegalPageType = 'privacy' | 'terms' | 'shipping' | 'invoice';
 
 interface LegalPageResponse {
   pageType: LegalPageType;

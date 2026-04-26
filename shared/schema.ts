@@ -307,7 +307,7 @@ export const aboutSections = pgTable("about_sections", {
 // Legal Pages dynamic sections (Privacy Policy + Terms of Service)
 export const legalPages = pgTable("legal_pages", {
   id: serial("id").primaryKey(),
-  pageType: text("page_type").notNull(), // "privacy" | "terms"
+  pageType: text("page_type").notNull(), // "privacy" | "terms" | "shipping" | "invoice"
   level: integer("level").notNull().default(2), // 2 = main section (h2), 3 = subsection (h3)
   title: text("title").notNull(),
   content: text("content"), // paragraph text shown above the list

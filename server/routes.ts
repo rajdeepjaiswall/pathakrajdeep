@@ -2685,8 +2685,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===== Legal Pages (Privacy Policy + Terms of Service) =====
-  const isValidLegalPageType = (t: any): t is "privacy" | "terms" =>
-    t === "privacy" || t === "terms";
+  const isValidLegalPageType = (t: any): t is "privacy" | "terms" | "shipping" | "invoice" =>
+    t === "privacy" || t === "terms" || t === "shipping" || t === "invoice";
+
+  // Lightweight summary used by the footer to know which legal pages have content.
+  // Returns one entry per supported page type with a hasContent flag.
+  app.get("/api/legal-pages", async (_req, res) => {
+    try {
+      const types: Array<"privacy" | "terms" | "shipping" | "invoice"> = [
+        "privacy",
+        "terms",
+        "shipping",
+        "invoice",
+      ];
+      const summary = await Promise.all(
+        types.map(async (pageType) => {
+          const sections = await storage.getLegalPageSections(pageType, true);
+          return { pageType, hasContent: sections.length > 0 };
+        })
+      );
+      res.json(summary);
+    } catch (e) {
+      console.error("Failed to load legal pages summary:", e);
+      res.status(500).json({ message: "Failed to load legal pages summary" });
+    }
+  });
 
   // Public read — active sections only for the requested page
   app.get("/api/legal-pages/:pageType", async (req, res) => {

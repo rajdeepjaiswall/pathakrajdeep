@@ -1,5 +1,16 @@
 import { Facebook, Instagram } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { COMPANY_INFO } from '@/lib/constants';
+
+type LegalPageType = 'privacy' | 'terms' | 'shipping' | 'invoice';
+type LegalPageSummary = { pageType: LegalPageType; hasContent: boolean };
+
+const LEGAL_PAGE_LINKS: Record<LegalPageType, { name: string; href: string }> = {
+  privacy: { name: 'Privacy Policy', href: '/privacy-policy' },
+  terms: { name: 'Terms of Service', href: '/terms-of-service' },
+  shipping: { name: 'Shipping Policy', href: '/shipping-policy' },
+  invoice: { name: 'Invoice Terms', href: '/invoice-terms' },
+};
 
 export default function Footer() {
   const quickLinks = [
@@ -10,10 +21,13 @@ export default function Footer() {
     { name: 'Contact', href: '/#contact' },
   ];
 
-  const policies = [
-    { name: 'Privacy Policy', href: '/privacy-policy' },
-    { name: 'Terms of Service', href: '/terms-of-service' },
-  ];
+  const { data: legalSummary = [] } = useQuery<LegalPageSummary[]>({
+    queryKey: ['/api/legal-pages'],
+  });
+
+  const policies = legalSummary
+    .filter((s) => s.hasContent && LEGAL_PAGE_LINKS[s.pageType])
+    .map((s) => LEGAL_PAGE_LINKS[s.pageType]);
 
   return (
     <footer className="bg-navy text-cream">

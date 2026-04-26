@@ -12,6 +12,8 @@ import {
   ExternalLink,
   FileText,
   ScrollText,
+  Truck,
+  Receipt,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,11 +45,13 @@ import AdminSidebar from '@/components/admin/admin-sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import type { LegalPage } from '@shared/schema';
 
-type PageType = 'privacy' | 'terms';
+type PageType = 'privacy' | 'terms' | 'shipping' | 'invoice';
 
 const PAGE_META: Record<PageType, { title: string; route: string; icon: any }> = {
   privacy: { title: 'Privacy Policy', route: '/privacy-policy', icon: FileText },
   terms: { title: 'Terms of Service', route: '/terms-of-service', icon: ScrollText },
+  shipping: { title: 'Shipping Policy', route: '/shipping-policy', icon: Truck },
+  invoice: { title: 'Invoice Terms', route: '/invoice-terms', icon: Receipt },
 };
 
 const friendlyAuthError = (error: any) => {
@@ -295,17 +299,28 @@ export default function AdminLegalPages() {
           </div>
 
           <Tabs value={pageType} onValueChange={(v) => setPageType(v as PageType)} className="mb-6">
-            <TabsList className="grid w-full sm:w-96 grid-cols-2">
-              <TabsTrigger value="privacy" data-testid="tab-privacy">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+              <TabsTrigger value="privacy" data-testid="tab-privacy" className="py-2">
                 <FileText className="h-4 w-4 mr-2" />
-                Privacy Policy
+                <span className="truncate">Privacy Policy</span>
               </TabsTrigger>
-              <TabsTrigger value="terms" data-testid="tab-terms">
+              <TabsTrigger value="terms" data-testid="tab-terms" className="py-2">
                 <ScrollText className="h-4 w-4 mr-2" />
-                Terms of Service
+                <span className="truncate">Terms of Service</span>
+              </TabsTrigger>
+              <TabsTrigger value="shipping" data-testid="tab-shipping" className="py-2">
+                <Truck className="h-4 w-4 mr-2" />
+                <span className="truncate">Shipping Policy</span>
+              </TabsTrigger>
+              <TabsTrigger value="invoice" data-testid="tab-invoice" className="py-2">
+                <Receipt className="h-4 w-4 mr-2" />
+                <span className="truncate">Invoice Terms</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          <p className="text-xs text-gray-500 -mt-4 mb-4">
+            Tip: Shipping Policy and Invoice Terms only appear in the website footer once you add at least one section here.
+          </p>
 
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 text-gray-700">

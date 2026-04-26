@@ -1462,9 +1462,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Send notification to customer about order status update
+      // Policy: NO SMS on admin status updates. WhatsApp only for "out_for_delivery".
       if (order.deliveryAddress && order.deliveryAddress.phone) {
         try {
-          // For "out_for_delivery" status, send WhatsApp ONLY (no SMS)
           if (status === 'out_for_delivery') {
             const customerName = order.deliveryAddress.name || 'Customer';
             await otpService.sendOutForDeliveryWhatsApp(
@@ -1473,15 +1473,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               order.orderNumber
             );
             console.log('Out for Delivery WhatsApp sent to:', order.deliveryAddress.phone);
-          } else {
-            // For all other statuses, send SMS as usual
-            await otpService.sendOrderStatusUpdate(
-              order.deliveryAddress.phone,
-              order.orderNumber,
-              status
-            );
-            console.log('Order status SMS sent to:', order.deliveryAddress.phone, 'Status:', status);
           }
+          // For all other statuses: no message is sent (SMS disabled per requirement).
         } catch (notifyError) {
           console.error('Failed to send order status notification:', notifyError);
           // Don't fail the status update if notification fails

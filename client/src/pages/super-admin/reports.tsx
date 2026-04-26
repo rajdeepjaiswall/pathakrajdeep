@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Download, Users, ShoppingCart, CreditCard } from 'lucide-react';
+import { BarChart3, Download, Users, ShoppingCart, CreditCard, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Header from '@/components/layout/header';
@@ -40,25 +41,38 @@ export default function Reports() {
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 7);
 
-  const [startDate, setStartDate] = useState(sevenDaysAgo.toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+  const initialStart = sevenDaysAgo.toISOString().split('T')[0];
+  const initialEnd = today.toISOString().split('T')[0];
+
+  // Filter inputs (what's in the form)
+  const [startDate, setStartDate] = useState(initialStart);
+  const [endDate, setEndDate] = useState(initialEnd);
+  const [statusFilter, setStatusFilter] = useState('delivered');
+
+  // Applied filters (what the query actually uses) — only updated when Search is clicked
+  const [applied, setApplied] = useState<{ start: string; end: string; status: string } | null>(null);
 
   if (!user || (user.role !== 'super_admin' && user.role !== 'admin')) {
     setLocation('/admin/login');
     return null;
   }
 
-  const { data: ordersData, isLoading: ordersLoading } = useQuery<Order[]>({
-    queryKey: ['/api/admin/reports/orders', startDate, endDate, 'delivered'],
+  const handleSearch = () => {
+    setApplied({ start: startDate, end: endDate, status: statusFilter });
+  };
+
+  const { data: ordersData, isLoading: ordersLoading, isFetching: ordersFetching } = useQuery<Order[]>({
+    queryKey: ['/api/admin/reports/orders', applied?.start, applied?.end, applied?.status],
     queryFn: async () => {
+      const statusParam = applied!.status === 'all' ? '' : `&status=${applied!.status}`;
       const res = await fetch(
-        `/api/admin/reports/orders?startDate=${startDate}&endDate=${endDate}&status=delivered`,
+        `/api/admin/reports/orders?startDate=${applied!.start}&endDate=${applied!.end}${statusParam}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       if (!res.ok) throw new Error('Failed to fetch orders');
       return res.json();
     },
-    enabled: activeTab === 'orders'
+    enabled: activeTab === 'orders' && !!applied,
   });
 
   const { data: customersData, isLoading: customersLoading } = useQuery<User[]>({
@@ -218,6 +232,28 @@ export default function Reports() {
                   data-testid="input-end-date"
                 />
               </div>
+              {activeTab === 'orders' && (
+                <div className="min-w-[180px]">
+                  <Label>Order Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger data-testid="select-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                      <SelectItem value="order_received">Order Received</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <Button onClick={handleSearch} className="bg-champagne text-navy hover:bg-champagne/90" data-testid="button-search">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={setToday} data-testid="button-today">Today</Button>
                 <Button variant="outline" onClick={setYesterday} data-testid="button-yesterday">Yesterday</Button>
@@ -251,20 +287,32 @@ export default function Reports() {
           <TabsContent value="orders">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Delivered Orders — Invoice Report</CardTitle>
+                <CardTitle>
+                  Sales Report
+                  {applied && (
+                    <span className="text-sm text-gray-500 font-normal ml-2">
+                      ({applied.start} → {applied.end}, {applied.status === 'all' ? 'all statuses' : applied.status.replace(/_/g, ' ')})
+                    </span>
+                  )}
+                </CardTitle>
                 <Button onClick={exportOrders} data-testid="button-export-orders" disabled={!orderRows.length}>
                   <Download className="h-4 w-4 mr-2" />
                   Export CSV
                 </Button>
               </CardHeader>
               <CardContent>
-                {ordersLoading ? (
+                {!applied ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Search className="h-10 w-10 mx-auto mb-3 text-gray-400" />
+                    <p>Pick a date range and status, then click <strong>Search</strong> to view the report.</p>
+                  </div>
+                ) : ordersLoading || ordersFetching ? (
                   <div className="animate-pulse h-48 bg-gray-100 rounded" />
                 ) : (
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
                       <div className="bg-blue-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-600">Delivered Orders</p>
+                        <p className="text-xs text-gray-600">Orders</p>
                         <p className="text-xl font-bold text-navy" data-testid="text-orders-count">{orderRows.length}</p>
                       </div>
                       <div className="bg-slate-50 rounded-lg p-3">

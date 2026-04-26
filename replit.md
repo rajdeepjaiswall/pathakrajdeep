@@ -5,6 +5,18 @@ Pathak Bhandar is a comprehensive e-commerce platform designed for a premium bak
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+No emojis in any communication or files unless explicitly requested.
+
+## Recent Changes (Apr 26, 2026)
+- **Legal Pages Management**: Privacy Policy and Terms of Service are now fully admin-editable.
+  - New `legal_pages` table with `pageType` ("privacy" | "terms"), `level` (2/3 for h2/h3), `title`, `content`, `listItems[]`, `highlight`, `displayOrder`, `isActive`.
+  - Public API: `GET /api/legal-pages/:pageType` returns active sections + computed `lastUpdated`.
+  - Admin API: `GET/POST/PATCH/DELETE /api/admin/legal-pages` (admin role required).
+  - Admin editor at `/admin/legal-pages` with tabs to switch between Privacy/Terms, add/edit/delete/reorder/toggle visibility, and a "View page" link.
+  - Single dynamic public page component `client/src/pages/legal-page.tsx` used by both `/privacy-policy` and `/terms-of-service` routes.
+  - Initial content seeded from the previous static pages via `scripts/seed-legal-pages.ts` (idempotent — skips if rows exist).
+  - Old static `PrivacyPolicy.tsx` and `TermsOfService.tsx` files removed.
+  - Sidebar entry "Legal Pages" added under admin nav.
 
 ## System Architecture
 

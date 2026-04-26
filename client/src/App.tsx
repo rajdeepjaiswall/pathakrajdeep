@@ -34,6 +34,7 @@ import AdminPayments from "@/pages/admin/payments";
 import AdminPaymentGateway from "@/pages/admin/payment-gateway";
 import AdminVerifiedCustomers from "@/pages/admin/verified-customers";
 import AdminTestimonials from "@/pages/admin/testimonials";
+import AdminLegalPages from "@/pages/admin/legal-pages";
 import SuperAdminLogin from "@/pages/super-admin/login";
 import SuperAdminDashboard from "@/pages/super-admin/dashboard";
 import LogoManager from "@/pages/super-admin/logo-manager";
@@ -47,8 +48,7 @@ import AboutUs from "@/pages/about-us";
 import ContactUs from "@/pages/contact-us";
 import PopupBanner from "@/components/PopupBanner";
 import OTPTest from "@/pages/otp-test";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
-import TermsOfService from "@/pages/TermsOfService";
+import LegalPageView from "@/pages/legal-page";
 import CompleteProfile from "@/pages/complete-profile";
 import PhonePeCallback from "@/pages/phonepe-callback";
 import NotFound from "@/pages/not-found";
@@ -87,6 +87,7 @@ function Router() {
       <Route path="/admin/payment-gateway" component={AdminPaymentGateway} />
       <Route path="/admin/verified-customers" component={AdminVerifiedCustomers} />
       <Route path="/admin/testimonials" component={AdminTestimonials} />
+      <Route path="/admin/legal-pages" component={AdminLegalPages} />
       <Route path="/super-admin/login" component={SuperAdminLogin} />
       <Route path="/super-admin" component={SuperAdminDashboard} />
       <Route path="/super-admin/logo-manager" component={LogoManager} />
@@ -100,8 +101,12 @@ function Router() {
       <Route path="/about-us" component={AboutUs} />
       <Route path="/contact-us" component={ContactUs} />
       <Route path="/otp-test" component={OTPTest} />
-      <Route path="/privacy-policy" component={PrivacyPolicy} />
-      <Route path="/terms-of-service" component={TermsOfService} />
+      <Route path="/privacy-policy">
+        <LegalPageView pageType="privacy" pageTitle="Privacy Policy" />
+      </Route>
+      <Route path="/terms-of-service">
+        <LegalPageView pageType="terms" pageTitle="Terms of Service" />
+      </Route>
       <Route path="/complete-profile" component={CompleteProfile} />
       <Route path="/phonepe-callback" component={PhonePeCallback} />
       <Route component={NotFound} />

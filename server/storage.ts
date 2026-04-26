@@ -9,6 +9,7 @@ import {
   type PaymentGatewayConfig, type InsertPaymentGatewayConfig,
   type PageContent, type InsertPageContent, type PopupBanner, type InsertPopupBanner,
   aboutSections, type AboutSection, type InsertAboutSection,
+  legalPages, type LegalPage, type InsertLegalPage,
   type PhonePeTransaction, type InsertPhonePeTransaction
 } from "@shared/schema";
 import { db } from "./db";
@@ -144,6 +145,13 @@ export interface IStorage {
   createAboutSection(section: InsertAboutSection): Promise<AboutSection>;
   updateAboutSection(id: number, section: Partial<InsertAboutSection>): Promise<AboutSection>;
   deleteAboutSection(id: number): Promise<void>;
+
+  // Legal Pages methods (privacy + terms)
+  getLegalPageSections(pageType: string, activeOnly?: boolean): Promise<LegalPage[]>;
+  getLegalPageSection(id: number): Promise<LegalPage | undefined>;
+  createLegalPageSection(section: InsertLegalPage): Promise<LegalPage>;
+  updateLegalPageSection(id: number, section: Partial<InsertLegalPage>): Promise<LegalPage>;
+  deleteLegalPageSection(id: number): Promise<void>;
 
   // Admin management methods
   getAdminUsers(): Promise<User[]>;
@@ -1176,6 +1184,47 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAboutSection(id: number): Promise<void> {
     await db.delete(aboutSections).where(eq(aboutSections.id, id));
+  }
+
+  // Legal Pages methods (privacy + terms)
+  async getLegalPageSections(pageType: string, activeOnly: boolean = false): Promise<LegalPage[]> {
+    const conditions = activeOnly
+      ? and(eq(legalPages.pageType, pageType), eq(legalPages.isActive, true))
+      : eq(legalPages.pageType, pageType);
+    return db
+      .select()
+      .from(legalPages)
+      .where(conditions)
+      .orderBy(asc(legalPages.displayOrder), asc(legalPages.id));
+  }
+
+  async getLegalPageSection(id: number): Promise<LegalPage | undefined> {
+    const [section] = await db
+      .select()
+      .from(legalPages)
+      .where(eq(legalPages.id, id));
+    return section || undefined;
+  }
+
+  async createLegalPageSection(section: InsertLegalPage): Promise<LegalPage> {
+    const [created] = await db
+      .insert(legalPages)
+      .values(section)
+      .returning();
+    return created;
+  }
+
+  async updateLegalPageSection(id: number, section: Partial<InsertLegalPage>): Promise<LegalPage> {
+    const [updated] = await db
+      .update(legalPages)
+      .set({ ...section, updatedAt: new Date() })
+      .where(eq(legalPages.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteLegalPageSection(id: number): Promise<void> {
+    await db.delete(legalPages).where(eq(legalPages.id, id));
   }
 
   // Admin management methods

@@ -2684,6 +2684,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== Legal Pages (Privacy Policy + Terms of Service) =====
+  const isValidLegalPageType = (t: any): t is "privacy" | "terms" =>
+    t === "privacy" || t === "terms";
+
+  // Public read — active sections only for the requested page
+  app.get("/api/legal-pages/:pageType", async (req, res) => {
+    try {
+      const { pageType } = req.params;
+      if (!isValidLegalPageType(pageType)) {
+        return res.status(400).json({ message: "Invalid page type" });
+      }
+      const sections = await storage.getLegalPageSections(pageType, true);
+      const lastUpdated = sections.reduce<Date | null>((latest, s) => {
+        const ts = s.updatedAt ? new Date(s.updatedAt) : null;
+        if (!ts) return latest;
+        if (!latest || ts > latest) return ts;
+        return latest;
+      }, null);
+      res.json({ pageType, sections, lastUpdated });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin CRUD
+  app.get("/api/admin/legal-pages/:pageType", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { pageType } = req.params;
+      if (!isValidLegalPageType(pageType)) {
+        return res.status(400).json({ message: "Invalid page type" });
+      }
+      const sections = await storage.getLegalPageSections(pageType, false);
+      res.json(sections);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/legal-pages", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const body = { ...req.body };
+      if (!isValidLegalPageType(body.pageType)) {
+        return res.status(400).json({ message: "Invalid page type" });
+      }
+      if (!body.title || typeof body.title !== "string" || !body.title.trim()) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      const section = await storage.createLegalPageSection(body);
+      res.json(section);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/legal-pages/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({ message: "Invalid id" });
+      }
+      const existing = await storage.getLegalPageSection(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Section not found" });
+      }
+      const body = { ...req.body };
+      if (body.pageType && !isValidLegalPageType(body.pageType)) {
+        return res.status(400).json({ message: "Invalid page type" });
+      }
+      const section = await storage.updateLegalPageSection(id, body);
+      res.json(section);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/legal-pages/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({ message: "Invalid id" });
+      }
+      await storage.deleteLegalPageSection(id);
+      res.json({ message: "Section deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin Management - Super Admin only
   app.get("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {

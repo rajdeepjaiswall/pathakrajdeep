@@ -14,7 +14,8 @@ import {
   CreditCard,
   Wallet,
   CheckCircle,
-  MessageSquare
+  MessageSquare,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
@@ -75,6 +76,11 @@ const adminNavItems = [
     title: 'Testimonials',
     href: '/admin/testimonials',
     icon: MessageSquare,
+  },
+  {
+    title: 'Legal Pages',
+    href: '/admin/legal-pages',
+    icon: FileText,
   },
 ];
 

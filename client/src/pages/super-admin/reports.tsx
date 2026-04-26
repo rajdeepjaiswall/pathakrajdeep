@@ -47,10 +47,10 @@ export default function Reports() {
   // Filter inputs (what's in the form)
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(initialEnd);
-  const [statusFilter, setStatusFilter] = useState('delivered');
+  const [paymentFilter, setPaymentFilter] = useState('all');
 
   // Applied filters (what the query actually uses) — only updated when Search is clicked
-  const [applied, setApplied] = useState<{ start: string; end: string; status: string } | null>(null);
+  const [applied, setApplied] = useState<{ start: string; end: string; paymentMethod: string } | null>(null);
 
   if (!user || (user.role !== 'super_admin' && user.role !== 'admin')) {
     setLocation('/admin/login');
@@ -58,15 +58,15 @@ export default function Reports() {
   }
 
   const handleSearch = () => {
-    setApplied({ start: startDate, end: endDate, status: statusFilter });
+    setApplied({ start: startDate, end: endDate, paymentMethod: paymentFilter });
   };
 
   const { data: ordersData, isLoading: ordersLoading, isFetching: ordersFetching } = useQuery<Order[]>({
-    queryKey: ['/api/admin/reports/orders', applied?.start, applied?.end, applied?.status],
+    queryKey: ['/api/admin/reports/orders', applied?.start, applied?.end, applied?.paymentMethod],
     queryFn: async () => {
-      const statusParam = applied!.status === 'all' ? '' : `&status=${applied!.status}`;
+      const methodParam = applied!.paymentMethod === 'all' ? '' : `&paymentMethod=${applied!.paymentMethod}`;
       const res = await fetch(
-        `/api/admin/reports/orders?startDate=${applied!.start}&endDate=${applied!.end}${statusParam}`,
+        `/api/admin/reports/orders?startDate=${applied!.start}&endDate=${applied!.end}${methodParam}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       if (!res.ok) throw new Error('Failed to fetch orders');
@@ -234,18 +234,15 @@ export default function Reports() {
               </div>
               {activeTab === 'orders' && (
                 <div className="min-w-[180px]">
-                  <Label>Order Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger data-testid="select-status">
+                  <Label>Payment Type</Label>
+                  <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                    <SelectTrigger data-testid="select-payment-method">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="delivered">Delivered</SelectItem>
-                      <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
-                      <SelectItem value="order_received">Order Received</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="all">All (Online + COD)</SelectItem>
+                      <SelectItem value="online">Online (Gateway / UPI)</SelectItem>
+                      <SelectItem value="cod">Cash on Delivery</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -288,10 +285,12 @@ export default function Reports() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>
-                  Sales Report
+                  Sales Report — Money Received
                   {applied && (
                     <span className="text-sm text-gray-500 font-normal ml-2">
-                      ({applied.start} → {applied.end}, {applied.status === 'all' ? 'all statuses' : applied.status.replace(/_/g, ' ')})
+                      ({applied.start} → {applied.end},{' '}
+                      {applied.paymentMethod === 'all' ? 'all payments' :
+                        applied.paymentMethod === 'cod' ? 'cash on delivery' : 'online payments'})
                     </span>
                   )}
                 </CardTitle>

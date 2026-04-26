@@ -2880,21 +2880,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reports - Admin (and Super Admin) sales report with delivered orders + GST split
+  // Reports - Admin (and Super Admin) sales report — money received (gateway 'paid' + COD 'confirmed')
   app.get("/api/admin/reports/orders", authenticateUser, requireAdmin, async (req, res) => {
     try {
-      const { startDate, endDate, status } = req.query;
+      const { startDate, endDate, paymentMethod } = req.query;
       if (!startDate || !endDate) {
         return res.status(400).json({ message: "Start and end dates are required" });
       }
       const start = new Date(startDate as string);
       const end = new Date(endDate as string);
       end.setHours(23, 59, 59, 999);
-      const orders = await storage.getOrdersReport(
-        start,
-        end,
-        status ? (status as string) : undefined,
-      );
+      const method = paymentMethod && paymentMethod !== 'all' ? (paymentMethod as string) : undefined;
+      const orders = await storage.getOrdersReport(start, end, method);
       res.json(orders);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

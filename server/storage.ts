@@ -1246,13 +1246,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Reports methods
-  async getOrdersReport(startDate: Date, endDate: Date, status?: string): Promise<Order[]> {
+  async getOrdersReport(startDate: Date, endDate: Date, paymentMethod?: string): Promise<Order[]> {
+    // Money actually received: gateway/UPI/card/wallet marked 'paid'
+    // OR cash-on-delivery marked 'confirmed' (collected on delivery).
     const conditions = [
       sql`${orders.orderDate} >= ${startDate}`,
       sql`${orders.orderDate} <= ${endDate}`,
+      sql`(
+        (${orders.paymentMethod} = 'cod' AND ${orders.paymentStatus} = 'confirmed')
+        OR (${orders.paymentMethod} <> 'cod' AND ${orders.paymentStatus} = 'paid')
+      )`,
     ];
-    if (status) {
-      conditions.push(eq(orders.status, status));
+    if (paymentMethod === 'cod') {
+      conditions.push(eq(orders.paymentMethod, 'cod'));
+    } else if (paymentMethod === 'online') {
+      conditions.push(sql`${orders.paymentMethod} <> 'cod'`);
     }
     return db
       .select()

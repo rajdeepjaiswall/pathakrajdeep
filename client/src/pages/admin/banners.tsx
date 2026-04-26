@@ -41,6 +41,7 @@ const PLACEMENTS: { value: string; label: string; description: string }[] = [
   { value: 'hero', label: 'Hero Banner', description: 'Top of homepage — main carousel' },
   { value: 'after_featured', label: 'After Featured Products', description: 'Below the featured products section' },
   { value: 'after_trending', label: 'After Trending', description: 'Below the trending section' },
+  { value: 'after_trending_mini', label: 'Trending — Mini Carousel', description: 'Compact carousel under Trending Local with title and description overlay' },
   { value: 'after_zero_products', label: 'After Zero Products', description: 'Below the deal of the day' },
   { value: 'after_chef_editorial', label: 'After Chef Editorial', description: 'Below the chef editorial section' },
 ];

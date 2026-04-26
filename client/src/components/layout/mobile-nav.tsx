@@ -93,11 +93,15 @@ export default function MobileNav() {
             >
               {isLogo ? (
                 <div className="relative w-full h-10 flex items-center justify-center pointer-events-none">
-                  <img 
-                    src={pathakLogo} 
-                    alt="Pathak Bhandar Since 1957" 
-                    className={`absolute left-1/2 -translate-x-1/2 -top-10 object-contain rounded-full drop-shadow-lg animate-pulse-logo transition-all duration-200 ${isActive ? 'h-24 w-24' : 'h-20 w-20'}`}
-                  />
+                  <div
+                    className={`absolute left-1/2 -translate-x-1/2 -top-10 transition-all duration-200 ${isActive ? 'h-24 w-24' : 'h-20 w-20'}`}
+                  >
+                    <img
+                      src={pathakLogo}
+                      alt="Pathak Bhandar Since 1957"
+                      className="w-full h-full object-contain rounded-full drop-shadow-lg animate-pulse-logo"
+                    />
+                  </div>
                   {isActive && (
                     <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-amber-800 rounded-full"></div>
                   )}

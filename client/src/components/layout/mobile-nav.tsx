@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import pathakLogo from '@assets/file_0000000051ec720b90b768c597e02df3_1777219492201.png';
+import pathakLogo from '@assets/Screenshot_2026-04-26-21-37-03-25_96b26121e545231a3c569311a54c_1777219640927.png';
 import { useState, useEffect } from 'react';
 
 export default function MobileNav() {
@@ -72,7 +72,7 @@ export default function MobileNav() {
         isVisible ? 'translate-y-0' : 'translate-y-full'
       }`}
     >
-      <div className="grid grid-cols-5 py-2">
+      <div className="grid grid-cols-5 py-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = isActiveRoute(item.href);
@@ -85,7 +85,7 @@ export default function MobileNav() {
               key={item.label}
               href={item.href}
               onClick={isCart ? handleCartClick : undefined}
-              className={`flex flex-col items-center justify-center py-2 relative transition-all duration-200 ${
+              className={`flex flex-col items-center justify-center py-1 relative transition-all duration-200 ${
                 isActive 
                   ? 'text-amber-800 bg-amber-200/40 rounded-lg mx-1' 
                   : 'text-amber-700/80 hover:text-amber-800 hover:bg-amber-200/20 rounded-lg mx-1'

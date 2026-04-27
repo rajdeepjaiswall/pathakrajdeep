@@ -182,6 +182,15 @@ export default function SuperAdminDashboard() {
             <Trash2 className="h-6 w-6" />
             <span>Deleted Accounts</span>
           </Button>
+          <Button
+            variant="outline"
+            className="h-20 flex-col gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => setLocation('/super-admin/backup-status')}
+            data-testid="button-backup-status"
+          >
+            <Database className="h-6 w-6" />
+            <span>Backup Database</span>
+          </Button>
         </div>
 
         {/* Primary Stats */}

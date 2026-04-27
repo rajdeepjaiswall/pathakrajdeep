@@ -248,3 +248,19 @@ The new `site_settings`, `foundation_settings`, `foundation_enquiries` tables we
 - **Email delivery** (`server/email-service.ts`): `sendOtpEmail(email, otp)` — Resend SDK wrapper, from `Pathak Bhandar <contact@getdownfoundation.in>`. Subject: "OTP to Confirm Phone Number Change". Failures are logged only — never block the OTP flow (OTP stays in DB; user can resend or contact support). Requires `RESEND_API_KEY` secret.
 - **OTP system untouched**: existing 5-min expiry, 3-attempt limit, master OTP `565656`, 60s resend cooldown, identifier+type cleanup all reused as-is.
 - **Frontend** (`client/src/pages/customer/account.tsx`): new "Change Phone Number" card in Profile tab. Two-step flow: (1) enter new phone → "Send OTP to Email"; (2) enter 6-digit OTP → "Verify & Update". Shows masked email, current vs new phone, 60s resend cooldown, Cancel button. Hidden if user has no email on file.
+
+### Live Mirror Backup Database (Apr 2026)
+- **Why**: Insurance — every change made to the live Neon DB is also copied to a second Neon project (`pathak-bhandar-mirror`, `ep-purple-violet-aka2ko7q.c-3.us-west-2.aws.neon.tech`) so we always have an up-to-date backup. Neon stays the single primary; the mirror is read-only / standby.
+- **Connection**: stored as `MIRROR_DATABASE_URL` secret. Uses `@neondatabase/serverless` Pool — same driver as the primary.
+- **Initial bulk copy**: done one-time with `pg_dump --schema-only` then `pg_dump --data-only --column-inserts` from primary → loaded into mirror via psql. All 28 tables matched row-for-row after copy.
+- **Live replication** (`server/db.ts` + `server/mirror.ts`):
+  - The primary `pool.query` is monkey-patched to detect any `INSERT`/`UPDATE`/`DELETE` SQL.
+  - On every write: primary executes first; once it resolves, the same `(sql, params)` is fired to the mirror pool in the background (fire-and-forget, never blocks the response).
+  - If the mirror write fails, the SQL + params + error are recorded in a `mirror_failures` table on the **primary** DB (so we don't lose retry info if mirror is down). A `setInterval` retry loop runs every 5 minutes and replays unresolved failures, marking `resolved_at` on success.
+  - In-memory stats track total/successful/failed writes, last success/failure timestamps.
+- **Admin UI**:
+  - `GET /api/super-admin/mirror/health` returns `{enabled, stats, pendingFailures, oldestPendingAt, primaryRowCounts, mirrorRowCounts, inSync}` for 9 key tables (users, products, orders, order_items, cart_items, addresses, reviews, wishlist_items, phonepe_transactions).
+  - `POST /api/super-admin/mirror/retry` manually retries up to 200 pending failures.
+  - New tile **Backup Database** on the super-admin dashboard → `/super-admin/backup-status` (`client/src/pages/super-admin/backup-status.tsx`). Shows in-sync status, success rate, pending retries, last copy time, per-table row count comparison, last error message, and a "Retry pending" button.
+  - Page auto-refreshes every 30 seconds.
+- **Safety**: `mirror_failures` writes are excluded from mirroring (regex skip) to avoid loops. The mirror DB has its own `mirror_failures` table created at startup but it stays empty.

@@ -2141,6 +2141,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mirror database (backup) health & retry endpoints
+  app.get("/api/super-admin/mirror/health", authenticateUser, requireSuperAdmin, async (_req, res) => {
+    try {
+      const { getMirrorHealth } = await import("./mirror");
+      const health = await getMirrorHealth();
+      res.json(health);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/super-admin/mirror/retry", authenticateUser, requireSuperAdmin, async (_req, res) => {
+    try {
+      const { retryMirrorFailures } = await import("./mirror");
+      const result = await retryMirrorFailures(200);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin OTP Configuration endpoints
   app.get("/api/admin/otp-status", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {

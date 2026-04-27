@@ -2490,6 +2490,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============== Contact Settings (admin-managed, draft + published) ==============
+
+  // Public: read PUBLISHED contact info for the live /contact-us page
+  app.get("/api/contact-info", async (_req, res) => {
+    try {
+      const settings = await storage.getContactSettings();
+      res.json(settings?.publishedData || {});
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: read both draft and published versions
+  app.get("/api/admin/contact-settings", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const settings = await storage.getContactSettings();
+      res.json(
+        settings || {
+          draftData: {},
+          publishedData: {},
+          updatedAt: null,
+          publishedAt: null,
+        }
+      );
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: save the DRAFT (does NOT update what visitors see)
+  app.patch("/api/admin/contact-settings", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { contactDataSchema } = await import("@shared/schema");
+      const parsed = contactDataSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid data",
+          errors: parsed.error.flatten(),
+        });
+      }
+      const settings = await storage.saveContactDraft(parsed.data);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: PUSH LIVE — copy current draft to published
+  app.post("/api/admin/contact-settings/publish", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const settings = await storage.publishContactSettings();
+      res.json(settings);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Popup Banners - Public read active only
   app.get("/api/popup-banners/active", async (req, res) => {
     try {

@@ -134,3 +134,44 @@ A comprehensive deployment guide is available in `CPANEL_DEPLOYMENT_GUIDE.md` co
   - `POST /api/admin/account/change-password/verify` — body: `{ adminOtp, superAdminOtp?, newPassword }`. Verifies both OTPs and updates the password.
 - WhatsApp delivery uses the existing `otpService.sendWhatsAppOTP(phone, name, purpose)` (Fast2SMS).
 - Initial state: no admin in the DB has a `phone` set. They must save a WhatsApp number in the Profile section before they can use the password-change flow.
+
+## Contact Us — Dynamic Page with Admin Editor + Push-Live (Apr 2026)
+
+**Public page**: `/contact-us` (file `client/src/pages/contact-us.tsx`)
+- Premium centered layout: circular profile image, store name, social-icon row, contact details card, "Save Contact" button.
+- Reads from `GET /api/contact-info` which returns the **published** version only.
+- Empty fields are hidden automatically.
+- Social icons (WhatsApp, Facebook, Instagram, Email) use the brown/champagne brand theme on a cream background, with hover/active animations.
+- WhatsApp link auto-converts to `https://wa.me/<digits>`. Phone uses `tel:`. Email uses `mailto:`.
+- "Save Contact" button generates a `.vcf` (vCard 3.0) file containing name, phone, WhatsApp, email, address and the website URL — opens in the user's default contacts app.
+
+**Admin editor**: `/admin/contact-settings` (file `client/src/pages/admin/contact-settings.tsx`)
+- Reachable from the dashboard tile **Contact Us**. Available to both `admin` and `super_admin`.
+- Form sections: Basic Info (store name + profile image upload or URL), Contact Details (phone, email, address), Social Links (WhatsApp number, Facebook URL, Instagram URL, mailto email).
+- Image upload is base64-embedded (max 2 MB) — same pattern as the About page.
+- Three buttons:
+  - **Preview Live Page** — opens `/contact-us` in a new tab.
+  - **Save Draft** — stores in `draftData`. Visitors do NOT see this.
+  - **Push Live** — saves the draft and copies it into `publishedData`. Visitors now see the new content.
+- Validates email + Facebook/Instagram URLs before saving.
+- Shows "Draft last saved" and "Published" timestamps.
+
+**Schema** (`shared/schema.ts`): new `contactSettings` table — single row.
+```
+id serial PK
+draft_data    jsonb  // admin's working copy
+published_data jsonb // what visitors see
+updated_at    timestamp
+published_at  timestamp
+```
+Created in DB manually via `CREATE TABLE IF NOT EXISTS contact_settings (...)` (drizzle-kit push had unrelated interactive prompts on a pre-existing google_id constraint).
+
+**Backend routes** (`server/routes.ts`, around line 2496):
+- `GET  /api/contact-info` — public. Returns `publishedData` only.
+- `GET  /api/admin/contact-settings` — admin. Returns full row (draft + published + timestamps).
+- `PATCH /api/admin/contact-settings` — admin. Validates with `contactDataSchema` (Zod) and updates `draftData`.
+- `POST /api/admin/contact-settings/publish` — admin. Copies `draftData` → `publishedData`.
+
+**Storage methods**: `getContactSettings`, `saveContactDraft`, `publishContactSettings` in `server/storage.ts`.
+
+**Not changed**: navbar, footer, theme, About Us, product pages.

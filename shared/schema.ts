@@ -319,6 +319,54 @@ export const legalPages = pgTable("legal_pages", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Contact Settings (single-row) — admin-controlled with draft + published versions
+export type ContactData = {
+  storeName?: string;
+  profileImage?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  socialLinks?: {
+    whatsapp?: string;
+    facebook?: string;
+    instagram?: string;
+    email?: string;
+  };
+};
+
+export const contactSettings = pgTable("contact_settings", {
+  id: serial("id").primaryKey(),
+  draftData: jsonb("draft_data").$type<ContactData>().default({}),
+  publishedData: jsonb("published_data").$type<ContactData>().default({}),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  publishedAt: timestamp("published_at"),
+});
+
+export const insertContactSettingsSchema = createInsertSchema(contactSettings).omit({
+  id: true,
+  updatedAt: true,
+  publishedAt: true,
+});
+
+export const contactDataSchema = z.object({
+  storeName: z.string().optional(),
+  profileImage: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  address: z.string().optional(),
+  socialLinks: z
+    .object({
+      whatsapp: z.string().optional(),
+      facebook: z.string().url().optional().or(z.literal("")),
+      instagram: z.string().url().optional().or(z.literal("")),
+      email: z.string().email().optional().or(z.literal("")),
+    })
+    .optional(),
+});
+
+export type InsertContactSettings = z.infer<typeof insertContactSettingsSchema>;
+export type ContactSettings = typeof contactSettings.$inferSelect;
+
 // PhonePe Transactions table
 export const phonePeTransactions = pgTable("phonepe_transactions", {
   id: serial("id").primaryKey(),

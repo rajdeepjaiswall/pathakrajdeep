@@ -31,6 +31,7 @@ import AdminAbout from "@/pages/admin/about";
 import AdminCategories from "@/pages/admin/categories";
 import AdminSettings from "@/pages/admin/settings";
 import AdminAccount from "@/pages/admin/account";
+import AdminContactSettings from "@/pages/admin/contact-settings";
 import AdminPayments from "@/pages/admin/payments";
 import AdminPaymentGateway from "@/pages/admin/payment-gateway";
 import AdminVerifiedCustomers from "@/pages/admin/verified-customers";
@@ -85,6 +86,7 @@ function Router() {
       <Route path="/admin/categories" component={AdminCategories} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/account" component={AdminAccount} />
+      <Route path="/admin/contact-settings" component={AdminContactSettings} />
       <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/payment-gateway" component={AdminPaymentGateway} />
       <Route path="/admin/verified-customers" component={AdminVerifiedCustomers} />

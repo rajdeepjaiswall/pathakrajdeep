@@ -8,6 +8,7 @@ import {
   type ManualPaymentConfig, type InsertManualPaymentConfig, type ManualPaymentDetails, type InsertManualPaymentDetails,
   type PaymentGatewayConfig, type InsertPaymentGatewayConfig,
   type PageContent, type InsertPageContent, type PopupBanner, type InsertPopupBanner,
+  contactSettings, type ContactSettings, type ContactData,
   aboutSections, type AboutSection, type InsertAboutSection,
   legalPages, type LegalPage, type InsertLegalPage,
   type PhonePeTransaction, type InsertPhonePeTransaction
@@ -132,6 +133,11 @@ export interface IStorage {
   // Page Content methods
   getPageContent(pageType: string): Promise<PageContent | undefined>;
   upsertPageContent(content: InsertPageContent): Promise<PageContent>;
+
+  // Contact Settings (single-row, draft + published)
+  getContactSettings(): Promise<ContactSettings | undefined>;
+  saveContactDraft(data: ContactData): Promise<ContactSettings>;
+  publishContactSettings(): Promise<ContactSettings>;
 
   // Popup Banner methods
   getPopupBanners(activeOnly?: boolean): Promise<PopupBanner[]>;
@@ -1098,6 +1104,46 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // Contact Settings methods
+  async getContactSettings(): Promise<ContactSettings | undefined> {
+    const [row] = await db.select().from(contactSettings).limit(1);
+    return row || undefined;
+  }
+
+  async saveContactDraft(data: ContactData): Promise<ContactSettings> {
+    const existing = await this.getContactSettings();
+    if (existing) {
+      const [updated] = await db
+        .update(contactSettings)
+        .set({ draftData: data, updatedAt: new Date() })
+        .where(eq(contactSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(contactSettings)
+      .values({ draftData: data, publishedData: {} })
+      .returning();
+    return created;
+  }
+
+  async publishContactSettings(): Promise<ContactSettings> {
+    const existing = await this.getContactSettings();
+    if (!existing) {
+      throw new Error("No contact settings to publish — save a draft first.");
+    }
+    const [updated] = await db
+      .update(contactSettings)
+      .set({
+        publishedData: existing.draftData || {},
+        publishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(contactSettings.id, existing.id))
+      .returning();
+    return updated;
   }
 
   // Popup Banner methods

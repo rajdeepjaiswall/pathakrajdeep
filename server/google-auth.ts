@@ -46,6 +46,10 @@ export function initializeGoogleAuth() {
           const existingUser = await storage.getUserByGoogleId(profile.id);
           
           if (existingUser) {
+            // Block soft-deleted accounts
+            if ((existingUser as any).isDeleted) {
+              return done(null, false, { message: 'ACCOUNT_DELETED' } as any);
+            }
             // User exists, return user
             return done(null, existingUser);
           }
@@ -54,6 +58,10 @@ export function initializeGoogleAuth() {
           if (profile.emails && profile.emails.length > 0) {
             const emailUser = await storage.getUserByEmail(profile.emails[0].value);
             if (emailUser) {
+              // Block soft-deleted accounts
+              if ((emailUser as any).isDeleted) {
+                return done(null, false, { message: 'ACCOUNT_DELETED' } as any);
+              }
               // Link Google ID to existing email account
               const updatedUser = await storage.updateUserGoogleId(emailUser.id, profile.id);
               return done(null, updatedUser);

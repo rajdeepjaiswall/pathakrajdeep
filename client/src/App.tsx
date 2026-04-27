@@ -51,6 +51,7 @@ import PopupBannersManager from "@/pages/super-admin/popup-banners";
 import Reports from "@/pages/super-admin/reports";
 import SuperAdminFoundationSettings from "@/pages/super-admin/foundation-settings";
 import SuperAdminFoundationEnquiries from "@/pages/super-admin/foundation-enquiries";
+import SuperAdminDeletedAccounts from "@/pages/super-admin/deleted-accounts";
 import GetdownFoundationPage from "@/pages/getdown-foundation";
 import AboutUs from "@/pages/about-us";
 import ContactUs from "@/pages/contact-us";
@@ -111,6 +112,8 @@ function Router() {
       <Route path="/super-admin/reports" component={Reports} />
       <Route path="/super-admin/foundation-settings" component={SuperAdminFoundationSettings} />
       <Route path="/super-admin/foundation-enquiries" component={SuperAdminFoundationEnquiries} />
+      <Route path="/super-admin/deleted-accounts" component={SuperAdminDeletedAccounts} />
+      <Route path="/admin/deleted-accounts" component={SuperAdminDeletedAccounts} />
       <Route path="/getdown-foundation" component={GetdownFoundationPage} />
       <Route path="/admin/reports" component={Reports} />
       <Route path="/trending-local" component={TrendingLocalPage} />

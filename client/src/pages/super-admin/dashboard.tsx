@@ -15,7 +15,8 @@ import {
   BarChart3,
   UserCog,
   Sparkles,
-  Inbox
+  Inbox,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -171,6 +172,15 @@ export default function SuperAdminDashboard() {
           >
             <Inbox className="h-6 w-6" />
             <span>Foundation Enquiries</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-20 flex-col gap-2 border-red-300 text-red-700 hover:bg-red-50"
+            onClick={() => setLocation('/super-admin/deleted-accounts')}
+            data-testid="button-deleted-accounts"
+          >
+            <Trash2 className="h-6 w-6" />
+            <span>Deleted Accounts</span>
           </Button>
         </div>
 

@@ -69,8 +69,28 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+// Daily background job: permanently purge soft-deleted users past their 30-day recovery window
+async function startAccountPurgeJob() {
+  const { storage } = await import('./storage');
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const runOnce = async () => {
+    try {
+      const purged = await storage.purgeExpiredDeletedUsers();
+      if (purged > 0) {
+        log(`[purge-job] Permanently removed ${purged} expired deleted account(s).`);
+      }
+    } catch (err: any) {
+      console.error('[purge-job] Failed:', err?.message || err);
+    }
+  };
+  // Run once 30s after boot, then every 24h
+  setTimeout(runOnce, 30 * 1000);
+  setInterval(runOnce, ONE_DAY_MS);
+}
+
 (async () => {
   const server = await registerRoutes(app);
+  startAccountPurgeJob();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

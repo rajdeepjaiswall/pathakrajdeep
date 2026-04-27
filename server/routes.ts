@@ -262,6 +262,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
+      // Block soft-deleted accounts at login (within 30-day recovery window)
+      if ((user as any).isDeleted) {
+        const deadline = (user as any).recoveryDeadline ? new Date((user as any).recoveryDeadline) : null;
+        if (deadline && deadline > new Date()) {
+          return res.status(403).json({
+            message: 'Your account has been deleted. Contact support to recover within 30 days.',
+            code: 'ACCOUNT_DELETED',
+            recoveryDeadline: deadline.toISOString(),
+          });
+        }
+        // Past deadline — treat as non-existent
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
       // Block disabled admin accounts at login
       if (['admin', 'sub_admin', 'super_admin'].includes(user.role) && user.isActive === false) {
         return res.status(403).json({ message: 'Your account has been disabled. Please contact the super admin.' });
@@ -376,6 +390,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fetch complete user data from database
         const fullUser = await storage.getUser(req.user.id);
         if (fullUser) {
+          // Force session logout for soft-deleted accounts
+          if ((fullUser as any).isDeleted) {
+            try { (req as any).logout?.(() => {}); } catch {}
+            return res.json({ isAuthenticated: false, authType: null, code: 'ACCOUNT_DELETED' });
+          }
           // Force session logout for disabled admins
           if (['admin','sub_admin','super_admin'].includes(fullUser.role) && fullUser.isActive === false) {
             return res.json({ isAuthenticated: false, authType: null, code: 'ACCOUNT_DISABLED' });
@@ -396,6 +415,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fetch complete user data from database
         const fullUser = await storage.getUser(req.user.id);
         if (fullUser) {
+          if ((fullUser as any).isDeleted) {
+            return res.json({ isAuthenticated: false, authType: null, code: 'ACCOUNT_DELETED' });
+          }
           if (['admin','sub_admin','super_admin'].includes(fullUser.role) && fullUser.isActive === false) {
             return res.json({ isAuthenticated: false, authType: null, code: 'ACCOUNT_DISABLED' });
           }
@@ -3485,6 +3507,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const k of ADMIN_FEATURE_KEYS) if (clean[k] === undefined) clean[k] = true;
       await storage.upsertAdminPermissions(id, clean);
       res.json({ permissions: clean });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== Account soft-delete (30-day recovery) =====
+  // User: delete own account (soft delete, 30-day recovery window)
+  app.post("/api/auth/delete-account", authenticateUser, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { reason, confirm } = req.body || {};
+      if (!confirm || String(confirm).trim().toLowerCase() !== 'pathak') {
+        return res.status(400).json({ message: "Please type 'pathak' to confirm." });
+      }
+      const me = await storage.getUser(userId);
+      if (!me) return res.status(404).json({ message: 'User not found' });
+      if ((me as any).isDeleted) {
+        return res.status(400).json({ message: 'Account is already pending deletion.' });
+      }
+      // Block admin/super-admin self-delete via this endpoint to prevent lockout
+      if (['admin', 'sub_admin', 'super_admin'].includes(me.role)) {
+        return res.status(403).json({
+          message: 'Admin accounts cannot be self-deleted. Please contact the super admin.'
+        });
+      }
+      const updated = await storage.softDeleteUser(
+        userId,
+        reason ? String(reason).trim().slice(0, 1000) : null,
+        30
+      );
+      // End any session-based login (Google OAuth)
+      try {
+        if (req.logout) {
+          req.logout(() => {});
+        }
+      } catch {}
+      res.json({
+        success: true,
+        message: 'Your account has been deleted. You can recover it within 30 days through admin support.',
+        recoveryDeadline: (updated as any).recoveryDeadline,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: list deleted accounts (within recovery window)
+  app.get("/api/admin/deleted-users", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const list = await storage.getDeletedUsers();
+      const now = Date.now();
+      const result = list.map((u: any) => ({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username,
+        email: u.email,
+        phone: u.phone,
+        role: u.role,
+        deletedAt: u.deletedAt,
+        recoveryDeadline: u.recoveryDeadline,
+        deletionReason: u.deletionReason,
+        daysLeft: u.recoveryDeadline
+          ? Math.max(0, Math.ceil((new Date(u.recoveryDeadline).getTime() - now) / (24 * 60 * 60 * 1000)))
+          : 0,
+      }));
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: recover a deleted account
+  app.post("/api/admin/users/:id/recover", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const target = await storage.getUser(id);
+      if (!target) return res.status(404).json({ message: 'User not found' });
+      if (!(target as any).isDeleted) {
+        return res.status(400).json({ message: 'This account is not deleted.' });
+      }
+      const deadline = (target as any).recoveryDeadline ? new Date((target as any).recoveryDeadline) : null;
+      if (deadline && deadline < new Date()) {
+        return res.status(400).json({ message: 'Recovery window has expired for this account.' });
+      }
+      const restored = await storage.recoverUser(id);
+      res.json({ success: true, message: 'Account has been restored.', user: restored });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: manual purge trigger (also runs automatically once per day)
+  app.post("/api/admin/deleted-users/purge", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const count = await storage.purgeExpiredDeletedUsers();
+      res.json({ success: true, purged: count });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

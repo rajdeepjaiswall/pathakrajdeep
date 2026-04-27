@@ -18,10 +18,14 @@ import { useLocation, Link } from 'wouter';
 import { 
   User, MapPin, Phone, Mail, Edit3, Save, X, Plus, Trash2, 
   AlertCircle, CheckCircle, Clock, Package, LogOut, Verified,
-  ArrowLeft, Home, Store
+  ArrowLeft, Home, Store, ShieldAlert, Loader2
 } from 'lucide-react';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
 import MobileNav from '@/components/layout/mobile-nav';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 // Phone verification schema
 const phoneVerificationSchema = z.object({
@@ -65,6 +69,40 @@ export default function CustomerAccount() {
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
+
+  // Delete account state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/auth/delete-account', {
+        reason: deleteReason.trim() || undefined,
+        confirm: deleteConfirm.trim(),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Account deleted',
+        description: 'You can recover your account within 30 days through admin support.',
+      });
+      setDeleteOpen(false);
+      setDeleteReason('');
+      setDeleteConfirm('');
+      // Log out and redirect home
+      try { logout(); } catch {}
+      setTimeout(() => setLocation('/'), 800);
+    },
+    onError: (e: any) => {
+      toast({
+        title: 'Could not delete account',
+        description: e.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -804,9 +842,120 @@ export default function CustomerAccount() {
               )}
             </CardContent>
           </Card>
+
+          {/* Delete Account */}
+          <Card className="mt-6 border-red-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-700">
+                <ShieldAlert className="w-5 h-5" /> Delete My Account
+              </CardTitle>
+              <CardDescription>
+                Permanently close your account. You will have 30 days to recover it through admin support.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Alert className="border-red-300 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-700">
+                  Deleting your account will log you out and disable login. Your data will be kept securely for 30 days
+                  in case you change your mind. After 30 days, it will be permanently removed.
+                </AlertDescription>
+              </Alert>
+              <Button
+                variant="destructive"
+                className="mt-4"
+                onClick={() => setDeleteOpen(true)}
+                data-testid="button-open-delete-account"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete My Account
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
       </div>
+
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(o) => {
+          if (deleteAccountMutation.isPending) return;
+          setDeleteOpen(o);
+          if (!o) {
+            setDeleteReason('');
+            setDeleteConfirm('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <ShieldAlert className="w-5 h-5" /> Delete My Account
+            </DialogTitle>
+            <DialogDescription className="text-red-700 font-medium">
+              Your account will be deleted. Your data can be recovered within 30 days through admin support.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="delete-reason">Please tell us why you are leaving (optional)</Label>
+              <Textarea
+                id="delete-reason"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value.slice(0, 1000))}
+                placeholder="Your feedback helps us improve…"
+                rows={3}
+                className="mt-1"
+                data-testid="input-delete-reason"
+              />
+            </div>
+            <div>
+              <Label htmlFor="delete-confirm">
+                Type <span className="font-bold text-red-700">pathak</span> to confirm
+              </Label>
+              <Input
+                id="delete-confirm"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="pathak"
+                className="mt-1"
+                autoComplete="off"
+                data-testid="input-delete-confirm"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleteAccountMutation.isPending}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteAccountMutation.mutate()}
+              disabled={
+                deleteAccountMutation.isPending ||
+                deleteConfirm.trim().toLowerCase() !== 'pathak'
+              }
+              data-testid="button-confirm-delete"
+            >
+              {deleteAccountMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Delete My Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <MobileNav />
     </div>
   );

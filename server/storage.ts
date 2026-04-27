@@ -186,6 +186,12 @@ export interface IStorage {
   updateUserPassword(id: number, newPassword: string): Promise<User>;
   setUserActive(id: number, isActive: boolean): Promise<User>;
   generateUniqueAdminId(): Promise<string>;
+
+  // Account soft-delete methods (30-day recovery window)
+  softDeleteUser(id: number, reason: string | null, recoveryDays?: number): Promise<User>;
+  recoverUser(id: number): Promise<User>;
+  getDeletedUsers(): Promise<User[]>;
+  purgeExpiredDeletedUsers(): Promise<number>;
   getAdminPermissions(adminUserId: number): Promise<AdminPermissionsMap>;
   upsertAdminPermissions(adminUserId: number, permissions: AdminPermissionsMap): Promise<AdminPermissionsMap>;
   deleteAdminUser(id: number): Promise<void>;
@@ -1457,6 +1463,89 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return updated;
+  }
+
+  // ===== Account soft-delete (30-day recovery) =====
+  async softDeleteUser(id: number, reason: string | null, recoveryDays: number = 30): Promise<User> {
+    const now = new Date();
+    const deadline = new Date(now.getTime() + recoveryDays * 24 * 60 * 60 * 1000);
+    const [updated] = await db
+      .update(users)
+      .set({
+        isDeleted: true,
+        deletedAt: now,
+        deletionReason: reason || null,
+        recoveryDeadline: deadline,
+        updatedAt: now,
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async recoverUser(id: number): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        isDeleted: false,
+        deletedAt: null,
+        deletionReason: null,
+        recoveryDeadline: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getDeletedUsers(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.isDeleted, true))
+      .orderBy(desc(users.deletedAt));
+  }
+
+  async purgeExpiredDeletedUsers(): Promise<number> {
+    const now = new Date();
+    const expired = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.isDeleted, true), sql`${users.recoveryDeadline} < ${now}`));
+    let count = 0;
+    for (const row of expired) {
+      try {
+        await db.delete(users).where(eq(users.id, row.id));
+        count++;
+      } catch (e) {
+        // Skip users with foreign-key dependencies (orders, addresses) — keep the row but anonymize
+        await db
+          .update(users)
+          .set({
+            username: `deleted_user_${row.id}`,
+            email: null,
+            phone: null,
+            password: null,
+            firstName: 'Deleted',
+            lastName: 'User',
+            googleId: null,
+            profileImageUrl: null,
+            addressLine1: null,
+            addressLine2: null,
+            area: null,
+            city: null,
+            state: null,
+            pinCode: null,
+            latitude: null,
+            longitude: null,
+            isActive: false,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, row.id));
+        count++;
+      }
+    }
+    return count;
   }
 
   async generateUniqueAdminId(): Promise<string> {

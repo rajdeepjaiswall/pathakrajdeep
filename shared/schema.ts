@@ -28,6 +28,11 @@ export const users = pgTable("users", {
   pinCode: text("pin_code"),
   latitude: text("latitude"),
   longitude: text("longitude"),
+  // Soft-delete fields (account deletion with 30-day recovery window)
+  isDeleted: boolean("is_deleted").default(false),
+  deletedAt: timestamp("deleted_at"),
+  deletionReason: text("deletion_reason"),
+  recoveryDeadline: timestamp("recovery_deadline"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -2797,24 +2797,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // In-memory map of phones that have completed WhatsApp OTP for the foundation form
+  // In-memory map of phones that have completed SMS OTP for the foundation form
   // (key = digits-only phone, value = expiry timestamp ms). 10-min window.
   const verifiedFoundationPhones = new Map<string, number>();
   const FOUNDATION_OTP_WINDOW_MS = 10 * 60 * 1000;
   const normalizePhone = (p: string) => p.replace(/\D/g, '');
 
-  // Public: send WhatsApp OTP for the foundation enquiry form
+  // Public: send SMS OTP for the foundation enquiry form (uses existing Fast2SMS SMS)
   app.post("/api/foundation/send-otp", async (req, res) => {
     try {
       const { phone, name } = req.body || {};
       if (!phone || normalizePhone(phone).length < 10) {
         return res.status(400).json({ message: "Please enter a valid phone number." });
       }
-      const result = await otpService.sendWhatsAppOTP(phone, name || "Friend", "foundation_enquiry");
+      const result = await otpService.sendSMSOTP(phone, name || "Friend", "foundation_enquiry", "sms");
       if (!result.success) {
         return res.status(400).json({ message: result.message });
       }
-      res.json({ success: true, message: "OTP sent on WhatsApp." });
+      res.json({ success: true, message: "OTP sent via SMS." });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -2827,7 +2827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!phone || !otp) {
         return res.status(400).json({ message: "Phone and OTP are required." });
       }
-      const result = await otpService.verifyOTP(phone, otp, "whatsapp");
+      const result = await otpService.verifyOTP(phone, otp, "sms");
       if (!result.success) {
         return res.status(400).json({ message: result.message });
       }

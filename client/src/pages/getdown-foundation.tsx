@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ShieldCheck, MessageCircle, CheckCircle2, Building2, Sparkles } from 'lucide-react';
-import { SiWhatsapp } from 'react-icons/si';
+import { Loader2, ShieldCheck, MessageCircle, CheckCircle2, Building2, Sparkles, Phone, Send } from 'lucide-react';
 import type { FoundationContent } from '@shared/schema';
 
 const SCALE_OPTIONS = [
@@ -47,7 +46,7 @@ export default function GetdownFoundationPage() {
     },
     onSuccess: () => {
       setOtpSent(true);
-      toast({ title: 'OTP sent', description: 'Check your WhatsApp for the verification code.' });
+      toast({ title: 'OTP sent', description: 'Check your phone for the SMS verification code.' });
     },
     onError: (e: any) =>
       toast({ title: 'Could not send OTP', description: e.message || 'Try again.', variant: 'destructive' }),
@@ -84,7 +83,7 @@ export default function GetdownFoundationPage() {
       setSubmitted(true);
       toast({
         title: 'Enquiry submitted',
-        description: "We'll reach out to you on WhatsApp shortly.",
+        description: "We'll reach out to you shortly.",
       });
     },
     onError: (e: any) =>

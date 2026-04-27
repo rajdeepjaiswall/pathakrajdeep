@@ -14,6 +14,7 @@ import {
   foundationEnquiries, type FoundationEnquiry, type InsertFoundationEnquiry,
   aboutSections, type AboutSection, type InsertAboutSection,
   legalPages, type LegalPage, type InsertLegalPage,
+  adminPermissions, type AdminPermissionsMap, defaultPermissionsAllOn,
   type PhonePeTransaction, type InsertPhonePeTransaction
 } from "@shared/schema";
 import { db } from "./db";
@@ -181,7 +182,13 @@ export interface IStorage {
 
   // Admin management methods
   getAdminUsers(): Promise<User[]>;
+  getAdminUserById(id: number): Promise<User | undefined>;
   updateUserPassword(id: number, newPassword: string): Promise<User>;
+  setUserActive(id: number, isActive: boolean): Promise<User>;
+  generateUniqueAdminId(): Promise<string>;
+  getAdminPermissions(adminUserId: number): Promise<AdminPermissionsMap>;
+  upsertAdminPermissions(adminUserId: number, permissions: AdminPermissionsMap): Promise<AdminPermissionsMap>;
+  deleteAdminUser(id: number): Promise<void>;
 
   // Reports methods
   getOrdersReport(startDate: Date, endDate: Date): Promise<Order[]>;
@@ -1422,8 +1429,16 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(users)
-      .where(sql`${users.role} IN ('admin', 'super_admin')`)
+      .where(sql`${users.role} IN ('admin', 'super_admin', 'sub_admin')`)
       .orderBy(desc(users.createdAt));
+  }
+
+  async getAdminUserById(id: number): Promise<User | undefined> {
+    const [u] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.id, id), sql`${users.role} IN ('admin', 'super_admin', 'sub_admin')`));
+    return u;
   }
 
   async updateUserPassword(id: number, newPassword: string): Promise<User> {
@@ -1433,6 +1448,61 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return updated;
+  }
+
+  async setUserActive(id: number, isActive: boolean): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async generateUniqueAdminId(): Promise<string> {
+    for (let i = 0; i < 12; i++) {
+      const id = 'ADM-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const existing = await db.select().from(users).where(eq(users.adminId, id)).limit(1);
+      if (existing.length === 0) return id;
+    }
+    return 'ADM-' + Date.now().toString(36).toUpperCase();
+  }
+
+  async getAdminPermissions(adminUserId: number): Promise<AdminPermissionsMap> {
+    const [row] = await db
+      .select()
+      .from(adminPermissions)
+      .where(eq(adminPermissions.adminUserId, adminUserId));
+    if (!row) {
+      // Default: every feature ON for admins, persist on first read
+      const def = defaultPermissionsAllOn();
+      try {
+        await db.insert(adminPermissions).values({ adminUserId, permissions: def });
+      } catch {}
+      return def;
+    }
+    return { ...defaultPermissionsAllOn(), ...(row.permissions || {}) };
+  }
+
+  async upsertAdminPermissions(adminUserId: number, permissions: AdminPermissionsMap): Promise<AdminPermissionsMap> {
+    const existing = await db
+      .select()
+      .from(adminPermissions)
+      .where(eq(adminPermissions.adminUserId, adminUserId));
+    if (existing.length === 0) {
+      await db.insert(adminPermissions).values({ adminUserId, permissions });
+    } else {
+      await db
+        .update(adminPermissions)
+        .set({ permissions, updatedAt: new Date() })
+        .where(eq(adminPermissions.adminUserId, adminUserId));
+    }
+    return permissions;
+  }
+
+  async deleteAdminUser(id: number): Promise<void> {
+    await db.delete(adminPermissions).where(eq(adminPermissions.adminUserId, id));
+    await db.delete(users).where(eq(users.id, id));
   }
 
   // Reports methods

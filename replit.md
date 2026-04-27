@@ -214,3 +214,29 @@ Created in DB manually via `CREATE TABLE IF NOT EXISTS contact_settings (...)` (
 
 ### Tables created via raw SQL
 The new `site_settings`, `foundation_settings`, `foundation_enquiries` tables were created via `executeSql` (drizzle-kit `db:push` interactive prompt is blocked by an unrelated pre-existing `google_id` constraint).
+
+### Super Admin dashboard & role-based permissions (Apr 2026)
+- **Roles**: `super_admin` (full + irrevocable access), `admin` (dashboard access + per-feature toggles), `sub_admin` (dashboard access + per-feature toggles).
+- **Schema** (`shared/schema.ts`): `users.adminId` (`ADM-XXXXXX`, unique) + `users.isActive`; new `admin_permissions` table (`adminUserId` FK, `permissions` JSONB). Constants: `ADMIN_FEATURE_KEYS` (17 features) + `ADMIN_FEATURE_LABELS` + `defaultPermissionsAllOn()`.
+- **Existing admins** are untouched; `adminId` was backfilled (rajdeep=ADM-F8CB6E super_admin, admin=ADM-9DA13F, pathakji=ADM-2606FF, ankit5656=ADM-6AFFAA) and they default to all-permissions-on.
+- **Backend** (`server/routes.ts`):
+  - `requirePermission(featureKey)` middleware: super_admin always passes; admins/sub_admins are 403'd if they lack the feature.
+  - Path-prefix permission guard mounted on `/api/admin/*` (skips `/api/admin/me/*`): inspects the JWT, blocks disabled accounts (`code: ACCOUNT_DISABLED`), and 403s any request whose path matches `PATH_FEATURE_MAP` when the admin lacks that feature (`code: PERMISSION_DENIED`). Maps cover orders, products, categories, customers, banners, popup-banners, about-sections, legal-pages, manual-payment-config, pending-payments, verify-payment, payment-gateways, contact-settings, site-settings/header, site-settings/footer, analytics/reports, testimonials, verified-customers.
+  - Login + `/api/auth/status` block disabled admins.
+  - Routes:
+    - `GET /api/admin/me/permissions` — returns own `{adminId, role, isActive, permissions, features}` (used by sidebar/dashboard tile filtering, refetched every 30s).
+    - `GET /api/super-admin/admins` — list (super_admin only) with embedded `adminPermissions`.
+    - `POST /api/super-admin/admins` — auto-generates unique `ADM-XXXXXX` + 12-char password, creates user + permissions row (default all-on), tries `otpService.sendWhatsAppMessage` if available, returns generated `{username, password, adminId}` to display once.
+    - `PUT /api/super-admin/admins/:id` — edit profile fields.
+    - `PATCH /api/super-admin/admins/:id/status` — toggle `isActive` (cannot disable super_admin or self).
+    - `GET/PATCH /api/super-admin/admins/:id/permissions` — read/upsert per-feature toggles (cannot edit super_admin).
+    - `POST /api/super-admin/admins/:id/reset-password` — regenerates 12-char password, returns it.
+    - `DELETE /api/super-admin/admins/:id` — deletes user + permissions row (cannot delete super_admin or self).
+- **Storage** (`server/storage.ts`): `getAdminUserById`, `setUserActive`, `generateUniqueAdminId`, `getAdminPermissions`, `upsertAdminPermissions`, `deleteAdminUser`.
+- **Frontend**:
+  - `/super-admin/admins` (`client/src/pages/super-admin/admin-management.tsx`): cards per admin with role badge, enabled-feature counter, eye-icon Permissions modal (Switch toggles + Enable-all/Disable-all + Save), Add (shows generated credentials in modal with copy + WhatsApp deep-link), Edit, Reset Password, Toggle status, Delete. Super admin row is locked.
+  - `client/src/hooks/use-admin-permissions.ts` — TanStack Query hook polling `/api/admin/me/permissions` every 30s with `hasPermission(feature)` helper.
+  - `client/src/components/admin/admin-sidebar.tsx` — filters nav items by permission; shows "Admin Management" for super_admin only.
+  - `client/src/pages/admin/dashboard.tsx` — `DashboardTiles` component renders only the tiles the current admin can access.
+  - `client/src/lib/auth.ts` — `User` type extended with `sub_admin`, `adminId`, `isActive`, `adminPermissions`.
+- **Feature keys** (17): dashboard, orders, products, categories, customers, banners, about, contact_settings, header_settings, footer_settings, legal_pages, testimonials, verified_customers, payments, payment_gateway, reports, account.

@@ -3,9 +3,14 @@ import { apiRequest } from "./queryClient";
 export interface User {
   id: number;
   username: string;
-  role: 'customer' | 'admin' | 'super_admin';
+  role: 'customer' | 'admin' | 'sub_admin' | 'super_admin';
   email?: string;
   phone?: string;
+  adminId?: string | null;
+  isActive?: boolean;
+  firstName?: string | null;
+  lastName?: string | null;
+  adminPermissions?: Record<string, boolean>;
   address_line_1?: string;
   address_line_2?: string;
   area?: string;

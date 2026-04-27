@@ -36,6 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import AdminSidebar from '@/components/admin/admin-sidebar';
 import { useAuth } from '@/hooks/use-auth';
+import { useAdminPermissions } from '@/hooks/use-admin-permissions';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/cart';
 import { ORDER_STATUSES } from '@/lib/constants';
@@ -402,87 +403,8 @@ export default function AdminDashboard() {
             <p className="text-gray-600">Welcome back, {user?.username}! Here's what's happening with your bakery.</p>
           </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mb-8">
-            <Link href="/admin/orders">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-orders">
-                <ShoppingCart className="h-6 w-6" />
-                <span>Orders</span>
-              </Button>
-            </Link>
-            <Link href="/admin/products">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-products">
-                <Package className="h-6 w-6" />
-                <span>Products</span>
-              </Button>
-            </Link>
-            <Link href="/admin/customers">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-customers">
-                <Users className="h-6 w-6" />
-                <span>Customers</span>
-              </Button>
-            </Link>
-            <Link href="/admin/banners">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-banners">
-                <TrendingUp className="h-6 w-6" />
-                <span>Banners</span>
-              </Button>
-            </Link>
-            <Link href="/admin/about">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-about">
-                <Store className="h-6 w-6" />
-                <span>About Us</span>
-              </Button>
-            </Link>
-            <Link href="/admin/categories">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-categories">
-                <Package className="h-6 w-6" />
-                <span>Categories</span>
-              </Button>
-            </Link>
-            <Link href="/admin/payments">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy" data-testid="button-payments">
-                <IndianRupee className="h-6 w-6" />
-                <span>Payments</span>
-              </Button>
-            </Link>
-            <Link href="/admin/legal-pages">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-legal-pages">
-                <FileText className="h-6 w-6" />
-                <span>Legal Pages</span>
-              </Button>
-            </Link>
-            <Link href="/admin/reports">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-reports">
-                <TrendingUp className="h-6 w-6" />
-                <span>Reports</span>
-              </Button>
-            </Link>
-            <Link href="/admin/account">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-account">
-                <UserCog className="h-6 w-6" />
-                <span>My Account</span>
-              </Button>
-            </Link>
-            <Link href="/admin/contact-settings">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-contact-settings">
-                <AtSign className="h-6 w-6" />
-                <span>Contact Us</span>
-              </Button>
-            </Link>
-            <Link href="/admin/header-settings">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-header-settings">
-                <PanelTop className="h-6 w-6" />
-                <span>Header Editor</span>
-              </Button>
-            </Link>
-            <Link href="/admin/footer-settings">
-              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-footer-settings">
-                <PanelBottom className="h-6 w-6" />
-                <span>Footer Editor</span>
-              </Button>
-            </Link>
-          </div>
+          {/* Quick Actions — filtered by per-admin permissions */}
+          <DashboardTiles />
 
           {/* Analytics Cards - 4x2 Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -722,6 +644,62 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============== Permission-aware tile grid ==============
+type DashboardTile = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  feature: string;
+  testId: string;
+};
+
+const DASHBOARD_TILES: DashboardTile[] = [
+  { href: '/admin/orders',            label: 'Orders',          icon: ShoppingCart, feature: 'orders',           testId: 'button-orders' },
+  { href: '/admin/products',          label: 'Products',        icon: Package,      feature: 'products',         testId: 'button-products' },
+  { href: '/admin/customers',         label: 'Customers',       icon: Users,        feature: 'customers',        testId: 'button-customers' },
+  { href: '/admin/banners',           label: 'Banners',         icon: TrendingUp,   feature: 'banners',          testId: 'button-banners' },
+  { href: '/admin/about',             label: 'About Us',        icon: Store,        feature: 'about',            testId: 'button-about' },
+  { href: '/admin/categories',        label: 'Categories',      icon: Package,      feature: 'categories',       testId: 'button-categories' },
+  { href: '/admin/payments',          label: 'Payments',        icon: IndianRupee,  feature: 'payments',         testId: 'button-payments' },
+  { href: '/admin/legal-pages',       label: 'Legal Pages',     icon: FileText,     feature: 'legal_pages',      testId: 'button-legal-pages' },
+  { href: '/admin/reports',           label: 'Reports',         icon: TrendingUp,   feature: 'reports',          testId: 'button-reports' },
+  { href: '/admin/account',           label: 'My Account',      icon: UserCog,      feature: 'account',          testId: 'button-account' },
+  { href: '/admin/contact-settings',  label: 'Contact Us',      icon: AtSign,       feature: 'contact_settings', testId: 'button-contact-settings' },
+  { href: '/admin/header-settings',   label: 'Header Editor',   icon: PanelTop,     feature: 'header_settings',  testId: 'button-header-settings' },
+  { href: '/admin/footer-settings',   label: 'Footer Editor',   icon: PanelBottom,  feature: 'footer_settings',  testId: 'button-footer-settings' },
+];
+
+function DashboardTiles() {
+  const { can, isSuperAdmin } = useAdminPermissions();
+  const tiles = DASHBOARD_TILES.filter((t) => isSuperAdmin || can(t.feature));
+  if (tiles.length === 0) {
+    return (
+      <div className="border border-stone-200 bg-stone-50 rounded-lg p-8 mb-8 text-center">
+        <p className="text-slate-600">You don't have access to any features yet. Please contact the super admin.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mb-8">
+      {tiles.map((t) => {
+        const Icon = t.icon;
+        return (
+          <Link key={t.href} href={t.href}>
+            <Button
+              variant="outline"
+              className="h-20 w-full flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy"
+              data-testid={t.testId}
+            >
+              <Icon className="h-6 w-6" />
+              <span>{t.label}</span>
+            </Button>
+          </Link>
+        );
+      })}
     </div>
   );
 }

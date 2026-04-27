@@ -15,7 +15,9 @@ export const users = pgTable("users", {
   profileImageUrl: text("profile_image_url"),
   googleId: text("google_id").unique(),
   authProvider: text("auth_provider").default("local"), // local, google
-  role: text("role").notNull().default("customer"), // customer, admin, super_admin
+  role: text("role").notNull().default("customer"), // customer, admin, sub_admin, super_admin
+  adminId: text("admin_id").unique(), // human-readable, immutable id like ADM-A4F2 (admins only)
+  isActive: boolean("is_active").default(true), // disable login without deleting
   isVerified: boolean("is_verified").default(false),
   profileCompleted: boolean("profile_completed").default(false),
   addressLine1: text("address_line_1"),
@@ -450,6 +452,73 @@ export const whatsappApiConfigSchema = z.object({
 });
 
 export type FoundationSettings = typeof foundationSettings.$inferSelect;
+
+// ============== Admin Permissions (per-admin feature toggles) ==============
+// Single source of truth for every admin-dashboard feature key.
+// Adding a new feature = add a new entry here; default ON for everyone.
+export const ADMIN_FEATURE_KEYS = [
+  'dashboard',
+  'orders',
+  'products',
+  'categories',
+  'customers',
+  'banners',
+  'about',
+  'contact_settings',
+  'header_settings',
+  'footer_settings',
+  'legal_pages',
+  'testimonials',
+  'verified_customers',
+  'payments',
+  'payment_gateway',
+  'reports',
+  'account',
+] as const;
+
+export type AdminFeatureKey = (typeof ADMIN_FEATURE_KEYS)[number];
+
+export const ADMIN_FEATURE_LABELS: Record<AdminFeatureKey, string> = {
+  dashboard: 'Dashboard Overview',
+  orders: 'Orders',
+  products: 'Products',
+  categories: 'Categories',
+  customers: 'Customers',
+  banners: 'Banners',
+  about: 'About Us',
+  contact_settings: 'Contact Us Editor',
+  header_settings: 'Header Editor',
+  footer_settings: 'Footer Editor',
+  legal_pages: 'Legal Pages',
+  testimonials: 'Testimonials',
+  verified_customers: 'Verified Customers',
+  payments: 'Payments',
+  payment_gateway: 'Payment Gateway Config',
+  reports: 'Reports & Analytics',
+  account: 'My Account / Security',
+};
+
+export type AdminPermissionsMap = Partial<Record<AdminFeatureKey, boolean>>;
+
+export const adminPermissions = pgTable("admin_permissions", {
+  id: serial("id").primaryKey(),
+  adminUserId: integer("admin_user_id").references(() => users.id).notNull().unique(),
+  permissions: jsonb("permissions").$type<AdminPermissionsMap>().default({}),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const adminPermissionsSchema = z.object({
+  permissions: z.record(z.string(), z.boolean()),
+});
+
+export type AdminPermissionsRow = typeof adminPermissions.$inferSelect;
+
+export function defaultPermissionsAllOn(): AdminPermissionsMap {
+  return ADMIN_FEATURE_KEYS.reduce((acc, k) => {
+    acc[k] = true;
+    return acc;
+  }, {} as AdminPermissionsMap);
+}
 
 // ============== Foundation Enquiries (super-admin viewable) ==============
 export const foundationEnquiries = pgTable("foundation_enquiries", {

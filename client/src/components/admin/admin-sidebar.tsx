@@ -15,86 +15,47 @@ import {
   Wallet,
   CheckCircle,
   MessageSquare,
-  FileText
+  FileText,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
+import { useAdminPermissions } from '@/hooks/use-admin-permissions';
 import { cn } from '@/lib/utils';
+import type { AdminFeatureKey } from '@shared/schema';
 
-const adminNavItems = [
-  {
-    title: 'Dashboard',
-    href: '/admin',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Products',
-    href: '/admin/products',
-    icon: Package,
-  },
-  {
-    title: 'Categories',
-    href: '/admin/categories',
-    icon: Grid3X3,
-  },
-  {
-    title: 'Banners',
-    href: '/admin/banners',
-    icon: Image,
-  },
-  {
-    title: 'Orders',
-    href: '/admin/orders',
-    icon: ShoppingBag,
-  },
-  {
-    title: 'Verified Customers',
-    href: '/admin/verified-customers',
-    icon: CheckCircle,
-  },
-  {
-    title: 'All Customers',
-    href: '/admin/customers',
-    icon: Users,
-  },
-  {
-    title: 'Payments',
-    href: '/admin/payments',
-    icon: CreditCard,
-  },
-  {
-    title: 'Payment Gateway',
-    href: '/admin/payment-gateway',
-    icon: Wallet,
-  },
-  {
-    title: 'Analytics',
-    href: '/admin/analytics',
-    icon: BarChart3,
-  },
-  {
-    title: 'Testimonials',
-    href: '/admin/testimonials',
-    icon: MessageSquare,
-  },
-  {
-    title: 'Legal Pages',
-    href: '/admin/legal-pages',
-    icon: FileText,
-  },
+interface NavItem {
+  title: string;
+  href: string;
+  icon: any;
+  feature?: AdminFeatureKey; // when omitted, always visible to admins
+}
+
+const adminNavItems: NavItem[] = [
+  { title: 'Dashboard', href: '/admin', icon: LayoutDashboard, feature: 'dashboard' },
+  { title: 'Products', href: '/admin/products', icon: Package, feature: 'products' },
+  { title: 'Categories', href: '/admin/categories', icon: Grid3X3, feature: 'categories' },
+  { title: 'Banners', href: '/admin/banners', icon: Image, feature: 'banners' },
+  { title: 'Orders', href: '/admin/orders', icon: ShoppingBag, feature: 'orders' },
+  { title: 'Verified Customers', href: '/admin/verified-customers', icon: CheckCircle, feature: 'verified_customers' },
+  { title: 'All Customers', href: '/admin/customers', icon: Users, feature: 'customers' },
+  { title: 'Payments', href: '/admin/payments', icon: CreditCard, feature: 'payments' },
+  { title: 'Payment Gateway', href: '/admin/payment-gateway', icon: Wallet, feature: 'payment_gateway' },
+  { title: 'Analytics', href: '/admin/analytics', icon: BarChart3, feature: 'reports' },
+  { title: 'Testimonials', href: '/admin/testimonials', icon: MessageSquare, feature: 'testimonials' },
+  { title: 'Legal Pages', href: '/admin/legal-pages', icon: FileText, feature: 'legal_pages' },
 ];
 
-const superAdminNavItems = [
-  {
-    title: 'Settings',
-    href: '/admin/settings',
-    icon: Settings,
-  },
+const superAdminNavItems: NavItem[] = [
+  { title: 'Admin Management', href: '/super-admin/admins', icon: Shield },
+  { title: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 export default function AdminSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const { can, isSuperAdmin } = useAdminPermissions();
+  const visibleAdminNavItems = adminNavItems.filter((item) => !item.feature || isSuperAdmin || can(item.feature));
 
   return (
     <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:bg-white lg:border-r lg:border-gray-200">
@@ -129,7 +90,7 @@ export default function AdminSidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2">
-          {adminNavItems.map((item) => {
+          {visibleAdminNavItems.map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.href} href={item.href}>

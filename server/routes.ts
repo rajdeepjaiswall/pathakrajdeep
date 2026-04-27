@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { OAuth2Client } from "google-auth-library";
-import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders, otps, users } from "@shared/schema";
+import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders, otps, users, ADMIN_FEATURE_KEYS, defaultPermissionsAllOn, type AdminPermissionsMap } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
 import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
@@ -88,9 +88,9 @@ function optionalAuth(req: any, res: any, next: any) {
   }
 }
 
-// Middleware to verify admin role
+// Middleware to verify admin role (covers admin, sub_admin, super_admin)
 function requireAdmin(req: any, res: any, next: any) {
-  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+  if (!['admin', 'sub_admin', 'super_admin'].includes(req.user.role)) {
     return res.status(403).json({ message: 'Admin access required' });
   }
   next();
@@ -102,6 +102,31 @@ function requireSuperAdmin(req: any, res: any, next: any) {
     return res.status(403).json({ message: 'Super admin access required' });
   }
   next();
+}
+
+// Block disabled accounts and check feature permission for admin/sub_admin.
+// Super admin always has access. Returns 403 with code 'PERMISSION_DENIED' or 'ACCOUNT_DISABLED'.
+function requirePermission(featureKey: string) {
+  return async function (req: any, res: any, next: any) {
+    try {
+      const fresh = await storage.getUser(req.user.id);
+      if (!fresh) return res.status(401).json({ message: 'Account not found' });
+      if (fresh.isActive === false) {
+        return res.status(403).json({ message: 'Your account has been disabled. Contact the super admin.', code: 'ACCOUNT_DISABLED' });
+      }
+      if (fresh.role === 'super_admin') return next();
+      if (!['admin', 'sub_admin'].includes(fresh.role)) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const perms = await storage.getAdminPermissions(fresh.id);
+      if ((perms as any)[featureKey] === false) {
+        return res.status(403).json({ message: 'You do not have permission to access this feature.', code: 'PERMISSION_DENIED', feature: featureKey });
+      }
+      next();
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  };
 }
 
 import { initializeGoogleAuth, setupSession, setupGoogleAuthRoutes } from "./google-auth";
@@ -118,6 +143,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupSession(app);
   initializeGoogleAuth();
   setupGoogleAuthRoutes(app);
+
+  // ============== Path-prefix permission guard ==============
+  // Runs BEFORE every /api/admin/* route (except /api/admin/me/*).
+  // Inspects the JWT/session, blocks disabled accounts, and returns 403 with
+  // code 'PERMISSION_DENIED' when the admin lacks the matched feature permission.
+  // Super admins always pass. Unmapped paths fall through unchanged.
+  const PATH_FEATURE_MAP: Array<[RegExp, string]> = [
+    [/^\/orders/, 'orders'],
+    [/^\/products/, 'products'],
+    [/^\/categories/, 'categories'],
+    [/^\/customers/, 'customers'],
+    [/^\/verified-customers/, 'verified_customers'],
+    [/^\/banners/, 'banners'],
+    [/^\/popup-banners/, 'banners'],
+    [/^\/about-sections/, 'about'],
+    [/^\/about/, 'about'],
+    [/^\/legal-pages/, 'legal_pages'],
+    [/^\/manual-payment-config/, 'payments'],
+    [/^\/pending-payments/, 'payments'],
+    [/^\/verify-payment/, 'payments'],
+    [/^\/payment-gateways/, 'payment_gateway'],
+    [/^\/contact-settings/, 'contact_settings'],
+    [/^\/site-settings\/header/, 'header_settings'],
+    [/^\/site-settings\/footer/, 'footer_settings'],
+    [/^\/analytics/, 'reports'],
+    [/^\/reports/, 'reports'],
+    [/^\/testimonials/, 'testimonials'],
+  ];
+
+  app.use('/api/admin', async (req, res, next) => {
+    try {
+      // /me/* endpoints (own permissions/account) are always allowed
+      if (req.path.startsWith('/me/')) return next();
+
+      // Resolve the user from session or JWT (without forcing 401 — let downstream do that)
+      let userId: number | null = null;
+      let role: string | null = null;
+      if ((req as any).isAuthenticated && (req as any).isAuthenticated() && (req as any).user) {
+        userId = (req as any).user.id;
+        role = (req as any).user.role;
+      } else {
+        const authHeader = req.headers['authorization'] as string | undefined;
+        const token = authHeader?.split(' ')[1];
+        if (token) {
+          try {
+            const decoded: any = jwt.verify(token, JWT_SECRET);
+            userId = decoded.id;
+            role = decoded.role;
+          } catch { /* let downstream auth middleware return 401 */ }
+        }
+      }
+      if (!userId) return next();
+      if (role === 'super_admin') return next();
+
+      const fresh = await storage.getUser(userId);
+      if (!fresh) return next();
+      if (fresh.isActive === false) {
+        return res.status(403).json({ message: 'Your account has been disabled. Contact the super admin.', code: 'ACCOUNT_DISABLED' });
+      }
+      if (!['admin', 'sub_admin'].includes(fresh.role)) return next();
+
+      let feature: string | null = null;
+      for (const [pattern, f] of PATH_FEATURE_MAP) {
+        if (pattern.test(req.path)) { feature = f; break; }
+      }
+      if (!feature) return next();
+
+      const perms = await storage.getAdminPermissions(fresh.id);
+      if ((perms as any)[feature] === false) {
+        return res.status(403).json({ message: 'You do not have permission to access this feature.', code: 'PERMISSION_DENIED', feature });
+      }
+      next();
+    } catch (err: any) {
+      console.error('Admin permission guard error:', err);
+      next();
+    }
+  });
 
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
@@ -160,13 +262,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
+      // Block disabled admin accounts at login
+      if (['admin', 'sub_admin', 'super_admin'].includes(user.role) && user.isActive === false) {
+        return res.status(403).json({ message: 'Your account has been disabled. Please contact the super admin.' });
+      }
+
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
 
-      res.json({ token, user: { id: user.id, username: user.username, role: user.role, email: user.email, phone: user.phone } });
+      res.json({ token, user: { id: user.id, username: user.username, role: user.role, email: user.email, phone: user.phone, adminId: user.adminId } });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -251,12 +358,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId: req.sessionID || 'none'
       });
 
+      const attachAdminPermissions = async (u: any) => {
+        if (!u) return u;
+        if (['admin', 'sub_admin', 'super_admin'].includes(u.role)) {
+          if (u.role === 'super_admin') {
+            (u as any).adminPermissions = defaultPermissionsAllOn();
+          } else {
+            (u as any).adminPermissions = await storage.getAdminPermissions(u.id);
+          }
+        }
+        return u;
+      };
+
       // Check session-based auth first (Google OAuth)
       if (req.isAuthenticated && req.isAuthenticated() && req.user) {
         console.log('Session user found:', req.user.id);
         // Fetch complete user data from database
         const fullUser = await storage.getUser(req.user.id);
         if (fullUser) {
+          // Force session logout for disabled admins
+          if (['admin','sub_admin','super_admin'].includes(fullUser.role) && fullUser.isActive === false) {
+            return res.json({ isAuthenticated: false, authType: null, code: 'ACCOUNT_DISABLED' });
+          }
+          await attachAdminPermissions(fullUser);
           res.json({ 
             isAuthenticated: true, 
             user: fullUser,
@@ -272,6 +396,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fetch complete user data from database
         const fullUser = await storage.getUser(req.user.id);
         if (fullUser) {
+          if (['admin','sub_admin','super_admin'].includes(fullUser.role) && fullUser.isActive === false) {
+            return res.json({ isAuthenticated: false, authType: null, code: 'ACCOUNT_DISABLED' });
+          }
+          await attachAdminPermissions(fullUser);
           res.json({ 
             isAuthenticated: true, 
             user: fullUser,
@@ -3098,11 +3226,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Management - Super Admin only
+  // ============== Admin Management — Super Admin only ==============
+  // Helper: build a public-safe admin payload (no password) including permissions
+  const toAdminPayload = async (u: any) => {
+    if (!u) return u;
+    const { password, ...rest } = u;
+    let perms: AdminPermissionsMap = defaultPermissionsAllOn();
+    if (u.role !== 'super_admin') {
+      perms = await storage.getAdminPermissions(u.id);
+    }
+    return { ...rest, adminPermissions: perms };
+  };
+
+  // Generate a secure 12-char random password (mixed case, digits, symbols)
+  const generateSecurePassword = () => {
+    const set = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$%';
+    let p = '';
+    for (let i = 0; i < 12; i++) p += set[Math.floor(Math.random() * set.length)];
+    return p;
+  };
+
   app.get("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {
       const admins = await storage.getAdminUsers();
-      res.json(admins);
+      const payload = await Promise.all(admins.map(toAdminPayload));
+      res.json(payload);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -3110,27 +3258,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/super-admin/admins", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {
-      const { username, email, password, role } = req.body;
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: "Username, email, and password are required" });
+      const { username, email, phone, firstName, lastName, role } = req.body;
+      if (!username || !email) {
+        return res.status(400).json({ message: "Username and email are required" });
       }
-      if (role && !['admin', 'super_admin'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
+      if (role && !['admin', 'sub_admin'].includes(role)) {
+        return res.status(400).json({ message: "Role must be 'admin' or 'sub_admin'" });
       }
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const admin = await storage.createUser({
+      // Uniqueness pre-checks for friendlier errors
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) return res.status(400).json({ message: "Username already taken" });
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) return res.status(400).json({ message: "Email already in use" });
+
+      const plainPassword = generateSecurePassword();
+      const hashedPassword = await bcrypt.hash(plainPassword, 10);
+      const adminId = await storage.generateUniqueAdminId();
+
+      const created = await storage.createUser({
         username,
         email,
+        phone: phone || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
         password: hashedPassword,
-        role: role || 'admin',
-        isVerified: true
+        role: (role as any) || 'admin',
+        isVerified: true,
+        isActive: true,
+        adminId,
+      } as any);
+
+      // Default ALL permissions ON for new admins
+      await storage.upsertAdminPermissions(created.id, defaultPermissionsAllOn());
+
+      // Optional WhatsApp delivery (best-effort, non-blocking)
+      let whatsappSent = false;
+      if (phone) {
+        try {
+          const message = `Welcome to Pathak Bhandar Admin Panel\n\nAdmin ID: ${adminId}\nUsername: ${username}\nTemporary Password: ${plainPassword}\n\nLogin: https://pathakbhandar.in/admin/login\nPlease change your password after the first login.`;
+          if (typeof (otpService as any).sendWhatsAppMessage === 'function') {
+            await (otpService as any).sendWhatsAppMessage(phone, message);
+            whatsappSent = true;
+          }
+        } catch (e) {
+          console.error('Failed to send admin credentials over WhatsApp:', e);
+        }
+      }
+
+      const payload = await toAdminPayload(created);
+      res.json({
+        admin: payload,
+        credentials: {
+          adminId,
+          username,
+          password: plainPassword, // shown ONCE in UI
+        },
+        whatsappSent,
       });
-      res.json(admin);
+    } catch (error: any) {
+      console.error('Create admin error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Reset password (auto-generate new one, return it once)
+  app.post("/api/super-admin/admins/:id/reset-password", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const target = await storage.getAdminUserById(id);
+      if (!target) return res.status(404).json({ message: "Admin not found" });
+      if (target.role === 'super_admin' && target.id !== req.user.id) {
+        return res.status(403).json({ message: "Cannot reset another super admin's password" });
+      }
+      const plainPassword = generateSecurePassword();
+      const hashedPassword = await bcrypt.hash(plainPassword, 10);
+      await storage.updateUserPassword(id, hashedPassword);
+
+      let whatsappSent = false;
+      if (target.phone) {
+        try {
+          const message = `Your Pathak Bhandar Admin password has been reset.\n\nAdmin ID: ${target.adminId}\nUsername: ${target.username}\nNew Password: ${plainPassword}\n\nLogin: https://pathakbhandar.in/admin/login`;
+          if (typeof (otpService as any).sendWhatsAppMessage === 'function') {
+            await (otpService as any).sendWhatsAppMessage(target.phone, message);
+            whatsappSent = true;
+          }
+        } catch (e) { console.error('Reset password WhatsApp send failed:', e); }
+      }
+
+      res.json({ message: "Password reset successfully", credentials: { adminId: target.adminId, username: target.username, password: plainPassword }, whatsappSent });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
+  // Manual password set (kept for backward compatibility)
   app.put("/api/super-admin/admins/:id/password", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -3139,19 +3360,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
       }
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      const admin = await storage.updateUserPassword(id, hashedPassword);
+      await storage.updateUserPassword(id, hashedPassword);
       res.json({ message: "Password updated successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
+  // Edit admin profile (name, email, phone, role) — adminId stays immutable
   app.put("/api/super-admin/admins/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { role, isVerified } = req.body;
-      const admin = await storage.updateUser(id, { role, isVerified });
-      res.json(admin);
+      const target = await storage.getAdminUserById(id);
+      if (!target) return res.status(404).json({ message: "Admin not found" });
+      if (target.role === 'super_admin' && target.id !== req.user.id) {
+        return res.status(403).json({ message: "Cannot edit another super admin" });
+      }
+      const { firstName, lastName, email, phone, role, isVerified } = req.body;
+      const update: any = {};
+      if (firstName !== undefined) update.firstName = firstName;
+      if (lastName !== undefined) update.lastName = lastName;
+      if (email !== undefined) update.email = email;
+      if (phone !== undefined) update.phone = phone;
+      if (isVerified !== undefined) update.isVerified = isVerified;
+      // Role can only change between 'admin' and 'sub_admin' (super_admin promotion blocked)
+      if (role !== undefined) {
+        if (!['admin', 'sub_admin'].includes(role)) {
+          return res.status(400).json({ message: "Role must be 'admin' or 'sub_admin'" });
+        }
+        if (target.role === 'super_admin') {
+          return res.status(403).json({ message: "Cannot change super admin role" });
+        }
+        update.role = role;
+      }
+      const updated = await storage.updateUser(id, update);
+      const payload = await toAdminPayload(updated);
+      res.json(payload);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Toggle active/disabled status
+  app.patch("/api/super-admin/admins/:id/status", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { isActive } = req.body;
+      if (typeof isActive !== 'boolean') return res.status(400).json({ message: 'isActive boolean required' });
+      const target = await storage.getAdminUserById(id);
+      if (!target) return res.status(404).json({ message: "Admin not found" });
+      if (target.role === 'super_admin') {
+        return res.status(403).json({ message: "Super admin account cannot be disabled" });
+      }
+      if (target.id === req.user.id) {
+        return res.status(403).json({ message: "You cannot disable your own account" });
+      }
+      const updated = await storage.setUserActive(id, isActive);
+      const payload = await toAdminPayload(updated);
+      res.json(payload);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get an admin's permissions
+  app.get("/api/super-admin/admins/:id/permissions", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const target = await storage.getAdminUserById(id);
+      if (!target) return res.status(404).json({ message: "Admin not found" });
+      const perms = target.role === 'super_admin'
+        ? defaultPermissionsAllOn()
+        : await storage.getAdminPermissions(id);
+      res.json({ permissions: perms, features: ADMIN_FEATURE_KEYS });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update an admin's permissions
+  app.patch("/api/super-admin/admins/:id/permissions", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { permissions } = req.body;
+      if (!permissions || typeof permissions !== 'object') {
+        return res.status(400).json({ message: "permissions object required" });
+      }
+      const target = await storage.getAdminUserById(id);
+      if (!target) return res.status(404).json({ message: "Admin not found" });
+      if (target.role === 'super_admin') {
+        return res.status(403).json({ message: "Super admin permissions cannot be modified" });
+      }
+      // Sanitize: only known feature keys, only boolean values
+      const clean: AdminPermissionsMap = {};
+      for (const k of ADMIN_FEATURE_KEYS) {
+        if (typeof permissions[k] === 'boolean') clean[k] = permissions[k];
+      }
+      // Fill missing keys with defaults (true) so future-added features default ON
+      for (const k of ADMIN_FEATURE_KEYS) if (clean[k] === undefined) clean[k] = true;
+      await storage.upsertAdminPermissions(id, clean);
+      res.json({ permissions: clean });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete an admin (super admin cannot be deleted)
+  app.delete("/api/super-admin/admins/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const target = await storage.getAdminUserById(id);
+      if (!target) return res.status(404).json({ message: "Admin not found" });
+      if (target.role === 'super_admin') {
+        return res.status(403).json({ message: "Super admin account cannot be deleted" });
+      }
+      if (target.id === req.user.id) {
+        return res.status(403).json({ message: "You cannot delete your own account" });
+      }
+      await storage.deleteAdminUser(id);
+      res.json({ message: "Admin deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Current admin: fetch own permissions (used by admin dashboard / sidebar filtering)
+  app.get("/api/admin/me/permissions", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const fresh = await storage.getUser(req.user.id);
+      if (!fresh) return res.status(404).json({ message: "User not found" });
+      if (fresh.isActive === false) {
+        return res.status(403).json({ message: 'Your account has been disabled.', code: 'ACCOUNT_DISABLED' });
+      }
+      const perms = fresh.role === 'super_admin'
+        ? defaultPermissionsAllOn()
+        : await storage.getAdminPermissions(fresh.id);
+      res.json({
+        adminId: fresh.adminId,
+        role: fresh.role,
+        isActive: fresh.isActive,
+        permissions: perms,
+        features: ADMIN_FEATURE_KEYS,
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

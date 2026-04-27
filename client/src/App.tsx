@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { CartProvider } from "./hooks/use-cart";
 import PWAInstaller from "./components/PWAInstaller";
 import GoogleOneTap from "./components/GoogleOneTap";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Pages
 import Home from "@/pages/home";
@@ -164,6 +165,7 @@ function AppContent() {
 
   return (
     <>
+      <ScrollToTop />
       <PWAInstaller />
       <GoogleOneTap />
       <PopupBanner />

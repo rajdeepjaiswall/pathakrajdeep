@@ -46,6 +46,11 @@ export default function Checkout() {
   const queryClient = useQueryClient();
   
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentStep]);
+
   const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [isAddingAddress, setIsAddingAddress] = useState(false);

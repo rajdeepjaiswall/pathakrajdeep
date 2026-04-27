@@ -26,7 +26,7 @@ export default function AdminLogin() {
     try {
       const response = await login({ username, password });
       
-      if (response.user.role !== 'admin' && response.user.role !== 'super_admin') {
+      if (response.user.role !== 'admin' && response.user.role !== 'sub_admin' && response.user.role !== 'super_admin') {
         throw new Error('Unauthorized access - Admin privileges required');
       }
 
@@ -35,7 +35,7 @@ export default function AdminLogin() {
         title: 'Welcome back!',
         description: 'Successfully logged in to admin dashboard',
       });
-      setLocation('/admin');
+      setLocation(response.user.role === 'super_admin' ? '/super-admin' : '/admin');
     } catch (error: any) {
       toast({
         title: 'Login Failed',

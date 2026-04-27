@@ -175,3 +175,42 @@ Created in DB manually via `CREATE TABLE IF NOT EXISTS contact_settings (...)` (
 **Storage methods**: `getContactSettings`, `saveContactDraft`, `publishContactSettings` in `server/storage.ts`.
 
 **Not changed**: navbar, footer, theme, About Us, product pages.
+
+---
+
+## Dynamic Header / Footer + GetDown Foundation (April 2026)
+
+### Header & Footer (admin-controlled, draft + published)
+- **Public header & footer** (`client/src/components/layout/header.tsx`, `client/src/components/layout/footer.tsx`) read live config from `GET /api/site-settings` and render the published version only.
+- **Header config**: optional logo upload (defaults to baked-in `pathakLogo`), toggle search icon, toggle hamburger menu.
+- **Footer**: optional logo, description, horizontal sitemap (Title + Link rows), green "Managed by GetDown Foundation" badge linking to `/getdown-foundation`.
+- **Admin editors**: `/admin/header-settings` and `/admin/footer-settings` (both available to `admin` and `super_admin`). Each has Save Draft + Push Live + Preview, plus draft/published timestamps.
+- **Schema** (`shared/schema.ts`): single-row `site_settings` table with `header_draft`, `header_published`, `footer_draft`, `footer_published` jsonb columns + per-section `*_published_at` timestamps.
+- **Backend routes** (`server/routes.ts`):
+  - `GET  /api/site-settings` — public. Returns `{ header: headerPublished, footer: footerPublished }`.
+  - `GET  /api/admin/site-settings` — admin. Returns full row.
+  - `PATCH /api/admin/site-settings/header` (Zod-validated)
+  - `PATCH /api/admin/site-settings/footer` (Zod-validated)
+  - `POST /api/admin/site-settings/header/publish`
+  - `POST /api/admin/site-settings/footer/publish`
+
+### GetDown Foundation page (super-admin controlled)
+- **Public page** `/getdown-foundation` (`client/src/pages/getdown-foundation.tsx`): green-themed hero, About panel (logo + description published by super-admin), and a WhatsApp-OTP-verified enquiry form (Name, Business Name, Location, Annual Scale dropdown, WhatsApp number).
+- **OTP flow** uses existing `otpService.sendWhatsAppOTP` + `verifyOTP`. After successful OTP verification, the phone is added to an in-memory `verifiedFoundationPhones` Map (10-min TTL); enquiry submission requires a still-valid entry, then deletes it (single-use).
+- **Super-admin pages**:
+  - `/super-admin/foundation-settings` — two tabs: "Public Page" (logo + description draft/publish) and "WhatsApp API" (provider, API key, sender ID, phone number ID, template name — kept secret, never returned to public endpoint).
+  - `/super-admin/foundation-enquiries` — searchable list (by name / phone / business name) of all submitted enquiries with CSV export.
+- **Schema** (`shared/schema.ts`):
+  - `foundation_settings` (single row): `content_draft`, `content_published`, `whatsapp_api_config` jsonb columns + timestamps.
+  - `foundation_enquiries`: id, name, businessName, location, scale, phone, verified, createdAt.
+- **Backend routes**:
+  - `GET  /api/foundation` — public. Returns `contentPublished` only (never the API config).
+  - `POST /api/foundation/send-otp` + `POST /api/foundation/verify-otp` + `POST /api/foundation/enquiry` (verified-phone gate).
+  - `GET/PATCH /api/super-admin/foundation`, `POST .../foundation/publish`, `PATCH .../foundation/whatsapp-config`, `GET .../foundation/enquiries?search=`.
+
+### Dashboard tiles
+- Admin dashboard adds tiles: **Header Editor**, **Footer Editor**.
+- Super-admin dashboard adds tiles: **Foundation Page**, **Foundation Enquiries**.
+
+### Tables created via raw SQL
+The new `site_settings`, `foundation_settings`, `foundation_enquiries` tables were created via `executeSql` (drizzle-kit `db:push` interactive prompt is blocked by an unrelated pre-existing `google_id` constraint).

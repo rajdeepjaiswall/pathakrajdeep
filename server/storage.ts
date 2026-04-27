@@ -9,6 +9,9 @@ import {
   type PaymentGatewayConfig, type InsertPaymentGatewayConfig,
   type PageContent, type InsertPageContent, type PopupBanner, type InsertPopupBanner,
   contactSettings, type ContactSettings, type ContactData,
+  siteSettings, type SiteSettings, type HeaderConfig, type FooterConfig,
+  foundationSettings, type FoundationSettings, type FoundationContent, type WhatsappApiConfig,
+  foundationEnquiries, type FoundationEnquiry, type InsertFoundationEnquiry,
   aboutSections, type AboutSection, type InsertAboutSection,
   legalPages, type LegalPage, type InsertLegalPage,
   type PhonePeTransaction, type InsertPhonePeTransaction
@@ -138,6 +141,23 @@ export interface IStorage {
   getContactSettings(): Promise<ContactSettings | undefined>;
   saveContactDraft(data: ContactData): Promise<ContactSettings>;
   publishContactSettings(): Promise<ContactSettings>;
+
+  // Site Settings (Header + Footer, draft + published)
+  getSiteSettings(): Promise<SiteSettings | undefined>;
+  saveHeaderDraft(data: HeaderConfig): Promise<SiteSettings>;
+  saveFooterDraft(data: FooterConfig): Promise<SiteSettings>;
+  publishHeader(): Promise<SiteSettings>;
+  publishFooter(): Promise<SiteSettings>;
+
+  // Foundation Settings (super-admin only)
+  getFoundationSettings(): Promise<FoundationSettings | undefined>;
+  saveFoundationDraft(data: FoundationContent): Promise<FoundationSettings>;
+  publishFoundation(): Promise<FoundationSettings>;
+  saveWhatsappApiConfig(data: WhatsappApiConfig): Promise<FoundationSettings>;
+
+  // Foundation Enquiries
+  createFoundationEnquiry(data: InsertFoundationEnquiry): Promise<FoundationEnquiry>;
+  listFoundationEnquiries(search?: string): Promise<FoundationEnquiry[]>;
 
   // Popup Banner methods
   getPopupBanners(activeOnly?: boolean): Promise<PopupBanner[]>;
@@ -1144,6 +1164,130 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contactSettings.id, existing.id))
       .returning();
     return updated;
+  }
+
+  // ============== Site Settings ==============
+  async getSiteSettings(): Promise<SiteSettings | undefined> {
+    const [row] = await db.select().from(siteSettings).limit(1);
+    return row || undefined;
+  }
+  private async ensureSiteSettings(): Promise<SiteSettings> {
+    const existing = await this.getSiteSettings();
+    if (existing) return existing;
+    const [created] = await db.insert(siteSettings).values({}).returning();
+    return created;
+  }
+  async saveHeaderDraft(data: HeaderConfig): Promise<SiteSettings> {
+    const row = await this.ensureSiteSettings();
+    const [updated] = await db
+      .update(siteSettings)
+      .set({ headerDraft: data, updatedAt: new Date() })
+      .where(eq(siteSettings.id, row.id))
+      .returning();
+    return updated;
+  }
+  async saveFooterDraft(data: FooterConfig): Promise<SiteSettings> {
+    const row = await this.ensureSiteSettings();
+    const [updated] = await db
+      .update(siteSettings)
+      .set({ footerDraft: data, updatedAt: new Date() })
+      .where(eq(siteSettings.id, row.id))
+      .returning();
+    return updated;
+  }
+  async publishHeader(): Promise<SiteSettings> {
+    const row = await this.ensureSiteSettings();
+    const [updated] = await db
+      .update(siteSettings)
+      .set({
+        headerPublished: row.headerDraft || {},
+        headerPublishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(siteSettings.id, row.id))
+      .returning();
+    return updated;
+  }
+  async publishFooter(): Promise<SiteSettings> {
+    const row = await this.ensureSiteSettings();
+    const [updated] = await db
+      .update(siteSettings)
+      .set({
+        footerPublished: row.footerDraft || {},
+        footerPublishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(siteSettings.id, row.id))
+      .returning();
+    return updated;
+  }
+
+  // ============== Foundation Settings ==============
+  async getFoundationSettings(): Promise<FoundationSettings | undefined> {
+    const [row] = await db.select().from(foundationSettings).limit(1);
+    return row || undefined;
+  }
+  private async ensureFoundationSettings(): Promise<FoundationSettings> {
+    const existing = await this.getFoundationSettings();
+    if (existing) return existing;
+    const [created] = await db.insert(foundationSettings).values({}).returning();
+    return created;
+  }
+  async saveFoundationDraft(data: FoundationContent): Promise<FoundationSettings> {
+    const row = await this.ensureFoundationSettings();
+    const [updated] = await db
+      .update(foundationSettings)
+      .set({ contentDraft: data, updatedAt: new Date() })
+      .where(eq(foundationSettings.id, row.id))
+      .returning();
+    return updated;
+  }
+  async publishFoundation(): Promise<FoundationSettings> {
+    const row = await this.ensureFoundationSettings();
+    const [updated] = await db
+      .update(foundationSettings)
+      .set({
+        contentPublished: row.contentDraft || {},
+        publishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(foundationSettings.id, row.id))
+      .returning();
+    return updated;
+  }
+  async saveWhatsappApiConfig(data: WhatsappApiConfig): Promise<FoundationSettings> {
+    const row = await this.ensureFoundationSettings();
+    const [updated] = await db
+      .update(foundationSettings)
+      .set({ whatsappApiConfig: data, updatedAt: new Date() })
+      .where(eq(foundationSettings.id, row.id))
+      .returning();
+    return updated;
+  }
+
+  // ============== Foundation Enquiries ==============
+  async createFoundationEnquiry(data: InsertFoundationEnquiry): Promise<FoundationEnquiry> {
+    const [created] = await db
+      .insert(foundationEnquiries)
+      .values({ ...data, verified: true })
+      .returning();
+    return created;
+  }
+  async listFoundationEnquiries(search?: string): Promise<FoundationEnquiry[]> {
+    if (search && search.trim()) {
+      const pattern = `%${search.trim()}%`;
+      return db
+        .select()
+        .from(foundationEnquiries)
+        .where(
+          sql`${foundationEnquiries.name} ILIKE ${pattern} OR ${foundationEnquiries.phone} ILIKE ${pattern} OR ${foundationEnquiries.businessName} ILIKE ${pattern}`
+        )
+        .orderBy(desc(foundationEnquiries.createdAt));
+    }
+    return db
+      .select()
+      .from(foundationEnquiries)
+      .orderBy(desc(foundationEnquiries.createdAt));
   }
 
   // Popup Banner methods

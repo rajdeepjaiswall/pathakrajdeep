@@ -13,7 +13,9 @@ import {
   FileText,
   Bell,
   BarChart3,
-  UserCog
+  UserCog,
+  Sparkles,
+  Inbox
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -148,6 +150,27 @@ export default function SuperAdminDashboard() {
           >
             <Users className="h-6 w-6" />
             <span>Manage Shopkeepers</span>
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-8">
+          <Button
+            variant="outline"
+            className="h-20 flex-col gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            onClick={() => setLocation('/super-admin/foundation-settings')}
+            data-testid="button-foundation-settings"
+          >
+            <Sparkles className="h-6 w-6" />
+            <span>Foundation Page</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-20 flex-col gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            onClick={() => setLocation('/super-admin/foundation-enquiries')}
+            data-testid="button-foundation-enquiries"
+          >
+            <Inbox className="h-6 w-6" />
+            <span>Foundation Enquiries</span>
           </Button>
         </div>
 

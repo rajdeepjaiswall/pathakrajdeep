@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
 import { useQuery } from '@tanstack/react-query';
-import { Category, Product } from '@shared/schema';
+import { Category, Product, type HeaderConfig, type FooterConfig } from '@shared/schema';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
 import bakeryPattern from '@assets/project_20250607_1604012-01_1749292781428.png';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -37,6 +37,15 @@ export default function Header() {
   const { data: allProducts = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
   });
+
+  // Live header config (admin-controlled, published version only)
+  const { data: siteConfig } = useQuery<{ header: HeaderConfig; footer: FooterConfig }>({
+    queryKey: ['/api/site-settings'],
+  });
+  const headerCfg = siteConfig?.header || {};
+  const showSearch = headerCfg.showSearch !== false; // default ON
+  const showMenu = headerCfg.showMenu !== false; // default ON
+  const logoSrc = headerCfg.logo || pathakLogo;
 
   const filteredCategories = categories.map(cat => ({
     ...cat,
@@ -120,6 +129,7 @@ export default function Header() {
         <div className="grid grid-cols-3 items-center h-18">
           {/* Left Side: Search */}
           <div className="flex items-center justify-start">
+            {showSearch && (
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-navy hover:bg-almond/30">
@@ -231,13 +241,14 @@ export default function Header() {
                 </div>
               </SheetContent>
             </Sheet>
+            )}
           </div>
 
           {/* Center: Logo */}
           <div className="flex justify-center">
             <Link href="/" className="flex items-center">
               <img
-                src={pathakLogo}
+                src={logoSrc}
                 alt="Pathak Bhandar Logo"
                 className="h-10 sm:h-14 object-contain"
               />
@@ -246,6 +257,7 @@ export default function Header() {
 
           {/* Right Side: Hamburger Menu */}
           <div className="flex items-center justify-end">
+            {showMenu && (
             <Sheet open={isMenuSheetOpen} onOpenChange={setIsMenuSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-navy hover:bg-almond/30">
@@ -403,6 +415,7 @@ export default function Header() {
                 </div>
               </SheetContent>
             </Sheet>
+            )}
           </div>
         </div>
       </div>

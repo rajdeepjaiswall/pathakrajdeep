@@ -32,6 +32,8 @@ import AdminCategories from "@/pages/admin/categories";
 import AdminSettings from "@/pages/admin/settings";
 import AdminAccount from "@/pages/admin/account";
 import AdminContactSettings from "@/pages/admin/contact-settings";
+import AdminHeaderSettings from "@/pages/admin/header-settings";
+import AdminFooterSettings from "@/pages/admin/footer-settings";
 import AdminPayments from "@/pages/admin/payments";
 import AdminPaymentGateway from "@/pages/admin/payment-gateway";
 import AdminVerifiedCustomers from "@/pages/admin/verified-customers";
@@ -46,6 +48,9 @@ import AdminManagement from "@/pages/super-admin/admin-management";
 import PageEditor from "@/pages/super-admin/page-editor";
 import PopupBannersManager from "@/pages/super-admin/popup-banners";
 import Reports from "@/pages/super-admin/reports";
+import SuperAdminFoundationSettings from "@/pages/super-admin/foundation-settings";
+import SuperAdminFoundationEnquiries from "@/pages/super-admin/foundation-enquiries";
+import GetdownFoundationPage from "@/pages/getdown-foundation";
 import AboutUs from "@/pages/about-us";
 import ContactUs from "@/pages/contact-us";
 import PopupBanner from "@/components/PopupBanner";
@@ -87,6 +92,8 @@ function Router() {
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/account" component={AdminAccount} />
       <Route path="/admin/contact-settings" component={AdminContactSettings} />
+      <Route path="/admin/header-settings" component={AdminHeaderSettings} />
+      <Route path="/admin/footer-settings" component={AdminFooterSettings} />
       <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/payment-gateway" component={AdminPaymentGateway} />
       <Route path="/admin/verified-customers" component={AdminVerifiedCustomers} />
@@ -101,6 +108,9 @@ function Router() {
       <Route path="/super-admin/pages" component={PageEditor} />
       <Route path="/super-admin/popup-banners" component={PopupBannersManager} />
       <Route path="/super-admin/reports" component={Reports} />
+      <Route path="/super-admin/foundation-settings" component={SuperAdminFoundationSettings} />
+      <Route path="/super-admin/foundation-enquiries" component={SuperAdminFoundationEnquiries} />
+      <Route path="/getdown-foundation" component={GetdownFoundationPage} />
       <Route path="/admin/reports" component={Reports} />
       <Route path="/trending-local" component={TrendingLocalPage} />
       <Route path="/about-us" component={AboutUs} />

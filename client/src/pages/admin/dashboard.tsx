@@ -24,7 +24,9 @@ import {
   Store,
   FileText,
   UserCog,
-  AtSign
+  AtSign,
+  PanelTop,
+  PanelBottom
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -466,6 +468,18 @@ export default function AdminDashboard() {
               <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-contact-settings">
                 <AtSign className="h-6 w-6" />
                 <span>Contact Us</span>
+              </Button>
+            </Link>
+            <Link href="/admin/header-settings">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-header-settings">
+                <PanelTop className="h-6 w-6" />
+                <span>Header Editor</span>
+              </Button>
+            </Link>
+            <Link href="/admin/footer-settings">
+              <Button variant="outline" className="h-20 flex-col gap-2 border-champagne text-champagne hover:bg-champagne hover:text-navy w-full" data-testid="button-footer-settings">
+                <PanelBottom className="h-6 w-6" />
+                <span>Footer Editor</span>
               </Button>
             </Link>
           </div>

@@ -367,6 +367,111 @@ export const contactDataSchema = z.object({
 export type InsertContactSettings = z.infer<typeof insertContactSettingsSchema>;
 export type ContactSettings = typeof contactSettings.$inferSelect;
 
+// ============== Site Settings (Header + Footer, single-row, draft + published) ==============
+export type HeaderConfig = {
+  logo?: string;
+  showSearch?: boolean;
+  showMenu?: boolean;
+};
+
+export type FooterSitemapItem = { title: string; link: string };
+
+export type FooterConfig = {
+  logo?: string;
+  description?: string;
+  sitemap?: FooterSitemapItem[];
+  showFoundationBadge?: boolean;
+};
+
+export const siteSettings = pgTable("site_settings", {
+  id: serial("id").primaryKey(),
+  headerDraft: jsonb("header_draft").$type<HeaderConfig>().default({}),
+  headerPublished: jsonb("header_published").$type<HeaderConfig>().default({}),
+  footerDraft: jsonb("footer_draft").$type<FooterConfig>().default({}),
+  footerPublished: jsonb("footer_published").$type<FooterConfig>().default({}),
+  headerPublishedAt: timestamp("header_published_at"),
+  footerPublishedAt: timestamp("footer_published_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const headerConfigSchema = z.object({
+  logo: z.string().optional(),
+  showSearch: z.boolean().optional(),
+  showMenu: z.boolean().optional(),
+});
+export const footerConfigSchema = z.object({
+  logo: z.string().optional(),
+  description: z.string().optional(),
+  sitemap: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        link: z.string().min(1),
+      })
+    )
+    .optional(),
+  showFoundationBadge: z.boolean().optional(),
+});
+
+export type SiteSettings = typeof siteSettings.$inferSelect;
+
+// ============== GetDown Foundation (single-row, draft + published, super-admin only) ==============
+export type FoundationContent = {
+  logo?: string;
+  description?: string;
+};
+export type WhatsappApiConfig = {
+  provider?: string; // e.g. fast2sms, twilio
+  apiKey?: string;
+  senderId?: string;
+  phoneNumberId?: string;
+  templateName?: string;
+};
+
+export const foundationSettings = pgTable("foundation_settings", {
+  id: serial("id").primaryKey(),
+  contentDraft: jsonb("content_draft").$type<FoundationContent>().default({}),
+  contentPublished: jsonb("content_published").$type<FoundationContent>().default({}),
+  whatsappApiConfig: jsonb("whatsapp_api_config").$type<WhatsappApiConfig>().default({}),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  publishedAt: timestamp("published_at"),
+});
+
+export const foundationContentSchema = z.object({
+  logo: z.string().optional(),
+  description: z.string().optional(),
+});
+export const whatsappApiConfigSchema = z.object({
+  provider: z.string().optional(),
+  apiKey: z.string().optional(),
+  senderId: z.string().optional(),
+  phoneNumberId: z.string().optional(),
+  templateName: z.string().optional(),
+});
+
+export type FoundationSettings = typeof foundationSettings.$inferSelect;
+
+// ============== Foundation Enquiries (super-admin viewable) ==============
+export const foundationEnquiries = pgTable("foundation_enquiries", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  businessName: text("business_name").notNull(),
+  location: text("location"),
+  scale: text("scale"),
+  phone: text("phone").notNull(),
+  verified: boolean("verified").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFoundationEnquirySchema = createInsertSchema(foundationEnquiries).omit({
+  id: true,
+  createdAt: true,
+  verified: true,
+});
+
+export type InsertFoundationEnquiry = z.infer<typeof insertFoundationEnquirySchema>;
+export type FoundationEnquiry = typeof foundationEnquiries.$inferSelect;
+
 // PhonePe Transactions table
 export const phonePeTransactions = pgTable("phonepe_transactions", {
   id: serial("id").primaryKey(),

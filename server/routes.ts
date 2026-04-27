@@ -2547,6 +2547,244 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============== Site Settings (Header + Footer) ==============
+
+  // Public: published header + footer for the live site
+  app.get("/api/site-settings", async (_req, res) => {
+    try {
+      const s = await storage.getSiteSettings();
+      res.json({
+        header: s?.headerPublished || {},
+        footer: s?.footerPublished || {},
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: full draft + published
+  app.get("/api/admin/site-settings", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const s = await storage.getSiteSettings();
+      res.json(
+        s || {
+          headerDraft: {},
+          headerPublished: {},
+          footerDraft: {},
+          footerPublished: {},
+          headerPublishedAt: null,
+          footerPublishedAt: null,
+          updatedAt: null,
+        }
+      );
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: save header draft
+  app.patch("/api/admin/site-settings/header", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { headerConfigSchema } = await import("@shared/schema");
+      const parsed = headerConfigSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid header data", errors: parsed.error.flatten() });
+      }
+      const s = await storage.saveHeaderDraft(parsed.data);
+      res.json(s);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: save footer draft
+  app.patch("/api/admin/site-settings/footer", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { footerConfigSchema } = await import("@shared/schema");
+      const parsed = footerConfigSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid footer data", errors: parsed.error.flatten() });
+      }
+      const s = await storage.saveFooterDraft(parsed.data);
+      res.json(s);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: publish header
+  app.post("/api/admin/site-settings/header/publish", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const s = await storage.publishHeader();
+      res.json(s);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: publish footer
+  app.post("/api/admin/site-settings/footer/publish", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const s = await storage.publishFooter();
+      res.json(s);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============== GetDown Foundation (super admin) ==============
+
+  // Public: published foundation content (logo + description ONLY, no API config)
+  app.get("/api/foundation", async (_req, res) => {
+    try {
+      const s = await storage.getFoundationSettings();
+      res.json(s?.contentPublished || {});
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // In-memory map of phones that have completed WhatsApp OTP for the foundation form
+  // (key = digits-only phone, value = expiry timestamp ms). 10-min window.
+  const verifiedFoundationPhones = new Map<string, number>();
+  const FOUNDATION_OTP_WINDOW_MS = 10 * 60 * 1000;
+  const normalizePhone = (p: string) => p.replace(/\D/g, '');
+
+  // Public: send WhatsApp OTP for the foundation enquiry form
+  app.post("/api/foundation/send-otp", async (req, res) => {
+    try {
+      const { phone, name } = req.body || {};
+      if (!phone || normalizePhone(phone).length < 10) {
+        return res.status(400).json({ message: "Please enter a valid phone number." });
+      }
+      const result = await otpService.sendWhatsAppOTP(phone, name || "Friend", "foundation_enquiry");
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+      res.json({ success: true, message: "OTP sent on WhatsApp." });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Public: verify OTP — on success, mark this phone as verified for the next 10 min
+  app.post("/api/foundation/verify-otp", async (req, res) => {
+    try {
+      const { phone, otp } = req.body || {};
+      if (!phone || !otp) {
+        return res.status(400).json({ message: "Phone and OTP are required." });
+      }
+      const result = await otpService.verifyOTP(phone, otp, "whatsapp");
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+      verifiedFoundationPhones.set(normalizePhone(phone), Date.now() + FOUNDATION_OTP_WINDOW_MS);
+      res.json({ success: true, message: "Phone verified." });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Public: submit enquiry (requires verified phone within 10 min window)
+  app.post("/api/foundation/enquiry", async (req, res) => {
+    try {
+      const { name, businessName, location, scale, phone } = req.body || {};
+      if (!name || !businessName || !phone) {
+        return res
+          .status(400)
+          .json({ message: "Name, Business Name and Phone are required." });
+      }
+      const key = normalizePhone(phone);
+      const expiry = verifiedFoundationPhones.get(key);
+      if (!expiry || expiry < Date.now()) {
+        return res.status(400).json({
+          message: "Please verify your phone via WhatsApp OTP before submitting.",
+        });
+      }
+      const enquiry = await storage.createFoundationEnquiry({
+        name: String(name).trim(),
+        businessName: String(businessName).trim(),
+        location: location ? String(location).trim() : null as any,
+        scale: scale ? String(scale).trim() : null as any,
+        phone: String(phone).trim(),
+      });
+      // Consume the verification token so it can't be replayed
+      verifiedFoundationPhones.delete(key);
+      res.json({ success: true, enquiry });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Super Admin: get foundation settings (full draft + published + API config)
+  app.get("/api/super-admin/foundation", authenticateUser, requireSuperAdmin, async (_req, res) => {
+    try {
+      const s = await storage.getFoundationSettings();
+      res.json(
+        s || {
+          contentDraft: {},
+          contentPublished: {},
+          whatsappApiConfig: {},
+          updatedAt: null,
+          publishedAt: null,
+        }
+      );
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Super Admin: save foundation draft (logo + description)
+  app.patch("/api/super-admin/foundation", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const { foundationContentSchema } = await import("@shared/schema");
+      const parsed = foundationContentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid foundation data", errors: parsed.error.flatten() });
+      }
+      const s = await storage.saveFoundationDraft(parsed.data);
+      res.json(s);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Super Admin: publish foundation content
+  app.post("/api/super-admin/foundation/publish", authenticateUser, requireSuperAdmin, async (_req, res) => {
+    try {
+      const s = await storage.publishFoundation();
+      res.json(s);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Super Admin: save WhatsApp API config (separate from public content)
+  app.patch("/api/super-admin/foundation/whatsapp-config", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const { whatsappApiConfigSchema } = await import("@shared/schema");
+      const parsed = whatsappApiConfigSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid API config", errors: parsed.error.flatten() });
+      }
+      const s = await storage.saveWhatsappApiConfig(parsed.data);
+      res.json(s);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Super Admin: list enquiries (with optional search)
+  app.get("/api/super-admin/foundation/enquiries", authenticateUser, requireSuperAdmin, async (req, res) => {
+    try {
+      const search = (req.query.search as string) || "";
+      const list = await storage.listFoundationEnquiries(search);
+      res.json(list);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Popup Banners - Public read active only
   app.get("/api/popup-banners/active", async (req, res) => {
     try {

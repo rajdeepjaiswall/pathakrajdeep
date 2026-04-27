@@ -1576,6 +1576,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin-only: full order details (with items + customer) for invoice rendering
+  app.get("/api/admin/orders/:id/details", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [orderRow] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!orderRow) return res.status(404).json({ message: 'Order not found' });
+      const fullOrder = orderRow.user_id
+        ? await storage.getOrder(id, orderRow.user_id)
+        : { ...orderRow, orderItems: [] as any[] };
+      const customer = orderRow.user_id ? await storage.getUser(orderRow.user_id) : null;
+      res.json({
+        ...fullOrder,
+        customer: customer ? {
+          id: customer.id,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: customer.phone,
+        } : null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.put("/api/admin/orders/:id/status", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);

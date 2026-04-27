@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Download, Users, ShoppingCart, CreditCard, Search } from 'lucide-react';
+import { BarChart3, Download, Users, ShoppingCart, CreditCard, Search, Eye } from 'lucide-react';
+import InvoiceDialog from '@/components/invoice/InvoiceDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,11 @@ export default function Reports() {
 
   // Applied filters (what the query actually uses) — only updated when Search is clicked
   const [applied, setApplied] = useState<{ start: string; end: string; paymentMethod: string } | null>(null);
+
+  // Invoice preview dialog
+  const [invoiceOrderId, setInvoiceOrderId] = useState<number | null>(null);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const openInvoice = (id: number) => { setInvoiceOrderId(id); setInvoiceOpen(true); };
 
   if (!user || (user.role !== 'super_admin' && user.role !== 'admin')) {
     setLocation('/admin/login');
@@ -344,12 +350,13 @@ export default function Reports() {
                             <TableHead className="text-right">SGST</TableHead>
                             <TableHead className="text-right">IGST</TableHead>
                             <TableHead className="text-right">Grand Total</TableHead>
+                            <TableHead className="text-right w-[110px]">Invoice</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {orderRows.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                                 No delivered orders in this date range.
                               </TableCell>
                             </TableRow>
@@ -364,6 +371,30 @@ export default function Reports() {
                                 <TableCell className="text-right">{r.sgst > 0 ? formatPrice(r.sgst) : '-'}</TableCell>
                                 <TableCell className="text-right">{r.igst > 0 ? formatPrice(r.igst) : '-'}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatPrice(r.total)}</TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-1">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8"
+                                      title="View Invoice"
+                                      onClick={() => openInvoice(r.order.id)}
+                                      data-testid={`button-view-invoice-${r.order.id}`}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8"
+                                      title="Download Invoice"
+                                      onClick={() => openInvoice(r.order.id)}
+                                      data-testid={`button-download-invoice-${r.order.id}`}
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             ))
                           )}
@@ -377,6 +408,7 @@ export default function Reports() {
                               <TableCell className="text-right" data-testid="footer-sgst">{formatPrice(totals.sgst)}</TableCell>
                               <TableCell className="text-right" data-testid="footer-igst">{formatPrice(totals.igst)}</TableCell>
                               <TableCell className="text-right" data-testid="footer-grand-total">{formatPrice(totals.total)}</TableCell>
+                              <TableCell />
                             </TableRow>
                           </TableFooter>
                         )}
@@ -517,6 +549,12 @@ export default function Reports() {
           )}
         </Tabs>
       </div>
+
+      <InvoiceDialog
+        orderId={invoiceOrderId}
+        open={invoiceOpen}
+        onOpenChange={setInvoiceOpen}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import pathakLogo from '@assets/project_20250528_0859055-02.png';
+import pathakLogo from '@assets/Screenshot_2026-04-26-21-37-03-25_96b26121e545231a3c569311a54c_1777268519558.png';
 
 export type InvoiceItem = {
   name: string;

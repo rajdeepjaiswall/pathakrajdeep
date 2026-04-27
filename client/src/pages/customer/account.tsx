@@ -75,6 +75,75 @@ export default function CustomerAccount() {
   const [deleteReason, setDeleteReason] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState('');
 
+  // Change phone state
+  const [phoneStep, setPhoneStep] = useState<'idle' | 'enter-otp'>('idle');
+  const [newPhoneInput, setNewPhoneInput] = useState('');
+  const [phoneOtpInput, setPhoneOtpInput] = useState('');
+  const [phoneOtpResendIn, setPhoneOtpResendIn] = useState(0);
+  const [phoneOtpEmailMask, setPhoneOtpEmailMask] = useState('');
+
+  const requestPhoneOtpMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/account/change-phone/request-otp', {
+        new_phone: newPhoneInput.trim(),
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setPhoneStep('enter-otp');
+      setPhoneOtpEmailMask(data.email || '');
+      setPhoneOtpResendIn(60);
+      toast({
+        title: data.delivered ? 'OTP sent' : 'OTP ready',
+        description: data.message,
+        variant: data.delivered ? 'default' : 'destructive',
+      });
+    },
+    onError: (e: any) => {
+      toast({
+        title: 'Could not send OTP',
+        description: e.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const confirmPhoneOtpMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/account/change-phone/confirm', {
+        new_phone: newPhoneInput.trim(),
+        otp: phoneOtpInput.trim(),
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.user) updateUser(data.user);
+      toast({
+        title: 'Phone number updated',
+        description: 'Your new phone number has been saved.',
+      });
+      setPhoneStep('idle');
+      setNewPhoneInput('');
+      setPhoneOtpInput('');
+      setPhoneOtpEmailMask('');
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/status'] });
+    },
+    onError: (e: any) => {
+      toast({
+        title: 'Verification failed',
+        description: e.message || 'Please check the OTP and try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Resend cooldown ticker
+  useEffect(() => {
+    if (phoneOtpResendIn <= 0) return;
+    const t = setTimeout(() => setPhoneOtpResendIn((v) => v - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phoneOtpResendIn]);
+
   const deleteAccountMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/auth/delete-account', {
@@ -538,6 +607,126 @@ export default function CustomerAccount() {
                     </Button>
                   </div>
                 </form>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Change Phone Number — verified via OTP sent to registered email */}
+          <Card className="mt-6 border-blue-100">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="w-5 h-5 text-blue-600" />
+                Change Phone Number
+              </CardTitle>
+              <CardDescription>
+                For your safety, we will send a 6-digit code to your registered email
+                {user.email ? <> (<span className="font-medium">{user.email}</span>)</> : ''}.
+                Enter the code to confirm the new number.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!user.email ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No email is linked to your account. Please add an email above before changing your phone number.
+                  </AlertDescription>
+                </Alert>
+              ) : phoneStep === 'idle' ? (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="new-phone">New phone number</Label>
+                    <Input
+                      id="new-phone"
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder="10-digit mobile number"
+                      maxLength={10}
+                      value={newPhoneInput}
+                      onChange={(e) => setNewPhoneInput(e.target.value.replace(/\D/g, ''))}
+                      data-testid="input-new-phone"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Current: <span className="font-medium">{user.phone || 'Not set'}</span>
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => requestPhoneOtpMutation.mutate()}
+                    disabled={
+                      !/^[6-9]\d{9}$/.test(newPhoneInput) ||
+                      newPhoneInput === user.phone ||
+                      requestPhoneOtpMutation.isPending
+                    }
+                    data-testid="button-send-phone-otp"
+                  >
+                    {requestPhoneOtpMutation.isPending ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending OTP…</>
+                    ) : (
+                      <><Mail className="w-4 h-4 mr-2" /> Send OTP to Email</>
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Alert>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription>
+                      We sent a 6-digit code to <span className="font-medium">{phoneOtpEmailMask || user.email}</span>.
+                      It expires in 5 minutes.
+                    </AlertDescription>
+                  </Alert>
+                  <div>
+                    <Label htmlFor="phone-otp">Enter 6-digit OTP</Label>
+                    <Input
+                      id="phone-otp"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="••••••"
+                      value={phoneOtpInput}
+                      onChange={(e) => setPhoneOtpInput(e.target.value.replace(/\D/g, ''))}
+                      className="tracking-[0.5em] text-center text-lg font-semibold"
+                      data-testid="input-phone-otp"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Updating phone to: <span className="font-medium">{newPhoneInput}</span>
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => confirmPhoneOtpMutation.mutate()}
+                      disabled={phoneOtpInput.length !== 6 || confirmPhoneOtpMutation.isPending}
+                      data-testid="button-verify-phone-otp"
+                    >
+                      {confirmPhoneOtpMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying…</>
+                      ) : (
+                        <><CheckCircle className="w-4 h-4 mr-2" /> Verify &amp; Update</>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => requestPhoneOtpMutation.mutate()}
+                      disabled={phoneOtpResendIn > 0 || requestPhoneOtpMutation.isPending}
+                      data-testid="button-resend-phone-otp"
+                    >
+                      {phoneOtpResendIn > 0 ? `Resend in ${phoneOtpResendIn}s` : 'Resend OTP'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setPhoneStep('idle');
+                        setPhoneOtpInput('');
+                        setPhoneOtpEmailMask('');
+                      }}
+                      data-testid="button-cancel-phone-change"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

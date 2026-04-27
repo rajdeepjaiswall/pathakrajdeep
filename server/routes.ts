@@ -9,6 +9,7 @@ import { OAuth2Client } from "google-auth-library";
 import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders, otps, users, ADMIN_FEATURE_KEYS, defaultPermissionsAllOn, type AdminPermissionsMap } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
+import { sendOtpEmail } from "./email-service";
 import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
 import { db, pool } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -512,6 +513,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Verify phone error:', error);
       res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // ============================================================
+  // Change Phone Number (with OTP delivered to registered email)
+  // ============================================================
+  // Reuses the existing OTP service for generation/storage/verification.
+  // Resend is used as a delivery layer only — failures here never break the
+  // OTP itself, which is always saved in the database.
+  app.post("/api/account/change-phone/request-otp", authenticateUser, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const newPhone = String(req.body?.new_phone || req.body?.newPhone || '').trim();
+
+      if (!/^[6-9]\d{9}$/.test(newPhone)) {
+        return res.status(400).json({ success: false, message: 'Enter a valid 10-digit Indian mobile number.' });
+      }
+
+      const me = await storage.getUser(userId);
+      if (!me) {
+        return res.status(404).json({ success: false, message: 'Account not found.' });
+      }
+      if (!me.email) {
+        return res.status(400).json({
+          success: false,
+          message: 'No email address is linked to your account, so we cannot send a verification code. Please add an email first.',
+        });
+      }
+      if (me.phone && me.phone === newPhone) {
+        return res.status(400).json({ success: false, message: 'This is already your current phone number.' });
+      }
+
+      // Identifier scopes the OTP to this user + this action so it can never
+      // collide with login OTPs or any other purpose.
+      const identifier = `change_phone:${userId}`;
+
+      // Use the EXISTING OTP service to generate + store the code.
+      const otpCode = await otpService.createOTP(identifier, 'email', 'change_phone');
+
+      // Delivery-only step. If email fails, the OTP still exists in the DB and
+      // the user can use the resend button or contact support.
+      const deliver = await sendOtpEmail(me.email, otpCode, {
+        subject: 'OTP to Confirm Phone Number Change',
+      });
+
+      const maskedEmail = me.email.replace(/^(.{2}).*(@.*)$/, '$1***$2');
+      return res.json({
+        success: true,
+        delivered: deliver.delivered,
+        message: deliver.delivered
+          ? `We have sent a 6-digit code to ${maskedEmail}. It expires in 5 minutes.`
+          : `Your verification code is ready, but the email could not be sent right now (${deliver.reason || 'unknown error'}). Please try again or contact support.`,
+        email: maskedEmail,
+      });
+    } catch (err: any) {
+      console.error('change-phone/request-otp error:', err);
+      res.status(500).json({ success: false, message: err.message || 'Could not send code. Please try again.' });
+    }
+  });
+
+  app.post("/api/account/change-phone/confirm", authenticateUser, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const newPhone = String(req.body?.new_phone || req.body?.newPhone || '').trim();
+      const otp = String(req.body?.otp || '').trim();
+
+      if (!/^[6-9]\d{9}$/.test(newPhone)) {
+        return res.status(400).json({ success: false, message: 'Enter a valid 10-digit Indian mobile number.' });
+      }
+      if (!/^\d{6}$/.test(otp)) {
+        return res.status(400).json({ success: false, message: 'OTP must be 6 digits.' });
+      }
+
+      const identifier = `change_phone:${userId}`;
+
+      // Use the EXISTING OTP verification — same expiry, same attempt limits,
+      // same master OTP behaviour. We do not re-implement any of that here.
+      const result = await otpService.verifyOTP(identifier, otp, 'email');
+      if (!result.success) {
+        return res.status(400).json({ success: false, message: result.message });
+      }
+
+      // OTP verified — update the phone number.
+      const updated = await storage.updateUser(userId, {
+        phone: newPhone,
+        isVerified: true,
+      });
+
+      return res.json({
+        success: true,
+        message: 'Your phone number has been updated.',
+        user: updated,
+      });
+    } catch (err: any) {
+      console.error('change-phone/confirm error:', err);
+      res.status(500).json({ success: false, message: err.message || 'Could not update phone number. Please try again.' });
     }
   });
 

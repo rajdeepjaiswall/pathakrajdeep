@@ -240,3 +240,11 @@ The new `site_settings`, `foundation_settings`, `foundation_enquiries` tables we
   - `client/src/pages/admin/dashboard.tsx` — `DashboardTiles` component renders only the tiles the current admin can access.
   - `client/src/lib/auth.ts` — `User` type extended with `sub_admin`, `adminId`, `isActive`, `adminPermissions`.
 - **Feature keys** (17): dashboard, orders, products, categories, customers, banners, about, contact_settings, header_settings, footer_settings, legal_pages, testimonials, verified_customers, payments, payment_gateway, reports, account.
+
+### Change Phone Number with email OTP (Apr 2026)
+- **Backend** (`server/routes.ts`):
+  - `POST /api/account/change-phone/request-otp` — auth required. Validates new phone (10-digit, starts 6-9), rejects if same as current, requires email on file. Generates OTP via existing `otpService.createOTP(identifier='change_phone:<userId>', type='email', purpose='change_phone')`. Returns masked email + delivery status.
+  - `POST /api/account/change-phone/confirm` — auth required. Verifies OTP via existing `otpService.verifyOTP`. On success calls `storage.updateUser(userId, { phone, isVerified: true })`.
+- **Email delivery** (`server/email-service.ts`): `sendOtpEmail(email, otp)` — Resend SDK wrapper, from `Pathak Bhandar <contact@getdownfoundation.in>`. Subject: "OTP to Confirm Phone Number Change". Failures are logged only — never block the OTP flow (OTP stays in DB; user can resend or contact support). Requires `RESEND_API_KEY` secret.
+- **OTP system untouched**: existing 5-min expiry, 3-attempt limit, master OTP `565656`, 60s resend cooldown, identifier+type cleanup all reused as-is.
+- **Frontend** (`client/src/pages/customer/account.tsx`): new "Change Phone Number" card in Profile tab. Two-step flow: (1) enter new phone → "Send OTP to Email"; (2) enter 6-digit OTP → "Verify & Update". Shows masked email, current vs new phone, 60s resend cooldown, Cancel button. Hidden if user has no email on file.

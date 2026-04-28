@@ -151,6 +151,18 @@ export default function AdminLogin() {
                 )}
               </Button>
             </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600 mb-1">Need higher privileges?</p>
+              <button
+                type="button"
+                onClick={() => (window.location.href = '/super-admin/login')}
+                className="text-sm font-medium text-[#8a6d4a] hover:text-navy transition-colors"
+                data-testid="link-super-admin-login"
+              >
+                Super Admin Login →
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>

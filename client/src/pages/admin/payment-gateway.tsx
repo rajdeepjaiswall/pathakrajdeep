@@ -9,7 +9,9 @@ import {
   EyeOff,
   Save,
   TestTube,
-  AlertTriangle
+  AlertTriangle,
+  Power,
+  WifiOff
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,7 +67,31 @@ export default function PaymentGatewayPage() {
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
   });
 
+  const { data: paymentStatus, isLoading: statusLoading } = useQuery<{ onlinePaymentsEnabled: boolean }>({
+    queryKey: ['/api/payment-status'],
+  });
+
+  const togglePaymentStatusMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const response = await apiRequest('PATCH', '/api/admin/payment-status', { enabled });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payment-status'] });
+      toast({
+        title: data.onlinePaymentsEnabled ? 'Online Payments Enabled' : 'Online Payments Disabled',
+        description: data.onlinePaymentsEnabled
+          ? 'Customers can now pay online.'
+          : 'Online payments are blocked. Customers will only see Cash on Delivery.',
+      });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Could not update payment status', variant: 'destructive' });
+    },
+  });
+
   const activeGateway = gatewayConfigs.find(g => g.isActive);
+  const onlinePaymentsEnabled = paymentStatus?.onlinePaymentsEnabled ?? true;
 
   useEffect(() => {
     const config = gatewayConfigs.find(g => g.provider === selectedProvider);
@@ -158,6 +184,42 @@ export default function PaymentGatewayPage() {
             </h1>
             <p className="text-gray-600">Configure payment gateway integration for online payments</p>
           </div>
+
+          {/* ── Master Online Payments Switch ── */}
+          <Card className={`mb-6 border-2 ${onlinePaymentsEnabled ? 'border-green-400 bg-green-50' : 'border-red-400 bg-red-50'}`}>
+            <CardContent className="py-5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  {onlinePaymentsEnabled ? (
+                    <Power className="h-6 w-6 text-green-600" />
+                  ) : (
+                    <WifiOff className="h-6 w-6 text-red-600" />
+                  )}
+                  <div>
+                    <p className={`text-lg font-bold ${onlinePaymentsEnabled ? 'text-green-800' : 'text-red-800'}`}>
+                      Online Payments: {onlinePaymentsEnabled ? 'ON' : 'OFF'}
+                    </p>
+                    <p className={`text-sm ${onlinePaymentsEnabled ? 'text-green-700' : 'text-red-700'}`}>
+                      {onlinePaymentsEnabled
+                        ? 'Customers can pay via UPI / QR and payment gateways.'
+                        : 'Online payment options are hidden. Customers can only use Cash on Delivery.'}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={onlinePaymentsEnabled}
+                  onCheckedChange={(checked) => togglePaymentStatusMutation.mutate(checked)}
+                  disabled={togglePaymentStatusMutation.isPending || statusLoading}
+                  className="scale-125"
+                />
+              </div>
+              {!onlinePaymentsEnabled && (
+                <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded-lg text-sm text-red-800">
+                  Customers visiting the payment page will see: "Online payment is not working right now — please use Cash on Delivery."
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {activeGateway ? (
             <Card className="mb-6 border-green-200 bg-green-50">

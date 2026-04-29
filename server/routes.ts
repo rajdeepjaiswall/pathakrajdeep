@@ -3039,6 +3039,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Online payments master switch ──────────────────────────────────────
+  // Public: checkout page reads this to know whether to show online payment options
+  app.get("/api/payment-status", async (_req, res) => {
+    try {
+      const enabled = await storage.getOnlinePaymentStatus();
+      res.json({ onlinePaymentsEnabled: enabled });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: toggle online payments on / off
+  app.patch("/api/admin/payment-status", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: "'enabled' must be a boolean" });
+      }
+      const result = await storage.setOnlinePaymentStatus(enabled);
+      res.json({ onlinePaymentsEnabled: result });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────
+
   // ============== GetDown Foundation (super admin) ==============
 
   // Public: published foundation content (logo + description ONLY, no API config)

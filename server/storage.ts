@@ -150,6 +150,8 @@ export interface IStorage {
   saveFooterDraft(data: FooterConfig): Promise<SiteSettings>;
   publishHeader(): Promise<SiteSettings>;
   publishFooter(): Promise<SiteSettings>;
+  getOnlinePaymentStatus(): Promise<boolean>;
+  setOnlinePaymentStatus(enabled: boolean): Promise<boolean>;
 
   // Foundation Settings (super-admin only)
   getFoundationSettings(): Promise<FoundationSettings | undefined>;
@@ -1238,6 +1240,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(siteSettings.id, row.id))
       .returning();
     return updated;
+  }
+
+  async getOnlinePaymentStatus(): Promise<boolean> {
+    const row = await this.getSiteSettings();
+    if (!row) return true;
+    return row.onlinePaymentsEnabled ?? true;
+  }
+
+  async setOnlinePaymentStatus(enabled: boolean): Promise<boolean> {
+    const row = await this.ensureSiteSettings();
+    await db
+      .update(siteSettings)
+      .set({ onlinePaymentsEnabled: enabled, updatedAt: new Date() })
+      .where(eq(siteSettings.id, row.id));
+    return enabled;
   }
 
   // ============== Foundation Settings ==============

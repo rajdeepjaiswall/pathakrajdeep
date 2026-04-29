@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ArrowRight, CreditCard, Smartphone, Truck, MapPin, Plus, CheckCircle, AlertCircle, QrCode, Copy, Clock, MessageCircle, Check, Wallet, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CreditCard, Smartphone, Truck, MapPin, Plus, CheckCircle, AlertCircle, QrCode, Copy, Clock, MessageCircle, Check, Wallet, ExternalLink, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -94,6 +94,18 @@ export default function Checkout() {
   const { data: addresses = [] } = useQuery<Address[]>({
     queryKey: ['/api/addresses'],
   });
+
+  const { data: paymentStatusData } = useQuery<{ onlinePaymentsEnabled: boolean }>({
+    queryKey: ['/api/payment-status'],
+  });
+  const onlinePaymentsEnabled = paymentStatusData?.onlinePaymentsEnabled ?? true;
+
+  // Auto-switch to COD if online payments are disabled
+  useEffect(() => {
+    if (!onlinePaymentsEnabled && (paymentMethod === 'qr' || paymentMethod === 'gateway')) {
+      setPaymentMethod('cod');
+    }
+  }, [onlinePaymentsEnabled, paymentMethod]);
 
   const { data: paymentConfig } = useQuery<{ qrImageUrl: string; upiId: string } | null>({
     queryKey: ['/api/manual-payment-config'],
@@ -760,6 +772,28 @@ export default function Checkout() {
 
   const renderPaymentStep = () => (
     <div className="space-y-6">
+      {/* Blocking notice when online payments are off */}
+      {!onlinePaymentsEnabled && (
+        <Card className="border-2 border-red-400 bg-red-50">
+          <CardContent className="py-5">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <WifiOff className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-red-800">Online payment is not working right now</p>
+                <p className="text-red-700 mt-1">
+                  We will be back soon! Till then, please go for <strong>Cash on Delivery</strong>.
+                </p>
+                <p className="text-sm text-red-600 mt-2">
+                  Our team is working on restoring online payments. Sorry for the inconvenience.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -790,7 +824,7 @@ export default function Checkout() {
               </div>
             </div>
 
-            {paymentConfig && (
+            {paymentConfig && onlinePaymentsEnabled && (
               <div 
                 className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                   paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
@@ -809,7 +843,7 @@ export default function Checkout() {
               </div>
             )}
 
-            {gatewayConfig && (
+            {gatewayConfig && onlinePaymentsEnabled && (
               <div 
                 className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                   paymentMethod === 'gateway' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'

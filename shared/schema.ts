@@ -398,6 +398,7 @@ export const siteSettings = pgTable("site_settings", {
   footerPublished: jsonb("footer_published").$type<FooterConfig>().default({}),
   headerPublishedAt: timestamp("header_published_at"),
   footerPublishedAt: timestamp("footer_published_at"),
+  onlinePaymentsEnabled: boolean("online_payments_enabled").default(true).notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 

@@ -49,6 +49,7 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
   updateProductStock(id: number, stock: number): Promise<Product>;
+  deleteProduct(id: number): Promise<void>;
   getTrendingProducts(limit?: number): Promise<Product[]>;
   getProductOfDay(): Promise<Product | undefined>;
   getChefSpecialProducts(limit?: number): Promise<Product[]>;
@@ -381,6 +382,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(products.id, id))
       .returning();
     return product;
+  }
+
+  async deleteProduct(id: number): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
   }
 
   async getTrendingProducts(limit: number = 8): Promise<Product[]> {

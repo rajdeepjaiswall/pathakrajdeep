@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit, Trash2, Package, Star, Eye, Upload, X, Image, Video } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Star, Upload, X, Image, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -35,7 +36,16 @@ export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [deletingProduct, setDeletingProduct] = useState<any>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+
+  const invalidateAllProductQueries = () => {
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === 'string' &&
+        (query.queryKey[0] as string).startsWith('/api/products'),
+    });
+  };
 
   // Wait for auth to resolve before redirecting
   if (authLoading) {
@@ -124,7 +134,7 @@ export default function AdminProducts() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      invalidateAllProductQueries();
       setIsAddingProduct(false);
       setEditingProduct(null);
       productForm.reset();
@@ -142,6 +152,30 @@ export default function AdminProducts() {
     },
   });
 
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      const response = await apiRequest('DELETE', `/api/products/${productId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      invalidateAllProductQueries();
+      setDeletingProduct(null);
+      toast({
+        title: 'Product deleted',
+        description: 'Product has been permanently removed',
+      });
+    },
+    onError: (error: any) => {
+      setDeletingProduct(null);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete product',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Update stock mutation
   const updateStockMutation = useMutation({
     mutationFn: async ({ productId, stock }: { productId: number; stock: number }) => {
@@ -149,7 +183,7 @@ export default function AdminProducts() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      invalidateAllProductQueries();
       toast({
         title: 'Stock updated',
         description: 'Product stock has been updated successfully',
@@ -877,7 +911,7 @@ export default function AdminProducts() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mb-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -887,20 +921,50 @@ export default function AdminProducts() {
                       <Edit className="h-3 w-3 mr-1" />
                       Edit
                     </Button>
-                    <Input
-                      type="number"
-                      value={product.stock}
-                      onChange={(e) => handleStockUpdate(product.id, parseInt(e.target.value) || 0)}
-                      className="w-20 h-8 text-xs"
-                      min="0"
-                    />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeletingProduct(product)}
+                      disabled={deleteProductMutation.isPending}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
+                  <Input
+                    type="number"
+                    value={product.stock}
+                    onChange={(e) => handleStockUpdate(product.id, parseInt(e.target.value) || 0)}
+                    className="w-full h-8 text-xs"
+                    min="0"
+                  />
                 </CardContent>
               </Card>
             ))
           )}
         </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deletingProduct} onOpenChange={(open) => { if (!open) setDeletingProduct(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingProduct?.name}</strong>? This action cannot be undone and will permanently remove the product from your store.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteProductMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingProduct && deleteProductMutation.mutate(deletingProduct.id)}
+              disabled={deleteProductMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteProductMutation.isPending ? 'Deleting...' : 'Yes, delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

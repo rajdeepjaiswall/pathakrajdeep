@@ -1082,10 +1082,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }) || []
       }));
       
-      // Add aggressive caching for products
-      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800'); // Cache for 10 minutes, stale for 30 minutes
-      res.setHeader('ETag', `"products-${products.length}-${search || 'all'}"`);
-      
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
       res.json(optimizedProducts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1338,6 +1336,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(product);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/products/:id", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: 'Invalid product ID' });
+      }
+      await storage.deleteProduct(productId);
+      res.json({ message: 'Product deleted successfully' });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

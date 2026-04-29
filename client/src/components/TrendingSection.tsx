@@ -56,14 +56,14 @@ function PinterestCard({ product, index, onClick }: { product: any; index: numbe
 export default function TrendingSection() {
   const { data: products = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/products/trending-local'],
-    queryFn: () => fetch('/api/products/trending-local?limit=12').then(r => r.json()),
+    queryFn: () => fetch('/api/products/trending-local?limit=12').then(r => { if (!r.ok) throw new Error('Failed to fetch'); return r.json(); }),
   });
 
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { addToCart } = useCart();
 
   if (isLoading) return null;
-  if (!products || products.length === 0) return null;
+  if (!products || !Array.isArray(products) || products.length === 0) return null;
 
   const display = products.slice(0, 12);
 

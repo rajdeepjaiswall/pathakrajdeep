@@ -441,7 +441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: 'Password updated and logged in successfully',
         token,
-        user: { ...safeUser, password: hashedPassword }
+        user: safeUser
       });
     } catch (err: any) {
       console.error('super-admin-otp/reset-and-login error:', err);

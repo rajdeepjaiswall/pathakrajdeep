@@ -14,6 +14,13 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+// Mirror pool used as fallback when primary is disabled/down
+const mirrorPool = process.env.MIRROR_DATABASE_URL
+  ? new Pool({ connectionString: process.env.MIRROR_DATABASE_URL })
+  : null;
+
+const ENDPOINT_DISABLED = 'endpoint has been disabled';
+
 const WRITE_RE = /^\s*(INSERT|UPDATE|DELETE)\b/i;
 
 const originalQuery = pool.query.bind(pool) as any;
@@ -30,17 +37,32 @@ const originalQuery = pool.query.bind(pool) as any;
   }
 
   const isWrite = sqlText ? WRITE_RE.test(sqlText) : false;
-  const result = originalQuery(...args);
 
+  // Attempt the primary; on "endpoint disabled" fall back to mirror pool
+  const primaryResult = (originalQuery(...args) as Promise<any>).catch(async (err: any) => {
+    const msg: string = err?.message ?? '';
+    if (mirrorPool && msg.includes(ENDPOINT_DISABLED)) {
+      console.warn('[db] Primary disabled — falling back to mirror for query');
+      return (mirrorPool as any).query(...args);
+    }
+    throw err;
+  });
+
+  // Replicate writes to mirror (only when primary is healthy; skip if we're
+  // already reading/writing through the mirror as fallback)
   if (isWrite && sqlText) {
     const sqlForMirror = sqlText;
     const paramsForMirror = params ?? [];
-    Promise.resolve(result)
-      .then(() => mirrorQuery(sqlForMirror, paramsForMirror))
+    Promise.resolve(primaryResult)
+      .then((res) => {
+        // If the result came from the primary (not fallback), sync to mirror
+        mirrorQuery(sqlForMirror, paramsForMirror).catch(() => {});
+        return res;
+      })
       .catch((err) => recordMirrorFailure(sqlForMirror, paramsForMirror, err));
   }
 
-  return result;
+  return primaryResult;
 };
 
 export const db = drizzle({ client: pool, schema });

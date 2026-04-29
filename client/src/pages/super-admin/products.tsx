@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Plus, Package, Edit, Trash2, Star, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -34,6 +35,7 @@ export default function ProductManager() {
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
@@ -63,7 +65,7 @@ export default function ProductManager() {
       return apiRequest('POST', '/api/products', submitData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      invalidateAllProductQueries();
       setShowAddForm(false);
       resetForm();
       toast({
@@ -88,7 +90,7 @@ export default function ProductManager() {
       return apiRequest('PUT', `/api/products/${id}`, submitData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      invalidateAllProductQueries();
       setEditingProduct(null);
       toast({
         title: "Product Updated",
@@ -102,6 +104,38 @@ export default function ProductManager() {
         variant: "destructive",
       });
     }
+  });
+
+  const invalidateAllProductQueries = () => {
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === 'string' &&
+        (query.queryKey[0] as string).startsWith('/api/products'),
+    });
+  };
+
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      const response = await apiRequest('DELETE', `/api/products/${productId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      invalidateAllProductQueries();
+      setDeletingProduct(null);
+      toast({
+        title: 'Product deleted',
+        description: 'Product has been permanently removed from the store.',
+      });
+    },
+    onError: (error: any) => {
+      setDeletingProduct(null);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete product',
+        variant: 'destructive',
+      });
+    },
   });
 
   const resetForm = () => {
@@ -431,7 +465,13 @@ export default function ProductManager() {
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
                   </Button>
-                  <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setDeletingProduct(product)}
+                    disabled={deleteProductMutation.isPending}
+                  >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -482,6 +522,28 @@ export default function ProductManager() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deletingProduct} onOpenChange={(open) => { if (!open) setDeletingProduct(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingProduct?.name}</strong>? It will be removed from all carts, wishlists, and the store permanently.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteProductMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingProduct && deleteProductMutation.mutate(deletingProduct.id)}
+              disabled={deleteProductMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteProductMutation.isPending ? 'Deleting...' : 'Yes, delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

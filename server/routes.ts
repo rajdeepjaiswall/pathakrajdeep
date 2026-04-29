@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { OAuth2Client } from "google-auth-library";
-import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders, otps, users, ADMIN_FEATURE_KEYS, defaultPermissionsAllOn, type AdminPermissionsMap } from "@shared/schema";
+import { insertUserSchema, insertProductSchema, insertCategorySchema, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertAddressSchema, insertReviewSchema, insertBannerSchema, orders, otps, users, cartItems, wishlistItems, orderItems, products, ADMIN_FEATURE_KEYS, defaultPermissionsAllOn, type AdminPermissionsMap } from "@shared/schema";
 import otpRoutes from "./otp-routes";
 import { otpService } from "./otp-service";
 import { sendOtpEmail } from "./email-service";
@@ -1345,7 +1345,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(productId)) {
         return res.status(400).json({ message: 'Invalid product ID' });
       }
+
+      // 1. Remove from every customer's cart
+      await db.delete(cartItems).where(eq(cartItems.product_id, productId));
+
+      // 2. Remove from every customer's wishlist
+      await db.delete(wishlistItems).where(eq(wishlistItems.product_id, productId));
+
+      // 3. Preserve order history but detach the product reference
+      //    (product_id is nullable so existing orders will show "product removed")
+      await db.update(orderItems)
+        .set({ product_id: null })
+        .where(eq(orderItems.product_id, productId));
+
+      // 4. Delete the product itself
       await storage.deleteProduct(productId);
+
       res.json({ message: 'Product deleted successfully' });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

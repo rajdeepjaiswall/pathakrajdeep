@@ -362,6 +362,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Super-admin WhatsApp OTP login ──────────────────────────────────────
+  // Hardcoded to the owner's number — backend-only, never exposed to clients
+  const SUPER_ADMIN_PHONE = '7897965915';
+
+  // Step 1: Send OTP to owner's WhatsApp
+  app.post('/api/auth/super-admin-otp/send', async (req, res) => {
+    try {
+      const { username } = req.body;
+      if (!username) {
+        return res.status(400).json({ success: false, message: 'Username is required' });
+      }
+
+      // Verify the username belongs to an active super_admin
+      const [superAdmin] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      if (!superAdmin || superAdmin.role !== 'super_admin') {
+        // Generic error — don't reveal whether the username exists
+        return res.status(400).json({ success: false, message: 'Invalid username or access denied' });
+      }
+
+      const result = await otpService.sendWhatsAppOTP(SUPER_ADMIN_PHONE, 'Super Admin', 'super_admin_login');
+      if (result.success) {
+        return res.json({ success: true, message: 'OTP sent to the registered WhatsApp number' });
+      }
+      return res.status(500).json({ success: false, message: result.message });
+    } catch (err: any) {
+      console.error('super-admin-otp/send error:', err);
+      res.status(500).json({ success: false, message: 'Failed to send OTP. Please try again.' });
+    }
+  });
+
+  // Step 2: Verify OTP + set new password + auto-login
+  app.post('/api/auth/super-admin-otp/reset-and-login', async (req, res) => {
+    try {
+      const { username, otp, newPassword } = req.body;
+      if (!username || !otp || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Username, OTP and new password are required' });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+      }
+
+      // Verify the OTP against the owner phone
+      const otpResult = await otpService.verifyOTP(SUPER_ADMIN_PHONE, otp, 'whatsapp');
+      if (!otpResult.success) {
+        // Fallback: try sms type in case it was stored that way
+        const fallback = await otpService.verifyOTP(SUPER_ADMIN_PHONE, otp, 'sms');
+        if (!fallback.success) {
+          return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+        }
+      }
+
+      // Find the super_admin
+      const [superAdmin] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      if (!superAdmin || superAdmin.role !== 'super_admin') {
+        return res.status(400).json({ success: false, message: 'Super admin account not found' });
+      }
+
+      // Hash and save new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await db.update(users).set({ password: hashedPassword }).where(eq(users.id, superAdmin.id));
+
+      // Issue JWT token (same pattern as regular login)
+      const token = jwt.sign(
+        { id: superAdmin.id, username: superAdmin.username, role: superAdmin.role },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // Also set session for session-based auth
+      if (req.session) {
+        (req.session as any).userId = superAdmin.id;
+        (req.session as any).user = { id: superAdmin.id, username: superAdmin.username, role: superAdmin.role };
+      }
+
+      const { password: _pw, ...safeUser } = superAdmin as any;
+      return res.json({
+        success: true,
+        message: 'Password updated and logged in successfully',
+        token,
+        user: { ...safeUser, password: hashedPassword }
+      });
+    } catch (err: any) {
+      console.error('super-admin-otp/reset-and-login error:', err);
+      res.status(500).json({ success: false, message: 'Failed to reset password. Please try again.' });
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────
+
   // Auth status route (supports both JWT and session)
   app.get('/api/auth/status', optionalAuth, async (req, res) => {
     try {

@@ -1694,28 +1694,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.createOrder(orderData);
       console.log('Order created successfully:', order.id, order.orderNumber);
       
-      // Send order confirmation SMS only for NON-GATEWAY payments when order is created
-      // Gateway payments will get SMS from webhook after payment confirmation
-      if (req.body.paymentMethod !== 'gateway' && order.deliveryAddress && order.deliveryAddress.phone) {
-        const trackingLink = `https://pathakbhandar.in/customer/orders`;
-        const customerName = order.deliveryAddress.fullName || 'Customer';
-        const orderStatus = order.status || 'pending';
-        
-        try {
-          // Send SMS based on order status and payment method
-          await otpService.sendOrderPlacedSMS(
-            order.deliveryAddress.phone,
-            order.orderNumber,
-            orderStatus,
-            req.body.paymentMethod,
-            customerName
-          );
-          console.log('Order SMS sent to:', order.deliveryAddress.phone, 'Status:', orderStatus, 'Payment method:', req.body.paymentMethod);
-        } catch (smsError) {
-          console.error('Failed to send order SMS:', smsError);
-          // Don't fail the order if SMS fails
-        }
-      }
+      // Automatic order SMS to customers is disabled per owner preference.
+      // Only OTP and manual WhatsApp sharing are allowed.
       
       res.json(order);
     } catch (error: any) {
@@ -1847,25 +1827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to send push notification:', notifyError);
       }
       
-      // Send notification to customer about order status update
-      // Policy: NO SMS on admin status updates. WhatsApp only for "out_for_delivery".
-      if (order.deliveryAddress && order.deliveryAddress.phone) {
-        try {
-          if (status === 'out_for_delivery') {
-            const customerName = order.deliveryAddress.name || 'Customer';
-            await otpService.sendOutForDeliveryWhatsApp(
-              order.deliveryAddress.phone,
-              customerName,
-              order.orderNumber
-            );
-            console.log('Out for Delivery WhatsApp sent to:', order.deliveryAddress.phone);
-          }
-          // For all other statuses: no message is sent (SMS disabled per requirement).
-        } catch (notifyError) {
-          console.error('Failed to send order status notification:', notifyError);
-          // Don't fail the status update if notification fails
-        }
-      }
+      // Automatic customer WhatsApp/SMS notifications disabled per owner preference.
       
       res.json(order);
     } catch (error: any) {
@@ -1878,23 +1840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { riderName, riderPhone, riderImage } = req.body;
       const order = await storage.updateOrderRider(parseInt(req.params.id), riderName, riderPhone, riderImage);
       
-      // Send WhatsApp notification when rider is assigned (only if order is "out_for_delivery" and both name and phone provided)
-      if (riderName && riderPhone && order.status === 'out_for_delivery' && order.deliveryAddress && order.deliveryAddress.phone) {
-        try {
-          const customerName = order.deliveryAddress.name || 'Customer';
-          await otpService.sendRiderAssignedWhatsApp(
-            order.deliveryAddress.phone,
-            customerName,
-            order.orderNumber,
-            riderName,
-            riderPhone
-          );
-          console.log('Rider assigned WhatsApp sent to:', order.deliveryAddress.phone, '(order status: out_for_delivery)');
-        } catch (whatsappError) {
-          console.error('Failed to send rider assigned WhatsApp:', whatsappError);
-          // Don't fail the rider update if WhatsApp fails
-        }
-      }
+      // Automatic rider-assignment WhatsApp to customers disabled per owner preference.
       
       res.json(order);
     } catch (error: any) {
@@ -2646,27 +2592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateOrderStatus(transaction.orderId, 'pending');
         await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
         
-        // Send SUCCESS SMS for PhonePe payment
-        if (orderPhone && orderNumber) {
-          try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'success', customerName);
-            console.log('PhonePe SUCCESS SMS sent for order:', orderNumber);
-          } catch (smsError) {
-            console.error('Failed to send success SMS:', smsError);
-          }
-        }
-
-        // Send Payment Completed WhatsApp (template payment_completed / 9625)
-        if (orderPhone) {
-          try {
-            const paidOrder = await db.select().from(orders).where(eq(orders.id, transaction.orderId)).limit(1);
-            const orderTotal = paidOrder[0]?.total ?? transaction.amount;
-            await otpService.sendPaymentCompletedWhatsApp(orderPhone, orderTotal as any);
-            console.log('Payment Completed WhatsApp sent for order:', orderNumber, 'amount:', orderTotal);
-          } catch (waError) {
-            console.error('Failed to send payment completed WhatsApp:', waError);
-          }
-        }
+        // Automatic SMS/WhatsApp to customers after payment disabled per owner preference.
 
         console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as paid`);
       } else if (status === 'payment_failed') {
@@ -2674,28 +2600,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateOrderStatus(transaction.orderId, 'payment_failed');
         await db.update(orders).set({ paymentStatus: 'failed' }).where(eq(orders.id, transaction.orderId));
         
-        // Send FAILED SMS for PhonePe payment
-        if (orderPhone && orderNumber) {
-          try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'failed', customerName);
-            console.log('PhonePe FAILED SMS sent for order:', orderNumber);
-          } catch (smsError) {
-            console.error('Failed to send failed payment SMS:', smsError);
-          }
-        }
-        
+        // Automatic SMS to customers on payment failure disabled per owner preference.
         console.log(`PhonePe Webhook: Order ${transaction.orderId} marked as payment failed`);
       } else {
-        // Payment pending/processing - send PENDING SMS
-        if (orderPhone && orderNumber) {
-          try {
-            await otpService.sendPhonePePaymentSMS(orderPhone, orderNumber, 'pending', customerName);
-            console.log('PhonePe PENDING SMS sent for order:', orderNumber);
-          } catch (smsError) {
-            console.error('Failed to send pending payment SMS:', smsError);
-          }
-        }
-        
+        // Automatic SMS to customers on payment pending disabled per owner preference.
         console.log(`PhonePe Webhook: Order ${transaction.orderId} still pending`);
       }
 
@@ -2744,32 +2652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (order[0]) {
           await db.update(orders).set({ paymentStatus: 'paid' }).where(eq(orders.id, transaction.orderId));
           
-          // Send SMS confirmation for successful payment
-          try {
-            if (order[0].orderNumber && transaction.merchantUserId) {
-              const trackingLink = `https://pathakbhandar.in/track-order/${order[0].orderNumber}`;
-              await otpService.sendOrderConfirmation(
-                transaction.phone || '9999999999',
-                order[0].orderNumber,
-                trackingLink
-              );
-              console.log('Order confirmation SMS sent after payment');
-            }
-          } catch (smsError) {
-            console.error('Failed to send SMS after payment:', smsError);
-          }
-
-          // Send Payment Completed WhatsApp (template payment_completed / 9625)
-          try {
-            const phoneForWa = transaction.phone || (order[0] as any)?.deliveryAddress?.phone;
-            const orderTotal = order[0].total ?? transaction.amount;
-            if (phoneForWa) {
-              await otpService.sendPaymentCompletedWhatsApp(phoneForWa, orderTotal as any);
-              console.log('Payment Completed WhatsApp sent after payment, amount:', orderTotal);
-            }
-          } catch (waError) {
-            console.error('Failed to send payment completed WhatsApp:', waError);
-          }
+          // Automatic SMS/WhatsApp to customers after payment disabled per owner preference.
         }
       } else if (status === 'failed') {
         await storage.updateOrderStatus(transaction.orderId, 'payment_failed');

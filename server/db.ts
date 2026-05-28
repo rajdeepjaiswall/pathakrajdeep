@@ -6,13 +6,15 @@ import { mirrorQuery, recordMirrorFailure } from './mirror';
 
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
+const dbUrl = process.env.CUSTOM_DB_URL || process.env.DATABASE_URL;
+
+if (!dbUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "No database URL found. Please set CUSTOM_DB_URL in your secrets.",
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ connectionString: dbUrl });
 
 // Mirror pool used as fallback when primary is disabled/down
 const mirrorPool = process.env.MIRROR_DATABASE_URL

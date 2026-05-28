@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
+import { getProductUrl } from '@/lib/product-url';
 import { useState } from 'react';
 
 const BADGE_OPTIONS = ['BEST SELLER', 'MUST TRY', 'TRENDING', 'FAN FAV', 'LIMITED'];

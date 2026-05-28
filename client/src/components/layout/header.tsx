@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/use-cart';
 import { useQuery } from '@tanstack/react-query';
 import { Category, Product, type HeaderConfig, type FooterConfig } from '@shared/schema';
+import { getProductUrl } from '@/lib/product-url';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
 import bakeryPattern from '@assets/project_20250607_1604012-01_1749292781428.png';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -170,7 +171,7 @@ export default function Header() {
                             {searchResults.map((product) => (
                               <Link
                                 key={product.id}
-                                href={`/products/${product.id}`}
+                                href={getProductUrl(product)}
                                 className="flex items-center space-x-3 p-3 rounded-xl hover:bg-almond/30 transition-colors group bg-white/40 border border-almond/20"
                               >
                                 {product.images && product.images.length > 0 && (
@@ -208,7 +209,7 @@ export default function Header() {
                                     .map(product => (
                                       <Link
                                         key={product.id}
-                                        href={`/products/${product.id}`}
+                                        href={getProductUrl(product)}
                                         className="flex items-center space-x-3 p-2 rounded-lg hover:bg-champagne/20 transition-colors group"
                                       >
                                         <div className="h-8 w-8 rounded bg-white flex items-center justify-center overflow-hidden border border-almond/20">

@@ -11,6 +11,7 @@ import { useCart } from '@/hooks/use-cart';
 import { useWishlist } from '@/hooks/use-wishlist';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'wouter';
+import { getProductUrl } from '@/lib/product-url';
 
 export default function CustomerWishlist() {
   const { addToCart } = useCart();
@@ -236,7 +237,7 @@ export default function CustomerWishlist() {
                         <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
                         Add to Cart
                       </Button>
-                      <Link href={`/products/${product.id}`}>
+                      <Link href={getProductUrl(product)}>
                         <Button variant="outline" size="sm" className="border-champagne text-navy hover:bg-champagne/10 px-3">
                           View
                         </Button>

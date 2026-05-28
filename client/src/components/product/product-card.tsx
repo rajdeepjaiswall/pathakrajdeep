@@ -7,7 +7,8 @@ import { useWishlist } from '@/hooks/use-wishlist';
 import { formatPrice } from '@/lib/cart';
 import { Link } from 'wouter';
 import { Product } from '@shared/schema';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { getProductUrl } from '@/lib/product-url';
 import { ProductBadge } from '@/components/ui/product-badge';
 import OptimizedImage from '@/components/OptimizedImage';
 
@@ -84,7 +85,7 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
 
   return (
     <div>
-      <Link href={`/products/${product.id}`}>
+      <Link href={getProductUrl(product)}>
         <Card className="bg-white hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer border border-[#e8d5c4] hover:border-[#8B5E3C]/30 hover:shadow-[0_4px_20px_rgba(107,62,46,0.12)]">
           <div className="relative">
             <div className="relative w-full h-40 lg:h-auto lg:aspect-[4/3] overflow-hidden border-b border-[#e8d5c4] rounded-t-lg">

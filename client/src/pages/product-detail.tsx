@@ -14,6 +14,7 @@ import MediaViewerModal from '@/components/product/media-viewer-modal';
 import { useCart } from '@/hooks/use-cart';
 import { useWishlist } from '@/hooks/use-wishlist';
 import { formatPrice } from '@/lib/cart';
+import { getProductIdFromSlug, getProductUrl } from '@/lib/product-url';
 
 function ProductReviews({ productId }: { productId: number }) {
   const { data: reviews = [], isLoading } = useQuery<any[]>({
@@ -109,7 +110,8 @@ function ProductReviews({ productId }: { productId: number }) {
 }
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { id: rawId } = useParams();
+  const id = rawId ? getProductIdFromSlug(rawId) : undefined;
   const [quantity, setQuantity] = useState(1);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -142,7 +144,7 @@ export default function ProductDetail() {
 
   const handleShare = async () => {
     if (!product) return;
-    const url = `${window.location.origin}/products/${product.id}`;
+    const url = `${window.location.origin}${getProductUrl(product)}`;
     const shareData = {
       title: product.name,
       text: product.description,

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
+import { getProductUrl } from '@/lib/product-url';
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/cart';
@@ -287,7 +288,7 @@ function ProductModal({ product, onClose }: { product: any; onClose: () => void 
           <div className="flex items-center justify-between">
             <span className="text-3xl font-extrabold text-[#3E2723]">{formatPrice(price)}</span>
             <div className="flex gap-3">
-              <Link href={`/products/${product.id}`}>
+              <Link href={getProductUrl(product)}>
                 <button className="border border-[#3E2723] text-[#3E2723] text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-[#3E2723]/5 transition-colors">
                   Details
                 </button>

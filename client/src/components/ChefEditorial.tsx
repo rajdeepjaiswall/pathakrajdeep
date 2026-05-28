@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { useCart } from '@/hooks/use-cart';
+import { getProductUrl } from '@/lib/product-url';
 import { formatPrice } from '@/lib/cart';
 
 function ChefCard({ product, imageRight }: { product: any; imageRight: boolean }) {
@@ -75,7 +76,7 @@ export default function ChefEditorial() {
         {/* Mobile only: 2 cards stacked */}
         <div className="flex flex-col gap-4 md:hidden">
           {mobileProducts.map((product, index) => (
-            <Link key={product.id} href={`/products/${product.id}`}>
+            <Link key={product.id} href={getProductUrl(product)}>
               <ChefCard
                 product={product}
                 imageRight={index % 2 === 0}
@@ -87,7 +88,7 @@ export default function ChefEditorial() {
         {/* Tablet+Desktop: 2×2 grid for up to 4 cards */}
         <div className="hidden md:grid md:grid-cols-2 gap-5">
           {desktopProducts.map((product, index) => (
-            <Link key={product.id} href={`/products/${product.id}`}>
+            <Link key={product.id} href={getProductUrl(product)}>
               <ChefCard
                 product={product}
                 imageRight={index % 2 === 0}

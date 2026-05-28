@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getProductUrl } from '@/lib/product-url';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatPrice } from '@/lib/cart';
 
@@ -118,7 +119,7 @@ export default function FreshSection() {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {products.map((product, index) => (
-              <Link key={product.id} href={`/products/${product.id}`} className="flex-shrink-0">
+              <Link key={product.id} href={getProductUrl(product)} className="flex-shrink-0">
                 <div
                   className="w-36 sm:w-40 lg:w-48 bg-white rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 overflow-hidden cursor-pointer border border-amber-100"
                   style={{ animationDelay: `${index * 80}ms` }}

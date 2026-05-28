@@ -13,12 +13,13 @@ app.use((req, res, next) => {
     'http://localhost:3000',
     'http://localhost:5000',
     'https://*.replit.app',
-    'https://*.replit.co'
+    'https://*.replit.co',
+    'https://*.replit.dev'
   ];
-  
+
   const origin = req.headers.origin;
-  if (origin && (allowedOrigins.some(allowed => 
-    allowed.includes('*') ? origin.includes(allowed.replace('*', '')) : origin === allowed
+  if (origin && (allowedOrigins.some(allowed =>
+    allowed.includes('*') ? origin.includes(allowed.replace('*.', '')) : origin === allowed
   ) || process.env.NODE_ENV === 'development')) {
     res.header('Access-Control-Allow-Origin', origin);
   }

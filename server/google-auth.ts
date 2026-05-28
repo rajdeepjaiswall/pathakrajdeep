@@ -15,18 +15,14 @@ export function initializeGoogleAuth() {
 
   // Determine the callback URL based on environment
   const getCallbackURL = () => {
-    // Use environment variable or fallback based on NODE_ENV
+    // Priority: explicit override > Replit dev domain > local dev
     if (process.env.GOOGLE_CALLBACK_URL) {
       return process.env.GOOGLE_CALLBACK_URL;
     }
-    
-    // For production deployments
-    if (process.env.NODE_ENV === 'production') {
-      const host = process.env.REPLIT_WORKSPACE_DOMAIN || 'pathakbhandar.in';
-      return `https://${host}/api/auth/google/callback`;
+    if (process.env.REPLIT_DEV_DOMAIN) {
+      return `https://${process.env.REPLIT_DEV_DOMAIN}/api/auth/google/callback`;
     }
-    
-    // For development
+    // Development fallback
     return `http://localhost:5000/api/auth/google/callback`;
   };
 
@@ -110,7 +106,7 @@ export function setupSession(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    conString: process.env.CUSTOM_DB_URL || process.env.DATABASE_URL,
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",

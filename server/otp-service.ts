@@ -24,13 +24,14 @@ interface Fast2SMSConfig {
   whatsappSenderId?: string;
 }
 
+// WhatsApp / Fast2SMS config — IDs can be overridden via env vars
 const fast2smsConfig: Fast2SMSConfig = {
   apiKey: process.env.FAST2SMS_API_KEY || '',
   baseUrl: 'https://www.fast2sms.com/dev/bulkV2',
   senderId: 'GETDON',
-  otpTemplateId: '206901', // SMS template ID (Excel Message ID)
-  whatsappTemplateId: process.env.FAST2SMS_WHATSAPP_TEMPLATE_ID || '1709460170014791', // WhatsApp template ID
-  whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID || '15558471512' // WhatsApp sender ID phone number
+  otpTemplateId: process.env.FAST2SMS_SMS_TEMPLATE_ID || '206901',
+  whatsappTemplateId: process.env.FAST2SMS_WHATSAPP_TEMPLATE_ID || '1709460170014791',
+  whatsappSenderId: process.env.FAST2SMS_WHATSAPP_SENDER_ID || '15558471512'
 };
 
 export class OTPService {
@@ -165,12 +166,15 @@ export class OTPService {
       // "{{1}} is your verification code. For your security, do not share this code."
       // Only ONE variable: the OTP itself.
       const variablesValues = `${otpCode}`;
-      
+
+      const FAST2SMS_PHONE_NUMBER_ID = process.env.FAST2SMS_PHONE_NUMBER_ID || '979454055241619';
+      const FAST2SMS_OTP_TEMPLATE_ID = process.env.FAST2SMS_OTP_TEMPLATE_ID || '15404';
+
       // Build request for WhatsApp
       const params = new URLSearchParams({
         authorization: fast2smsConfig.apiKey,
-        message_id: '15404',
-        phone_number_id: '979454055241619',
+        message_id: FAST2SMS_OTP_TEMPLATE_ID,
+        phone_number_id: FAST2SMS_PHONE_NUMBER_ID,
         numbers: formattedPhone,
         variables_values: variablesValues
       });
@@ -447,14 +451,16 @@ export class OTPService {
       // WhatsApp API URL
       const whatsappApiUrl = 'https://www.fast2sms.com/dev/whatsapp';
       
+      const FAST2SMS_PHONE_NUMBER_ID = process.env.FAST2SMS_PHONE_NUMBER_ID || '979454055241619';
+
       // Template variables: Var1=customer name, Var2=order number
       const variablesValues = `${customerName}|${orderNumber}`;
-      
+
       // Build request for WhatsApp (template ID: 9781 - orderstatus)
       const params = new URLSearchParams({
         authorization: fast2smsConfig.apiKey,
-        message_id: '9781',
-        phone_number_id: '979454055241619',
+        message_id: process.env.FAST2SMS_ORDER_STATUS_TEMPLATE_ID || '9781',
+        phone_number_id: FAST2SMS_PHONE_NUMBER_ID,
         numbers: formattedPhone,
         variables_values: variablesValues
       });
@@ -517,13 +523,15 @@ export class OTPService {
       // WhatsApp API URL
       const whatsappApiUrl = 'https://www.fast2sms.com/dev/whatsapp';
 
+      const FAST2SMS_PHONE_NUMBER_ID = process.env.FAST2SMS_PHONE_NUMBER_ID || '979454055241619';
+
       // Template variables: Var1=amount
       const variablesValues = `${formattedAmount}`;
 
       const params = new URLSearchParams({
         authorization: fast2smsConfig.apiKey,
-        message_id: '9625',
-        phone_number_id: '979454055241619',
+        message_id: process.env.FAST2SMS_PAYMENT_TEMPLATE_ID || '9625',
+        phone_number_id: FAST2SMS_PHONE_NUMBER_ID,
         numbers: formattedPhone,
         variables_values: variablesValues
       });
@@ -581,14 +589,16 @@ export class OTPService {
       // WhatsApp API URL
       const whatsappApiUrl = 'https://www.fast2sms.com/dev/whatsapp';
       
+      const FAST2SMS_PHONE_NUMBER_ID = process.env.FAST2SMS_PHONE_NUMBER_ID || '979454055241619';
+
       // Template variables: Var1=customer name, Var2=order number, Var3=rider name, Var4=rider phone
       const variablesValues = `${customerName}|${orderNumber}|${riderName}|${riderPhone}`;
-      
+
       // Build request for WhatsApp (template ID: 10639 - dilivery_pb)
       const params = new URLSearchParams({
         authorization: fast2smsConfig.apiKey,
-        message_id: '10639',
-        phone_number_id: '979454055241619',
+        message_id: process.env.FAST2SMS_DELIVERY_TEMPLATE_ID || '10639',
+        phone_number_id: FAST2SMS_PHONE_NUMBER_ID,
         numbers: formattedPhone,
         variables_values: variablesValues
       });

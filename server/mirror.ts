@@ -13,7 +13,9 @@ if (MIRROR_URL) {
   console.warn('[mirror] MIRROR_DATABASE_URL not set - mirror is disabled');
 }
 
-const failuresPool = new Pool({ connectionString: process.env.DATABASE_URL });
+const failuresPool = new Pool({
+  connectionString: process.env.CUSTOM_DB_URL || process.env.DATABASE_URL,
+});
 
 interface MirrorStats {
   totalWrites: number;

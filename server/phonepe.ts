@@ -3,8 +3,6 @@ const PHONEPE_CLIENT_SECRET = process.env.PHONEPE_CLIENT_SECRET;
 const PHONEPE_CLIENT_VERSION = process.env.PHONEPE_CLIENT_VERSION || '1';
 const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
 
-const IS_TEST_MODE = true;
-
 // Sandbox URLs
 const SANDBOX_BASE_URL = 'https://api-preprod.phonepe.com/apis/pg-sandbox';
 const SANDBOX_OAUTH_URL = 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token';
@@ -13,8 +11,10 @@ const SANDBOX_OAUTH_URL = 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oa
 const PROD_BASE_URL = 'https://api.phonepe.com/apis/pg';
 const PROD_OAUTH_URL = 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token';
 
-const BASE_URL = IS_TEST_MODE ? SANDBOX_BASE_URL : PROD_BASE_URL;
-const OAUTH_URL = IS_TEST_MODE ? SANDBOX_OAUTH_URL : PROD_OAUTH_URL;
+// Override via env vars, or toggle test mode via PHONEPE_TEST_MODE
+const IS_TEST_MODE = (process.env.PHONEPE_TEST_MODE || 'true').toLowerCase() !== 'false';
+const BASE_URL = process.env.PHONEPE_BASE_URL || (IS_TEST_MODE ? SANDBOX_BASE_URL : PROD_BASE_URL);
+const OAUTH_URL = process.env.PHONEPE_OAUTH_URL || (IS_TEST_MODE ? SANDBOX_OAUTH_URL : PROD_OAUTH_URL);
 
 interface PhonePeTokenResponse {
   access_token: string;

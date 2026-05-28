@@ -87,7 +87,13 @@ export async function preloadImage(url: string): Promise<void> {
   // Check cache first
   const cachedUrl = await imageCache.get(url);
   if (cachedUrl) return;
-  
+
+  // Skip fetch-based preload for external CDN URLs — CORS may not be enabled.
+  // Let the browser load them naturally via <img> tags (no-cors mode).
+  if (url.startsWith('https://') && !url.includes('unsplash.com')) {
+    return Promise.resolve();
+  }
+
   try {
     const response = await fetch(url);
     if (response.ok) {

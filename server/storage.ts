@@ -17,7 +17,7 @@ import {
   adminPermissions, type AdminPermissionsMap, defaultPermissionsAllOn,
   type PhonePeTransaction, type InsertPhonePeTransaction
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and, like, desc, asc, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -162,6 +162,10 @@ export interface IStorage {
   // Foundation Enquiries
   createFoundationEnquiry(data: InsertFoundationEnquiry): Promise<FoundationEnquiry>;
   listFoundationEnquiries(search?: string): Promise<FoundationEnquiry[]>;
+
+  // Shop Settings
+  getShopSettings(): Promise<any>;
+  updateShopSettings(data: { isOpen?: boolean; manualOverride?: boolean; schedule?: any[] }): Promise<any>;
 
   // Popup Banner methods
   getPopupBanners(activeOnly?: boolean): Promise<PopupBanner[]>;
@@ -1773,6 +1777,38 @@ export class DatabaseStorage implements IStorage {
     }
     
     return results;
+  }
+
+  async getShopSettings(): Promise<any> {
+    const result = await pool.query('SELECT * FROM shop_settings LIMIT 1');
+    return result.rows[0] || null;
+  }
+
+  async updateShopSettings(data: { isOpen?: boolean; manualOverride?: boolean; schedule?: any[] }): Promise<any> {
+    const existing = await this.getShopSettings();
+    if (!existing) {
+      const result = await pool.query(
+        `INSERT INTO shop_settings (is_open, manual_override, schedule, updated_at)
+         VALUES ($1, $2, $3, NOW()) RETURNING *`,
+        [data.isOpen ?? true, data.manualOverride ?? false, JSON.stringify(data.schedule ?? [])]
+      );
+      return result.rows[0];
+    }
+    const result = await pool.query(
+      `UPDATE shop_settings SET
+         is_open = $1,
+         manual_override = $2,
+         schedule = $3,
+         updated_at = NOW()
+       WHERE id = $4 RETURNING *`,
+      [
+        data.isOpen !== undefined ? data.isOpen : existing.is_open,
+        data.manualOverride !== undefined ? data.manualOverride : existing.manual_override,
+        JSON.stringify(data.schedule !== undefined ? data.schedule : existing.schedule),
+        existing.id,
+      ]
+    );
+    return result.rows[0];
   }
 }
 

@@ -4287,6 +4287,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== SHOP TIMING ROUTES =====
+
+  // Helper: compute IST-based open/closed status from DB settings
+  function computeShopStatus(settings: any): { isOpen: boolean; nextOpenTime: string | null } {
+    if (!settings) return { isOpen: true, nextOpenTime: null };
+
+    const schedule: any[] = Array.isArray(settings.schedule) ? settings.schedule : [];
+    const IST_OFFSET_MS = 330 * 60 * 1000; // UTC+5:30
+
+    const nowUTC = Date.now();
+    const nowIST_ms = nowUTC + IST_OFFSET_MS;
+    const istDate = new Date(nowIST_ms);
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const todayName = dayNames[istDate.getUTCDay()];
+    const istCurrentMins = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
+
+    function getNextOpenTime(): string | null {
+      const todayDayIdx = istDate.getUTCDay();
+      for (let i = 0; i < 7; i++) {
+        const dayIdx = (todayDayIdx + i) % 7;
+        const dayName = dayNames[dayIdx];
+        const daySchedule = schedule.find((s: any) => s.day === dayName);
+        if (!daySchedule?.enabled) continue;
+
+        const [openH, openM] = daySchedule.openTime.split(':').map(Number);
+        const openMins = openH * 60 + openM;
+
+        if (i === 0) {
+          const [closeH, closeM] = daySchedule.closeTime.split(':').map(Number);
+          const closeMins = closeH * 60 + closeM;
+          if (istCurrentMins >= closeMins) continue; // past close today
+          if (istCurrentMins >= openMins) continue;  // currently open (shouldn't be here)
+          // before today's open time — return today's opening
+        }
+
+        // Construct UTC timestamp for "day+i at openH:openM IST"
+        const istMidnight = new Date(istDate);
+        istMidnight.setUTCHours(0, 0, 0, 0);
+        const targetISTms = istMidnight.getTime() + i * 86400000 + openMins * 60000;
+        const targetUTCms = targetISTms - IST_OFFSET_MS;
+        return new Date(targetUTCms).toISOString();
+      }
+      return null;
+    }
+
+    // Manual override
+    if (settings.manual_override) {
+      const isOpen = Boolean(settings.is_open);
+      if (isOpen) return { isOpen: true, nextOpenTime: null };
+      return { isOpen: false, nextOpenTime: getNextOpenTime() };
+    }
+
+    // Auto-detect from schedule
+    const todaySchedule = schedule.find((s: any) => s.day === todayName);
+    if (todaySchedule?.enabled) {
+      const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
+      const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
+      const openMins = openH * 60 + openM;
+      const closeMins = closeH * 60 + closeM;
+      if (istCurrentMins >= openMins && istCurrentMins < closeMins) {
+        return { isOpen: true, nextOpenTime: null };
+      }
+    }
+
+    return { isOpen: false, nextOpenTime: getNextOpenTime() };
+  }
+
+  // Public: current shop open/closed status
+  app.get('/api/shop-status', async (_req, res) => {
+    try {
+      const settings = await storage.getShopSettings();
+      const status = computeShopStatus(settings);
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: get full shop settings
+  app.get('/api/admin/shop-settings', authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const settings = await storage.getShopSettings();
+      res.json(settings || {});
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: update shop settings (toggle + schedule)
+  app.patch('/api/admin/shop-settings', authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { isOpen, manualOverride, schedule } = req.body;
+      const updated = await storage.updateShopSettings({ isOpen, manualOverride, schedule });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== END SHOP TIMING ROUTES =====
+
   const httpServer = createServer(app);
   return httpServer;
 }

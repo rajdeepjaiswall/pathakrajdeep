@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Search, Filter, Download, CheckCircle, Clock, Package, Truck, User, Phone, Edit, Save, X, XCircle, AlertCircle } from 'lucide-react';
+import { ShopClosedNotice } from '@/components/shop-closed-notice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -276,6 +277,9 @@ export default function AdminOrders() {
             Export Orders
           </Button>
         </div>
+
+        {/* Shop Closed Notice */}
+        <ShopClosedNotice variant="orders" />
 
         {/* Filters */}
         <Card className="mb-6">

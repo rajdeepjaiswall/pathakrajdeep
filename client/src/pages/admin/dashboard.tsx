@@ -26,7 +26,9 @@ import {
   UserCog,
   AtSign,
   PanelTop,
-  PanelBottom
+  PanelBottom,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminSidebar from '@/components/admin/admin-sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { useAdminPermissions } from '@/hooks/use-admin-permissions';
@@ -43,6 +46,32 @@ import { ORDER_STATUSES } from '@/lib/constants';
 import { apiRequest } from '@/lib/queryClient';
 import { Link, useLocation } from 'wouter';
 import type { ManualPaymentConfig } from '@shared/schema';
+
+// Generate 30-minute interval time options in 12h format
+const TIME_OPTIONS: { label: string; value: string }[] = (() => {
+  const opts: { label: string; value: string }[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const period = h < 12 ? 'AM' : 'PM';
+      const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      opts.push({
+        label: `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`,
+        value: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+      });
+    }
+  }
+  return opts;
+})();
+
+const DEFAULT_SCHEDULE = [
+  { day: 'monday',    openTime: '09:00', closeTime: '22:00', enabled: true  },
+  { day: 'tuesday',   openTime: '09:00', closeTime: '22:00', enabled: true  },
+  { day: 'wednesday', openTime: '09:00', closeTime: '22:00', enabled: true  },
+  { day: 'thursday',  openTime: '09:00', closeTime: '22:00', enabled: true  },
+  { day: 'friday',    openTime: '09:00', closeTime: '23:00', enabled: true  },
+  { day: 'saturday',  openTime: '10:00', closeTime: '23:00', enabled: true  },
+  { day: 'sunday',    openTime: '10:00', closeTime: '21:00', enabled: false },
+];
 
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
@@ -54,6 +83,56 @@ export default function AdminDashboard() {
       setLocation('/admin/login');
     }
   }, [user, authLoading, setLocation]);
+
+  // Shop Timing state
+  const [shopTimingOpen, setShopTimingOpen] = useState(false);
+  const [shopIsOpen, setShopIsOpen] = useState(true);
+  const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
+
+  // Fetch shop settings
+  const { data: shopSettings } = useQuery<any>({
+    queryKey: ['/api/admin/shop-settings'],
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
+  });
+
+  // Sync shop settings into local state
+  useEffect(() => {
+    if (shopSettings) {
+      setShopIsOpen(Boolean(shopSettings.is_open));
+      if (Array.isArray(shopSettings.schedule) && shopSettings.schedule.length > 0) {
+        setSchedule(shopSettings.schedule);
+      }
+    }
+  }, [shopSettings]);
+
+  const saveShopSettingsMutation = useMutation({
+    mutationFn: async (data: { isOpen?: boolean; manualOverride?: boolean; schedule?: typeof DEFAULT_SCHEDULE }) => {
+      const response = await apiRequest('PATCH', '/api/admin/shop-settings', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/shop-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shop-status'] });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to save shop settings', variant: 'destructive' });
+    },
+  });
+
+  const handleToggleShopOpen = () => {
+    const newVal = !shopIsOpen;
+    setShopIsOpen(newVal);
+    saveShopSettingsMutation.mutate({ isOpen: newVal, manualOverride: true });
+  };
+
+  const handleSaveSchedule = () => {
+    saveShopSettingsMutation.mutate({ schedule, manualOverride: false });
+    toast({ title: 'Schedule Saved', description: 'Shop timing schedule updated successfully' });
+  };
+
+  const updateDaySchedule = (idx: number, field: string, value: any) => {
+    setSchedule(prev => prev.map((d, i) => i === idx ? { ...d, [field]: value } : d));
+  };
 
   // Live visitor counter state
   const [liveVisitors, setLiveVisitors] = useState(Math.floor(Math.random() * 5) + 1);
@@ -401,6 +480,129 @@ export default function AdminDashboard() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-navy mb-2">Admin Dashboard</h1>
             <p className="text-gray-600">Welcome back, {user?.username}! Here's what's happening with your bakery.</p>
+          </div>
+
+          {/* Shop Status & Timing */}
+          <div className="mb-8">
+            <Card className="border border-gray-200 shadow-sm">
+              <CardContent className="p-4">
+                {/* Top Row: Status toggle + Timing expand button */}
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  {/* Shop Status Toggle */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-600">Shop Status</span>
+                    <button
+                      onClick={handleToggleShopOpen}
+                      disabled={saveShopSettingsMutation.isPending}
+                      className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all border ${
+                        shopIsOpen
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : 'bg-gray-100 border-gray-300 text-gray-600'
+                      }`}
+                    >
+                      Shop is {shopIsOpen ? 'Open' : 'Closed'}
+                      <span className={`inline-block w-5 h-5 rounded-full shadow-sm transition-all ${shopIsOpen ? 'bg-white' : 'bg-gray-400'}`} />
+                    </button>
+                  </div>
+
+                  {/* Shop Timing Expand Button */}
+                  <button
+                    onClick={() => setShopTimingOpen(!shopTimingOpen)}
+                    className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Shop Timing
+                    {shopTimingOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                </div>
+
+                {/* Expanded Schedule Section */}
+                {shopTimingOpen && (
+                  <div className="mt-4 border-t border-gray-100 pt-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-navy">Weekly Shop Timing</span>
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <button onClick={() => setShopTimingOpen(false)}>
+                        <ChevronUp className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      </button>
+                    </div>
+
+                    {/* Schedule Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr>
+                            <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Day</th>
+                            <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Open Time</th>
+                            <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Close Time</th>
+                            <th className="text-left py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Active</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {schedule.map((day, idx) => (
+                            <tr key={day.day} className="border-t border-gray-100">
+                              <td className="py-3 pr-4 font-medium text-navy capitalize">{day.day}</td>
+                              <td className="py-3 pr-4">
+                                <Select
+                                  value={day.openTime}
+                                  onValueChange={(v) => updateDaySchedule(idx, 'openTime', v)}
+                                >
+                                  <SelectTrigger className="w-32 h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-48">
+                                    {TIME_OPTIONS.map(opt => (
+                                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <Select
+                                  value={day.closeTime}
+                                  onValueChange={(v) => updateDaySchedule(idx, 'closeTime', v)}
+                                >
+                                  <SelectTrigger className="w-32 h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-48">
+                                    {TIME_OPTIONS.map(opt => (
+                                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="py-3">
+                                <Switch
+                                  checked={day.enabled}
+                                  onCheckedChange={(v) => updateDaySchedule(idx, 'enabled', v)}
+                                  className="data-[state=checked]:bg-green-500"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        onClick={handleSaveSchedule}
+                        disabled={saveShopSettingsMutation.isPending}
+                        className="bg-[#3d5a1e] hover:bg-[#2e4316] text-white text-sm px-5"
+                      >
+                        {saveShopSettingsMutation.isPending ? 'Saving...' : 'Save Changes'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Quick Actions — filtered by per-admin permissions */}

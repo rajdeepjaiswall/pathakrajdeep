@@ -9,6 +9,7 @@ import MobileNav from '@/components/layout/mobile-nav';
 import { formatPrice } from '@/lib/cart';
 import pathakLogo from '@assets/project_20250528_0859055-02.png';
 import bakeryPattern from '@assets/project_20250607_1604012-01_1749292781428.png';
+import { ShopClosedNotice } from '@/components/shop-closed-notice';
 
 export default function OrderConfirmation() {
   const [, setLocation] = useLocation();
@@ -187,6 +188,9 @@ export default function OrderConfirmation() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Shop Closed Notice */}
+        <ShopClosedNotice variant="confirmation" />
 
         {/* Action Buttons */}
         <div className="space-y-4">

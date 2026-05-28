@@ -25,6 +25,7 @@ import { insertAddressSchema, type Address, type ManualPaymentConfig } from '@sh
 import { z } from 'zod';
 import { OTPInput } from '@/components/otp-input';
 import { Progress } from '@/components/ui/progress';
+import { ShopClosedNotice } from '@/components/shop-closed-notice';
 
 const addressFormSchema = insertAddressSchema.omit({ userId: true });
 
@@ -868,6 +869,8 @@ export default function Checkout() {
           </RadioGroup>
         </CardContent>
       </Card>
+
+      <ShopClosedNotice variant="checkout" />
 
       <div className="flex justify-between">
         <Button 

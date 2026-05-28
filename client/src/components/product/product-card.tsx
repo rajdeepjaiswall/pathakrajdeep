@@ -18,11 +18,9 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, isPreviouslyOrdered = false }: ProductCardProps) {
   const { addToCart } = useCart();
-  const { isInWishlist, toggleWishlist, addToWishlist, isAdding, isRemoving } = useWishlist();
+  const { isInWishlist, toggleWishlist, isAdding, isRemoving } = useWishlist();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [heartAnim, setHeartAnim] = useState(false);
-  const lastTapRef = useRef<number>(0);
-  const doubleTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const createMediaItems = () => {
     const items = [];
@@ -70,35 +68,6 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
     toggleWishlist(product.id);
   };
 
-  const handleDoubleTap = (e: React.MouseEvent | React.TouchEvent) => {
-    const now = Date.now();
-    const timeSinceLastTap = now - lastTapRef.current;
-
-    if (timeSinceLastTap < 350 && timeSinceLastTap > 0) {
-      // Double tap detected
-      e.preventDefault();
-      if (!isInWishlist(product.id)) {
-        setHeartAnim(true);
-        setTimeout(() => setHeartAnim(false), 600);
-        addToWishlist(product.id);
-      }
-      lastTapRef.current = 0;
-      if (doubleTapTimeoutRef.current) {
-        clearTimeout(doubleTapTimeoutRef.current);
-        doubleTapTimeoutRef.current = null;
-      }
-    } else {
-      lastTapRef.current = now;
-      if (doubleTapTimeoutRef.current) {
-        clearTimeout(doubleTapTimeoutRef.current);
-      }
-      doubleTapTimeoutRef.current = setTimeout(() => {
-        lastTapRef.current = 0;
-        doubleTapTimeoutRef.current = null;
-      }, 350);
-    }
-  };
-
   const nextImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -114,10 +83,7 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
   const inWishlist = isInWishlist(product.id);
 
   return (
-    <div
-      onClick={handleDoubleTap}
-      onTouchEnd={handleDoubleTap}
-    >
+    <div>
       <Link href={`/products/${product.id}`}>
         <Card className="bg-white hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer border border-[#e8d5c4] hover:border-[#8B5E3C]/30 hover:shadow-[0_4px_20px_rgba(107,62,46,0.12)]">
           <div className="relative">

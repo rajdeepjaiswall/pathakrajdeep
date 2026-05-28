@@ -269,7 +269,7 @@ export default function CompleteProfile() {
       return response.json();
     },
     onSuccess: (updatedUser) => {
-      updateUser({ ...user, profileCompleted: false });
+      updateUser(updatedUser);
       toast({
         title: "Profile Skipped",
         description: "You can complete your profile later from the account page.",

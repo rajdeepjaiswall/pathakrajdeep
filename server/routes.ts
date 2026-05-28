@@ -875,7 +875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Skip profile completion
+  // Skip profile completion — saves any available Google name, marks profile as complete
   app.post("/api/auth/skip-profile", authenticateUser, async (req, res) => {
     try {
       // Get user ID from session (Google OAuth) or JWT
@@ -886,49 +886,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         userId = (req.user as any)?.id || (req.user as any)?.userId;
       }
-      
+
       if (!userId) {
         return res.status(401).json({ message: 'User not authenticated properly' });
       }
 
-      // Mark profile as completed (so user doesn't get redirected again) but with minimal data
+      const currentUser = await storage.getUser(userId);
+      const googleName = currentUser?.firstName || currentUser?.lastName || '';
+
       const updatedUser = await storage.updateUser(userId, {
-        profileCompleted: false, // Keep false so they can complete later
+        profileCompleted: true,
+        // If Google provided a name and it's not already set, save it
+        ...(googleName && !currentUser?.firstName ? { firstName: googleName } : {}),
       });
 
-      res.json({ 
+      res.json({
         user: updatedUser,
         message: 'Profile completion skipped'
       });
-    } catch (error: any) {
-      console.error('Skip profile error:', error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-
-  // Skip profile completion (mark as incomplete but allow access)
-  app.post("/api/auth/skip-profile", authenticateUser, async (req, res) => {
-    try {
-      // Get user ID from session (Google OAuth) or JWT
-      let userId;
-      if (req.isAuthenticated && req.isAuthenticated()) {
-        // Session-based authentication (Google OAuth)
-        const sessionUser = req.user as any;
-        userId = sessionUser.claims?.sub || sessionUser.id;
-      } else {
-        // JWT-based authentication
-        userId = (req.user as any)?.id || (req.user as any)?.userId;
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'User not authenticated properly' });
-      }
-      
-      const updatedUser = await storage.updateUser(userId, {
-        profileCompleted: false,
-      });
-      
-      res.json(updatedUser);
     } catch (error: any) {
       console.error('Skip profile error:', error);
       res.status(400).json({ message: error.message });

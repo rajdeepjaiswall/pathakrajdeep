@@ -120,6 +120,17 @@ export default function ProductDetail() {
   const { isInWishlist, toggleWishlist, isAdding, isRemoving } = useWishlist();
   const [heartAnim, setHeartAnim] = useState(false);
 
+  // Always start the product page at the very top, regardless of where the
+  // user navigated from (homepage card, modal popup, search, etc.)
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [id]);
+
+  const { data: product, isLoading } = useQuery<any>({
+    queryKey: [`/api/products/${id}`],
+    enabled: !!id,
+  });
+
   const inWishlist = product ? isInWishlist(product.id) : false;
 
   const handleHeartClick = () => {
@@ -154,17 +165,6 @@ export default function ProductDetail() {
       }
     }
   };
-
-  // Always start the product page at the very top, regardless of where the
-  // user navigated from (homepage card, modal popup, search, etc.)
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [id]);
-
-  const { data: product, isLoading } = useQuery<any>({
-    queryKey: [`/api/products/${id}`],
-    enabled: !!id,
-  });
 
   const mediaItems = (() => {
     if (!product) return [];

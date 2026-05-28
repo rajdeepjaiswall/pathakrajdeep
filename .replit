@@ -42,8 +42,8 @@ expertMode = true
 [userenv]
 
 [userenv.shared]
+GOOGLE_CALLBACK_URL = "https://www.pathakbhandar.in/api/auth/google/callback"
 
 [userenv.development]
 
 [userenv.production]
-GOOGLE_CALLBACK_URL = "https://www.pathakbhandar.in/api/auth/google/callback"

@@ -1498,62 +1498,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/wishlist", async (req, res) => {
+  app.post("/api/wishlist", authenticateUser, async (req, res) => {
     try {
-      // Check if user is authenticated
-      const authHeader = req.headers['authorization'];
-      const token = authHeader && authHeader.split(' ')[1];
-      
-      if (!token) {
-        return res.status(401).json({ message: 'Please login to add items to wishlist' });
-      }
-
-      // Verify token
-      jwt.verify(token, JWT_SECRET, async (err: any, user: any) => {
-        if (err) {
-          return res.status(401).json({ message: 'Please login to add items to wishlist', requireLogin: true });
-        }
-        
-        try {
-          const { product_id } = req.body;
-          const wishlistItem = await storage.addToWishlist({
-            user_id: user.id,
-            product_id: parseInt(product_id),
-          });
-          res.json(wishlistItem);
-        } catch (error: any) {
-          res.status(400).json({ message: error.message });
-        }
+      const user = req.user;
+      const { product_id } = req.body;
+      const wishlistItem = await storage.addToWishlist({
+        user_id: user.id,
+        product_id: parseInt(product_id),
       });
+      res.json(wishlistItem);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.delete("/api/wishlist/:productId", async (req, res) => {
+  app.delete("/api/wishlist/:productId", authenticateUser, async (req, res) => {
     try {
-      // Check if user is authenticated
-      const authHeader = req.headers['authorization'];
-      const token = authHeader && authHeader.split(' ')[1];
-      
-      if (!token) {
-        return res.status(401).json({ message: 'Please login to manage wishlist' });
-      }
-
-      // Verify token
-      jwt.verify(token, JWT_SECRET, async (err: any, user: any) => {
-        if (err) {
-          return res.status(401).json({ message: 'Please login to manage wishlist', requireLogin: true });
-        }
-        
-        try {
-          const productId = parseInt(req.params.productId);
-          await storage.removeFromWishlist(productId, user.id);
-          res.json({ message: "Product removed from wishlist" });
-        } catch (error: any) {
-          res.status(400).json({ message: error.message });
-        }
-      });
+      const user = req.user;
+      const productId = parseInt(req.params.productId);
+      await storage.removeFromWishlist(productId, user.id);
+      res.json({ message: "Product removed from wishlist" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

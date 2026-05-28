@@ -5,6 +5,7 @@ const apiRequest = async (url: string, options?: RequestInit) => {
   const token = localStorage.getItem('token');
   const response = await fetch(url, {
     ...options,
+    credentials: 'include', // send session cookies for Google OAuth users
     headers: {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),

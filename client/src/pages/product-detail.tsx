@@ -12,6 +12,7 @@ import MobileNav from '@/components/layout/mobile-nav';
 import CartSidebar from '@/components/cart/cart-sidebar';
 import MediaViewerModal from '@/components/product/media-viewer-modal';
 import { useCart } from '@/hooks/use-cart';
+import { useWishlist } from '@/hooks/use-wishlist';
 import { formatPrice } from '@/lib/cart';
 
 function ProductReviews({ productId }: { productId: number }) {
@@ -116,6 +117,17 @@ export default function ProductDetail() {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist, isAdding, isRemoving } = useWishlist();
+  const [heartAnim, setHeartAnim] = useState(false);
+
+  const inWishlist = product ? isInWishlist(product.id) : false;
+
+  const handleHeartClick = () => {
+    if (!product) return;
+    setHeartAnim(true);
+    setTimeout(() => setHeartAnim(false), 400);
+    toggleWishlist(product.id);
+  };
 
   // Always start the product page at the very top, regardless of where the
   // user navigated from (homepage card, modal popup, search, etc.)
@@ -399,8 +411,21 @@ export default function ProductDetail() {
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Add to Cart
                 </Button>
-                <Button variant="outline" size="sm" className="p-3">
-                  <Heart className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`p-3 transition-transform ${heartAnim ? 'scale-125' : 'scale-100'}`}
+                  onClick={handleHeartClick}
+                  disabled={isAdding || isRemoving}
+                  title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                  <Heart
+                    className={`h-4 w-4 transition-colors ${
+                      inWishlist
+                        ? 'fill-red-500 text-red-500'
+                        : 'text-gray-400 hover:text-red-400'
+                    }`}
+                  />
                 </Button>
                 <Button variant="outline" size="sm" className="p-3">
                   <Share2 className="h-4 w-4" />

@@ -129,6 +129,32 @@ export default function ProductDetail() {
     toggleWishlist(product.id);
   };
 
+  const handleShare = async () => {
+    if (!product) return;
+    const url = `${window.location.origin}/products/${product.id}`;
+    const shareData = {
+      title: product.name,
+      text: product.description,
+      url,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.log('Share failed:', err);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('Product link copied to clipboard!');
+      } catch {
+        alert('Could not copy link. Please copy the URL manually.');
+      }
+    }
+  };
+
   // Always start the product page at the very top, regardless of where the
   // user navigated from (homepage card, modal popup, search, etc.)
   useEffect(() => {
@@ -403,14 +429,7 @@ export default function ProductDetail() {
                   </Button>
                 </div>
               </div>
-              <div className="flex gap-4">
-                <Button
-                  onClick={() => addToCart(product.id, quantity)}
-                  className="flex-1 bg-champagne text-navy hover:bg-champagne/90"
-                >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add to Cart
-                </Button>
+              <div className="flex gap-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -427,7 +446,20 @@ export default function ProductDetail() {
                     }`}
                   />
                 </Button>
-                <Button variant="outline" size="sm" className="p-3">
+                <Button
+                  onClick={() => addToCart(product.id, quantity)}
+                  className="flex-1 bg-champagne text-navy hover:bg-champagne/90"
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Add to Cart
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="p-3"
+                  onClick={handleShare}
+                  title="Share this product"
+                >
                   <Share2 className="h-4 w-4" />
                 </Button>
               </div>

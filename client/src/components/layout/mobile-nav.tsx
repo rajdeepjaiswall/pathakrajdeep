@@ -88,10 +88,9 @@ export default function MobileNav() {
         transform: isVisible ? 'translate3d(0, 0, 0)' : 'translate3d(0, 100%, 0)',
         transition: 'transform 0.2s ease-in-out',
         willChange: 'transform',
-        contain: 'layout style paint',
         pointerEvents: 'auto',
         touchAction: 'manipulation',
-        overflow: 'hidden',
+        overflow: 'visible',
         boxSizing: 'border-box',
       }}
       aria-label="Mobile navigation"

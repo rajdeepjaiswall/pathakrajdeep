@@ -1,6 +1,7 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
@@ -63,6 +64,7 @@ import CompleteProfile from "@/pages/complete-profile";
 import PhonePeCallback from "@/pages/phonepe-callback";
 import NotFound from "@/pages/not-found";
 import TrendingLocalPage from "@/pages/trending-local";
+import MaintenancePage from "@/pages/maintenance-page";
 import { AddToCartPopup } from "@/components/AddToCartPopup";
 
 function Router() {
@@ -158,14 +160,45 @@ function App() {
 
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
 
-  // Show loading while checking auth
-  if (isLoading) {
+  const isAdminRoute = location.startsWith('/admin') || location.startsWith('/super-admin');
+  const isAdminLogin = location === '/admin/login' || location === '/super-admin/login';
+  const isAdminUser = user && (user.role === 'admin' || user.role === 'super_admin');
+  const shouldCheckMaintenance = !isAdminRoute && !isAdminLogin;
+
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
+  const [maintenanceChecked, setMaintenanceChecked] = useState(false);
+
+  useEffect(() => {
+    if (!shouldCheckMaintenance) {
+      setMaintenanceChecked(true);
+      return;
+    }
+    fetch('/api/maintenance-status', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        setMaintenanceEnabled(data.enabled === true);
+        setMaintenanceChecked(true);
+      })
+      .catch(() => {
+        setMaintenanceEnabled(false);
+        setMaintenanceChecked(true);
+      });
+  }, [shouldCheckMaintenance]);
+
+  // Show loading while checking auth or maintenance status
+  if (isLoading || (shouldCheckMaintenance && !maintenanceChecked)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
       </div>
     );
+  }
+
+  // If maintenance mode is ON and user is not an admin, show maintenance page
+  if (maintenanceEnabled && !isAdminUser) {
+    return <MaintenancePage />;
   }
 
   return (

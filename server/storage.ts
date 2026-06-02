@@ -152,6 +152,8 @@ export interface IStorage {
   publishFooter(): Promise<SiteSettings>;
   getOnlinePaymentStatus(): Promise<boolean>;
   setOnlinePaymentStatus(enabled: boolean): Promise<boolean>;
+  getMaintenanceModeStatus(): Promise<boolean>;
+  setMaintenanceModeStatus(enabled: boolean): Promise<boolean>;
 
   // Foundation Settings (super-admin only)
   getFoundationSettings(): Promise<FoundationSettings | undefined>;
@@ -1257,6 +1259,21 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(siteSettings)
       .set({ onlinePaymentsEnabled: enabled, updatedAt: new Date() })
+      .where(eq(siteSettings.id, row.id));
+    return enabled;
+  }
+
+  async getMaintenanceModeStatus(): Promise<boolean> {
+    const row = await this.getSiteSettings();
+    if (!row) return false;
+    return row.maintenanceModeEnabled ?? false;
+  }
+
+  async setMaintenanceModeStatus(enabled: boolean): Promise<boolean> {
+    const row = await this.ensureSiteSettings();
+    await db
+      .update(siteSettings)
+      .set({ maintenanceModeEnabled: enabled, updatedAt: new Date() })
       .where(eq(siteSettings.id, row.id));
     return enabled;
   }

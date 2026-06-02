@@ -399,6 +399,7 @@ export const siteSettings = pgTable("site_settings", {
   headerPublishedAt: timestamp("header_published_at"),
   footerPublishedAt: timestamp("footer_published_at"),
   onlinePaymentsEnabled: boolean("online_payments_enabled").default(true).notNull(),
+  maintenanceModeEnabled: boolean("maintenance_mode_enabled").default(false).notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 

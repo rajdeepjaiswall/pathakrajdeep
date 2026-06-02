@@ -2920,6 +2920,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   // ────────────────────────────────────────────────────────────────────────
 
+  // ── Maintenance mode master switch ─────────────────────────────────────
+  // Public: frontend reads this to know if maintenance mode is active
+  app.get("/api/maintenance-status", async (_req, res) => {
+    try {
+      const enabled = await storage.getMaintenanceModeStatus();
+      res.json({ enabled });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: toggle maintenance mode on / off
+  app.patch("/api/admin/maintenance-status", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: "'enabled' must be a boolean" });
+      }
+      const result = await storage.setMaintenanceModeStatus(enabled);
+      res.json({ maintenanceModeEnabled: result });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────
+
   // ============== GetDown Foundation (super admin) ==============
 
   // Public: published foundation content (logo + description ONLY, no API config)

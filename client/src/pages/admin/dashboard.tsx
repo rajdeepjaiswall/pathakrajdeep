@@ -28,7 +28,8 @@ import {
   PanelTop,
   PanelBottom,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Construction
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,46 @@ export default function AdminDashboard() {
   const [shopTimingOpen, setShopTimingOpen] = useState(false);
   const [shopIsOpen, setShopIsOpen] = useState(true);
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
+
+  // Maintenance mode state
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  // Fetch maintenance status
+  const { data: maintenanceStatus } = useQuery<{ enabled: boolean }>({
+    queryKey: ['/api/maintenance-status'],
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
+  });
+
+  useEffect(() => {
+    if (maintenanceStatus) {
+      setMaintenanceMode(maintenanceStatus.enabled);
+    }
+  }, [maintenanceStatus]);
+
+  const maintenanceMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const response = await apiRequest('PATCH', '/api/admin/maintenance-status', { enabled });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/maintenance-status'] });
+      toast({
+        title: maintenanceMode ? 'Maintenance Mode ON' : 'Maintenance Mode OFF',
+        description: maintenanceMode
+          ? 'The website is now hidden from customers. Only admins can access it.'
+          : 'The website is now visible to all customers.',
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to update maintenance mode', variant: 'destructive' });
+    },
+  });
+
+  const handleToggleMaintenance = () => {
+    const newVal = !maintenanceMode;
+    setMaintenanceMode(newVal);
+    maintenanceMutation.mutate(newVal);
+  };
 
   // Fetch shop settings
   const { data: shopSettings } = useQuery<any>({
@@ -502,6 +543,24 @@ export default function AdminDashboard() {
                     >
                       Shop is {shopIsOpen ? 'Open' : 'Closed'}
                       <span className={`inline-block w-5 h-5 rounded-full shadow-sm transition-all ${shopIsOpen ? 'bg-white' : 'bg-gray-400'}`} />
+                    </button>
+                  </div>
+
+                  {/* Maintenance Mode Toggle */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-600">Maintenance</span>
+                    <button
+                      onClick={handleToggleMaintenance}
+                      disabled={maintenanceMutation.isPending}
+                      className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all border ${
+                        maintenanceMode
+                          ? 'bg-red-600 border-red-600 text-white'
+                          : 'bg-gray-100 border-gray-300 text-gray-600'
+                      }`}
+                    >
+                      <Construction className="h-4 w-4" />
+                      {maintenanceMode ? 'ON' : 'OFF'}
+                      <span className={`inline-block w-5 h-5 rounded-full shadow-sm transition-all ${maintenanceMode ? 'bg-white' : 'bg-gray-400'}`} />
                     </button>
                   </div>
 

@@ -111,7 +111,7 @@ export default function AdminBanners() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/banners'], refetchType: 'all' });
       setIsCreating(false);
       setNewBanner({
         title: '',
@@ -156,7 +156,7 @@ export default function AdminBanners() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/banners'], refetchType: 'all' });
       setEditingBanner(null);
       toast({
         title: 'Banner updated',
@@ -197,7 +197,7 @@ export default function AdminBanners() {
       return { previous };
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/banners'], refetchType: 'all' });
       toast({
         title: variables.isActive ? 'Banner turned ON' : 'Banner turned OFF',
         description: variables.isActive
@@ -229,7 +229,8 @@ export default function AdminBanners() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/banners'], refetchType: 'all' });
+      setEditingBanner(null);
       toast({
         title: 'Banner deleted',
         description: 'The banner has been deleted successfully',

@@ -106,7 +106,7 @@ export default function Home() {
       <CartReminder />
 
       {/* Featured Products - above Trending section */}
-      <CollapsibleSection collapsedHeight={560} collapsedHeightDesktop={780} label="featured products">
+      <CollapsibleSection collapsedHeight={1200} collapsedHeightDesktop={780} label="featured products">
         <section className="pt-2 pb-10 lg:py-12 bg-[#F8F4F1]">
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center mb-6 lg:mb-8">
@@ -121,10 +121,10 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Mobile: 2 cols | Tablet+Desktop: exactly 3 rectangle cards per row */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+            {/* Mobile: 1 card per row (full width, bigger) | Tablet: 2 cols | Desktop: 3 cols */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
               {productsLoading ? (
-                <LoadingSkeleton type="product" count={6} className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6" />
+                <LoadingSkeleton type="product" count={6} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6" />
               ) : featuredProducts.length > 0 ? (
                 featuredProducts.slice(0, 9).map((product: any) => (
                   <ProductCard 

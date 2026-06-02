@@ -88,7 +88,7 @@ export default function ProductCard({ product, isPreviouslyOrdered = false }: Pr
       <Link href={getProductUrl(product)}>
         <Card className="bg-white hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer border border-[#e8d5c4] hover:border-[#8B5E3C]/30 hover:shadow-[0_4px_20px_rgba(107,62,46,0.12)]">
           <div className="relative">
-            <div className="relative w-full h-40 lg:h-auto lg:aspect-[4/3] overflow-hidden border-b border-[#e8d5c4] rounded-t-lg">
+            <div className="relative w-full h-52 sm:h-40 lg:h-auto lg:aspect-[4/3] overflow-hidden border-b border-[#e8d5c4] rounded-t-lg">
               {mediaItems[currentImageIndex].type === 'video' ? (
                 <video 
                   src={mediaItems[currentImageIndex].url}

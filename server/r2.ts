@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 // Build the Cloudflare R2 endpoint from the Account ID
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -63,6 +63,36 @@ export async function uploadBase64ToR2(
   );
 
   return `${PUBLIC_URL}/${key}`;
+}
+
+/**
+ * Delete a file from Cloudflare R2 by its CDN URL.
+ * Returns true if deletion succeeded, false if it was a no-op (not our CDN URL).
+ * Logs errors but never throws — safe to call without try/catch.
+ */
+export async function deleteFromR2(cdnUrl: string): Promise<boolean> {
+  if (!cdnUrl || !cdnUrl.startsWith(PUBLIC_URL)) {
+    // Not a URL in our R2 bucket — nothing to do
+    return false;
+  }
+
+  // Extract key from URL: https://pub-...r2.dev/products/images/123.jpg
+  const key = cdnUrl.replace(`${PUBLIC_URL}/`, "");
+  if (!key) return false;
+
+  try {
+    await r2Client.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+      })
+    );
+    console.log(`[R2] Deleted: ${key}`);
+    return true;
+  } catch (err) {
+    console.error(`[R2] Failed to delete ${key}:`, err);
+    return false;
+  }
 }
 
 /**

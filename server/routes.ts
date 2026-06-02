@@ -13,7 +13,7 @@ import { sendOtpEmail } from "./email-service";
 import { initiatePhonePePayment, checkPhonePePaymentStatus, isPhonePeConfigured, getPhonePeConfig, verifyPhonePeWebhook, parsePhonePeWebhook, getWebhookCredentials, PhonePeWebhookPayload } from "./phonepe";
 import { db, pool } from "./db";
 import { eq, and } from "drizzle-orm";
-import { uploadBase64ToR2, isR2Configured } from "./r2";
+import { uploadBase64ToR2, isR2Configured, deleteFromR2 } from "./r2";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -1111,7 +1111,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/categories/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      // Get category first to capture image URL for R2 cleanup
+      const category = await storage.getCategory(id);
       await storage.deleteCategory(id);
+      // Clean up R2 CDN file (fire-and-forget)
+      if (category?.imageUrl && isR2Configured()) {
+        deleteFromR2(category.imageUrl);
+      }
       res.json({ message: "Category deleted successfully" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1409,20 +1415,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid product ID' });
       }
 
-      // 1. Remove from every customer's cart
+      // 1. Get product first to capture its media URLs for R2 cleanup
+      const product = await storage.getProduct(productId);
+
+      // 2. Remove from every customer's cart
       await db.delete(cartItems).where(eq(cartItems.product_id, productId));
 
-      // 2. Remove from every customer's wishlist
+      // 3. Remove from every customer's wishlist
       await db.delete(wishlistItems).where(eq(wishlistItems.product_id, productId));
 
-      // 3. Preserve order history but detach the product reference
+      // 4. Preserve order history but detach the product reference
       //    (product_id is nullable so existing orders will show "product removed")
       await db.update(orderItems)
         .set({ product_id: null })
         .where(eq(orderItems.product_id, productId));
 
-      // 4. Delete the product itself
+      // 5. Delete the product itself
       await storage.deleteProduct(productId);
+
+      // 6. Clean up R2 CDN files (fire-and-forget, never blocks the response)
+      if (product && isR2Configured()) {
+        const mediaUrls = [
+          ...(product.images || []),
+          ...(product.videos || [])
+        ];
+        for (const url of mediaUrls) {
+          deleteFromR2(url);
+        }
+      }
 
       res.json({ message: 'Product deleted successfully' });
     } catch (error: any) {
@@ -2082,7 +2102,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      // Get banner first to capture media URLs for R2 cleanup
+      const banner = await storage.getBanner(id);
       await storage.deleteBanner(id);
+      // Clean up R2 CDN files (fire-and-forget)
+      if (banner && isR2Configured()) {
+        if (banner.imageUrl) deleteFromR2(banner.imageUrl);
+        if (banner.videoUrl) deleteFromR2(banner.videoUrl);
+      }
       res.json({ message: "Banner deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2133,7 +2160,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      // Get banner first to capture media URLs for R2 cleanup
+      const banner = await storage.getBanner(id);
       await storage.deleteBanner(id);
+      // Clean up R2 CDN files (fire-and-forget)
+      if (banner && isR2Configured()) {
+        if (banner.imageUrl) deleteFromR2(banner.imageUrl);
+        if (banner.videoUrl) deleteFromR2(banner.videoUrl);
+      }
       res.json({ message: "Banner deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3084,7 +3118,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/super-admin/popup-banners/:id", authenticateUser, requireSuperAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      // Get popup banner first to capture image URL for R2 cleanup
+      const banner = await storage.getPopupBanner(id);
       await storage.deletePopupBanner(id);
+      // Clean up R2 CDN file (fire-and-forget)
+      if (banner?.imageUrl && isR2Configured()) {
+        deleteFromR2(banner.imageUrl);
+      }
       res.json({ message: "Popup banner deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3131,7 +3171,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/popup-banners/:id", authenticateUser, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      // Get popup banner first to capture image URL for R2 cleanup
+      const banner = await storage.getPopupBanner(id);
       await storage.deletePopupBanner(id);
+      // Clean up R2 CDN file (fire-and-forget)
+      if (banner?.imageUrl && isR2Configured()) {
+        deleteFromR2(banner.imageUrl);
+      }
       res.json({ message: "Popup banner deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

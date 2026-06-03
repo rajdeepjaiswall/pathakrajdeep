@@ -89,7 +89,26 @@ async function startAccountPurgeJob() {
   setInterval(runOnce, ONE_DAY_MS);
 }
 
+async function runStartupMigrations() {
+  const { pool } = await import('./db');
+  const migrations = [
+    `ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_variants jsonb DEFAULT '[]'::jsonb`,
+    `ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS selected_weight text`,
+    `ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS variant_price numeric(10,2)`,
+    `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS selected_weight text`,
+  ];
+  for (const sql of migrations) {
+    try {
+      await pool.query(sql);
+    } catch (err: any) {
+      console.error('[migration] Failed:', sql, err?.message);
+    }
+  }
+  log('[migration] Startup column migrations complete');
+}
+
 (async () => {
+  await runStartupMigrations();
   const server = await registerRoutes(app);
   startAccountPurgeJob();
 

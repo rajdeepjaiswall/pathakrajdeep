@@ -644,6 +644,7 @@ export class DatabaseStorage implements IStorage {
         quantity: orderItems.quantity,
         price: orderItems.price,
         total: orderItems.total,
+        selectedWeight: orderItems.selectedWeight,
         product: products
       })
       .from(orderItems)

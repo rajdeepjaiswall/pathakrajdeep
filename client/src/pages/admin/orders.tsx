@@ -33,6 +33,20 @@ export default function AdminOrders() {
   const [estimatedDelivery, setEstimatedDelivery] = useState('');
   const previousOrderCount = useRef<number>(0);
 
+  // Fetch full order details (with items) when a dialog is open
+  const { data: selectedOrderDetails } = useQuery({
+    queryKey: ['/api/admin/orders', selectedOrder?.id, 'details'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/orders/${selectedOrder!.id}/details`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch order details');
+      return response.json();
+    },
+    enabled: !!selectedOrder?.id,
+  });
+
   // Wait for auth to resolve before redirecting
   if (authLoading) {
     return (
@@ -411,6 +425,34 @@ export default function AdminOrders() {
                                       </div>
                                     </div>
                                   </div>
+
+                                  {/* Order Items */}
+                                  {selectedOrderDetails?.orderItems?.length > 0 && (
+                                    <div>
+                                      <h4 className="font-medium mb-3">Ordered Items</h4>
+                                      <div className="space-y-2">
+                                        {selectedOrderDetails.orderItems.map((item: any) => (
+                                          <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                            {item.product?.images?.[0] && (
+                                              <img
+                                                src={item.product.images[0]}
+                                                alt={item.product.name}
+                                                className="w-10 h-10 object-cover rounded"
+                                              />
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-medium truncate">{item.product?.name}</p>
+                                              {item.selectedWeight && (
+                                                <p className="text-xs text-amber-700 font-medium">Weight: {item.selectedWeight}</p>
+                                              )}
+                                              <p className="text-xs text-gray-500">Qty: {item.quantity} x {formatPrice(parseFloat(item.price))}</p>
+                                            </div>
+                                            <span className="text-sm font-semibold">{formatPrice(parseFloat(item.total))}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
 
                                   {/* Order Summary */}
                                   <div>

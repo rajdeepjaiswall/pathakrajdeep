@@ -6,7 +6,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
-import { formatPrice, getGSTBreakdown } from '@/lib/cart';
+import { formatPrice, getGSTBreakdown, getItemPrice } from '@/lib/cart';
 
 export default function Cart() {
   const { items, summary, updateQuantity, removeFromCart } = useCart();
@@ -65,9 +65,13 @@ export default function Cart() {
                     
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-navy text-lg">{item.product.name}</h3>
-                      <p className="text-gray-600 text-sm">{item.product.weight}</p>
+                      {item.selectedWeight ? (
+                        <p className="text-sm font-medium text-champagne">Weight: {item.selectedWeight}</p>
+                      ) : item.product.weight ? (
+                        <p className="text-gray-600 text-sm">{item.product.weight}</p>
+                      ) : null}
                       <p className="text-champagne font-medium">
-                        {formatPrice(parseFloat(item.product.price))} each
+                        {formatPrice(getItemPrice(item))} each
                       </p>
                     </div>
                     
@@ -94,10 +98,10 @@ export default function Cart() {
                       
                       <div className="text-right min-w-0">
                         <p className="font-bold text-navy text-lg">
-                          {formatPrice(parseFloat(item.product.price) * item.quantity)}
+                          {formatPrice(getItemPrice(item) * item.quantity)}
                         </p>
                         <p className="text-xs text-green-600">
-                          + {formatPrice(parseFloat(item.product.price) * item.quantity * parseFloat(item.product.gstRate) / 100)} GST
+                          + {formatPrice(getItemPrice(item) * item.quantity * parseFloat(item.product.gstRate) / 100)} GST
                         </p>
                       </div>
                       

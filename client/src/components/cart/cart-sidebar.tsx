@@ -1,7 +1,7 @@
 import { X, Minus, Plus, Trash2, ShoppingBag, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
-import { formatPrice, getGSTBreakdown } from '@/lib/cart';
+import { formatPrice, getGSTBreakdown, getItemPrice } from '@/lib/cart';
 import { Link } from 'wouter';
 
 export default function CartSidebar() {
@@ -46,7 +46,11 @@ export default function CartSidebar() {
                   />
                   <div className="flex-1">
                     <h4 className="font-medium text-navy text-sm">{item.product.name}</h4>
-                    <p className="text-xs text-gray-600">{item.product.weight}</p>
+                    {item.selectedWeight ? (
+                      <p className="text-xs text-champagne font-medium">Weight: {item.selectedWeight}</p>
+                    ) : item.product.weight ? (
+                      <p className="text-xs text-gray-600">{item.product.weight}</p>
+                    ) : null}
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center space-x-2">
                         <Button
@@ -68,7 +72,7 @@ export default function CartSidebar() {
                         </Button>
                       </div>
                       <span className="font-semibold text-navy text-sm">
-                        {formatPrice(parseFloat(item.product.price) * item.quantity)}
+                        {formatPrice(getItemPrice(item) * item.quantity)}
                       </span>
                     </div>
                   </div>

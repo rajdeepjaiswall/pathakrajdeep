@@ -121,6 +121,7 @@ export default function ProductDetail() {
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist, isAdding, isRemoving } = useWishlist();
   const [heartAnim, setHeartAnim] = useState(false);
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
 
   // Always start the product page at the very top, regardless of where the
   // user navigated from (homepage card, modal popup, search, etc.)
@@ -395,84 +396,127 @@ export default function ProductDetail() {
               <h1 className="text-3xl font-bold text-navy mb-4">{product.name}</h1>
               <p className="text-gray-600 text-lg">{product.description}</p>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-navy">
-                  {formatPrice(parseFloat(product.price))}
-                </span>
-                {product.weight && (
-                  <span className="text-gray-500">/ {product.weight}</span>
-                )}
-              </div>
-              <p className="text-green-600 text-sm">
-                + {formatPrice(parseFloat(product.price) * parseFloat(product.gstRate) / 100)} GST included
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <span className="font-medium text-navy">Quantity:</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 p-0"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-10 h-10 p-0"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`p-3 transition-transform ${heartAnim ? 'scale-125' : 'scale-100'}`}
-                  onClick={handleHeartClick}
-                  disabled={isAdding || isRemoving}
-                  title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-                >
-                  <Heart
-                    className={`h-4 w-4 transition-colors ${
-                      inWishlist
-                        ? 'fill-red-500 text-red-500'
-                        : 'text-gray-400 hover:text-red-400'
-                    }`}
-                  />
-                </Button>
-                <Button
-                  onClick={() => addToCart(product.id, quantity)}
-                  className="flex-1 bg-champagne text-navy hover:bg-champagne/90"
-                >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add to Cart
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="p-3"
-                  onClick={handleShare}
-                  title="Share this product"
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            {(() => {
+              const variants = product.weightVariants || [];
+              const hasVariants = variants.length > 0;
+              const activeVariant = hasVariants ? variants[selectedVariantIndex] : null;
+              const displayPrice = activeVariant ? activeVariant.price : parseFloat(product.price);
+              const displayWeight = activeVariant ? activeVariant.weight : product.weight;
+
+              return (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold text-navy">
+                        {formatPrice(displayPrice)}
+                      </span>
+                      {!hasVariants && displayWeight && (
+                        <span className="text-gray-500">/ {displayWeight}</span>
+                      )}
+                    </div>
+                    <p className="text-green-600 text-sm">
+                      + {formatPrice(displayPrice * parseFloat(product.gstRate) / 100)} GST included
+                    </p>
+                  </div>
+
+                  {hasVariants && (
+                    <div className="space-y-2">
+                      <span className="font-medium text-navy">Select Weight:</span>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {variants.map((v: { weight: string; price: number }, idx: number) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setSelectedVariantIndex(idx)}
+                            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                              selectedVariantIndex === idx
+                                ? 'border-champagne bg-champagne/10 text-navy'
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-champagne/50'
+                            }`}
+                          >
+                            {v.weight} — {formatPrice(v.price)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <span className="font-medium text-navy">Quantity:</span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                          className="w-10 h-10 p-0"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="w-12 text-center font-medium">{quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setQuantity(quantity + 1)}
+                          className="w-10 h-10 p-0"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`p-3 transition-transform ${heartAnim ? 'scale-125' : 'scale-100'}`}
+                        onClick={handleHeartClick}
+                        disabled={isAdding || isRemoving}
+                        title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+                      >
+                        <Heart
+                          className={`h-4 w-4 transition-colors ${
+                            inWishlist
+                              ? 'fill-red-500 text-red-500'
+                              : 'text-gray-400 hover:text-red-400'
+                          }`}
+                        />
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (activeVariant) {
+                            addToCart(product.id, quantity, activeVariant.weight, activeVariant.price);
+                          } else {
+                            addToCart(product.id, quantity);
+                          }
+                        }}
+                        className="flex-1 bg-champagne text-navy hover:bg-champagne/90"
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Add to Cart
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="p-3"
+                        onClick={handleShare}
+                        title="Share this product"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
             <Card>
               <CardContent className="p-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-navy">Weight:</span>
-                    <p className="text-gray-600">{product.weight || 'N/A'}</p>
-                  </div>
+                  {!(product.weightVariants?.length > 0) && (
+                    <div>
+                      <span className="font-medium text-navy">Weight:</span>
+                      <p className="text-gray-600">{product.weight || 'N/A'}</p>
+                    </div>
+                  )}
                   <div>
                     <span className="font-medium text-navy">GST Rate:</span>
                     <p className="text-gray-600">{product.gstRate}%</p>

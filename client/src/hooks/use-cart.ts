@@ -9,7 +9,7 @@ interface CartContextType {
   items: CartItem[];
   summary: CartSummary;
   isLoading: boolean;
-  addToCart: (productId: number, quantity: number) => void;
+  addToCart: (productId: number, quantity: number, selectedWeight?: string, variantPrice?: number) => void;
   updateQuantity: (cartItemId: number, quantity: number) => void;
   removeFromCart: (cartItemId: number) => void;
   clearCart: () => void;
@@ -51,10 +51,12 @@ export function CartProvider({ children }: CartProviderProps) {
 
   // Add to cart mutation
   const addToCartMutation = useMutation({
-    mutationFn: async ({ productId, quantity }: { productId: number; quantity: number }) => {
+    mutationFn: async ({ productId, quantity, selectedWeight, variantPrice }: { productId: number; quantity: number; selectedWeight?: string; variantPrice?: number }) => {
       return await apiRequest('POST', '/api/cart', {
         product_id: productId,
         quantity,
+        ...(selectedWeight ? { selectedWeight } : {}),
+        ...(variantPrice !== undefined ? { variantPrice: variantPrice.toString() } : {}),
       });
     },
     onSuccess: (_, { productId }) => {
@@ -123,7 +125,7 @@ export function CartProvider({ children }: CartProviderProps) {
     },
   });
 
-  const addToCart = (productId: number, quantity: number) => {
+  const addToCart = (productId: number, quantity: number, selectedWeight?: string, variantPrice?: number) => {
     if (!isAuthenticated) {
       toast({
         title: 'Login required',
@@ -135,7 +137,7 @@ export function CartProvider({ children }: CartProviderProps) {
       }, 1500);
       return;
     }
-    addToCartMutation.mutate({ productId, quantity });
+    addToCartMutation.mutate({ productId, quantity, selectedWeight, variantPrice });
   };
 
   const updateQuantity = (cartItemId: number, quantity: number) => {

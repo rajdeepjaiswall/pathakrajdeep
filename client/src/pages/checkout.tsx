@@ -16,7 +16,7 @@ import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { formatPrice, getGSTBreakdown } from '@/lib/cart';
+import { formatPrice, getGSTBreakdown, getItemPrice } from '@/lib/cart';
 import { apiRequest, queryClient as globalQueryClient } from '@/lib/queryClient';
 import { playSuccessChime, initializeAudioContext } from '@/lib/sounds';
 import { useForm } from 'react-hook-form';
@@ -298,12 +298,14 @@ export default function Checkout() {
       const order = await response.json();
 
       for (const item of items) {
+        const itemPrice = item.variantPrice ? parseFloat(item.variantPrice) : parseFloat(item.product.price);
         await apiRequest('POST', '/api/order-items', {
           order_id: order.id,
           product_id: item.product_id,
           quantity: item.quantity,
-          price: item.product.price,
-          total: (parseFloat(item.product.price) * item.quantity).toString(),
+          price: itemPrice.toString(),
+          total: (itemPrice * item.quantity).toString(),
+          ...(item.selectedWeight ? { selectedWeight: item.selectedWeight } : {}),
         });
       }
 
@@ -1131,11 +1133,14 @@ export default function Checkout() {
               />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm text-navy truncate">{item.product.name}</p>
+                {item.selectedWeight && (
+                  <p className="text-xs text-champagne font-medium">Weight: {item.selectedWeight}</p>
+                )}
                 <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
               </div>
               <div className="text-right">
                 <p className="font-medium text-sm">
-                  {formatPrice(parseFloat(item.product.price) * item.quantity)}
+                  {formatPrice(getItemPrice(item) * item.quantity)}
                 </p>
               </div>
             </div>

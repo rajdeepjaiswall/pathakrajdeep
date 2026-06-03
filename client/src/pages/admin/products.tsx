@@ -26,6 +26,7 @@ const productFormSchema = insertProductSchema.extend({
   images: z.array(z.string()).default([]),
   videos: z.array(z.string()).default([]),
   ingredients: z.array(z.string()).default([]),
+  weightVariants: z.array(z.object({ weight: z.string(), price: z.number() })).default([]),
 });
 
 export default function AdminProducts() {
@@ -87,6 +88,7 @@ export default function AdminProducts() {
       images: [] as string[],
       videos: [] as string[],
       ingredients: [] as string[],
+      weightVariants: [] as { weight: string; price: number }[],
       stock: 0,
       isActive: true,
       hsnCode: '',
@@ -214,6 +216,7 @@ export default function AdminProducts() {
       images: product.images || [],
       videos: product.videos || [],
       ingredients: product.ingredients || [],
+      weightVariants: product.weightVariants || [],
       stock: product.stock,
       isActive: product.isActive,
       hsnCode: product.hsnCode || '',
@@ -569,6 +572,71 @@ export default function AdminProducts() {
                                   )}
                                 </div>
                               ))}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Weight Variants Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-navy">Weight Variants</h3>
+                    </div>
+                    <p className="text-sm text-gray-500">Add multiple weight options, each with its own price. If no variants are added, the single price above will be used.</p>
+                    <FormField
+                      control={productForm.control}
+                      name="weightVariants"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="space-y-2">
+                              {field.value.map((variant, index) => (
+                                <div key={index} className="flex gap-2 items-center">
+                                  <Input
+                                    value={variant.weight}
+                                    onChange={(e) => {
+                                      const updated = [...field.value];
+                                      updated[index] = { ...updated[index], weight: e.target.value };
+                                      field.onChange(updated);
+                                    }}
+                                    placeholder="e.g. 250g, 500g, 1kg"
+                                    className="flex-1"
+                                  />
+                                  <Input
+                                    type="number"
+                                    value={variant.price}
+                                    onChange={(e) => {
+                                      const updated = [...field.value];
+                                      updated[index] = { ...updated[index], price: parseFloat(e.target.value) || 0 };
+                                      field.onChange(updated);
+                                    }}
+                                    placeholder="Price (₹)"
+                                    className="w-32"
+                                    min={0}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = field.value.filter((_, i) => i !== index);
+                                      field.onChange(updated);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => field.onChange([...field.value, { weight: '', price: 0 }])}
+                              >
+                                + Add Weight Variant
+                              </Button>
                             </div>
                           </FormControl>
                           <FormMessage />

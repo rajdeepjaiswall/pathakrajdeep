@@ -68,6 +68,7 @@ export const products = pgTable("products", {
   isProductOfDay: boolean("is_product_of_day").default(false),
   isChefSpecial: boolean("is_chef_special").default(false),
   isTrendingLocal: boolean("is_trending_local").default(false),
+  weightVariants: jsonb("weight_variants").$type<{ weight: string; price: number }[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -128,6 +129,7 @@ export const orderItems = pgTable("order_items", {
   quantity: integer("quantity").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  selectedWeight: text("selected_weight"),
 });
 
 // Cart items table
@@ -136,6 +138,8 @@ export const cartItems = pgTable("cart_items", {
   user_id: integer("user_id").references(() => users.id),
   product_id: integer("product_id").references(() => products.id),
   quantity: integer("quantity").notNull(),
+  selectedWeight: text("selected_weight"),
+  variantPrice: decimal("variant_price", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -611,6 +611,9 @@ export default function CustomerOrders() {
                                     )}
                                     <div className="flex-1">
                                       <h5 className="font-medium">{item.product?.name}</h5>
+                                      {item.selectedWeight && (
+                                        <p className="text-xs text-amber-700 font-medium">Weight: {item.selectedWeight}</p>
+                                      )}
                                       <p className="text-sm text-gray-600">
                                         Quantity: {item.quantity} × {formatPrice(parseFloat(item.price))}
                                       </p>

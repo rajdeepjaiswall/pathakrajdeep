@@ -2,6 +2,8 @@ export interface CartItem {
   id: number;
   product_id: number;
   quantity: number;
+  selectedWeight?: string | null;
+  variantPrice?: string | null;
   product: {
     id: number;
     name: string;
@@ -10,6 +12,13 @@ export interface CartItem {
     images: string[];
     gstRate: string;
   };
+}
+
+export function getItemPrice(item: CartItem): number {
+  if (item.variantPrice && parseFloat(item.variantPrice) > 0) {
+    return parseFloat(item.variantPrice);
+  }
+  return parseFloat(item.product.price);
 }
 
 export interface CartSummary {
@@ -23,11 +32,11 @@ export interface CartSummary {
 
 export function calculateCartSummary(items: CartItem[], deliveryCharge: number = 0): CartSummary {
   const subtotal = items.reduce((sum, item) => {
-    return sum + (parseFloat(item.product.price) * item.quantity);
+    return sum + (getItemPrice(item) * item.quantity);
   }, 0);
 
   const gstAmount = items.reduce((sum, item) => {
-    const itemTotal = parseFloat(item.product.price) * item.quantity;
+    const itemTotal = getItemPrice(item) * item.quantity;
     const gstRate = parseFloat(item.product.gstRate) / 100;
     return sum + (itemTotal * gstRate);
   }, 0);
@@ -55,7 +64,7 @@ export function getGSTBreakdown(items: CartItem[]): {
   igst: number;
 } {
   const totalGST = items.reduce((sum, item) => {
-    const itemTotal = parseFloat(item.product.price) * item.quantity;
+    const itemTotal = getItemPrice(item) * item.quantity;
     const gstRate = parseFloat(item.product.gstRate) / 100;
     return sum + (itemTotal * gstRate);
   }, 0);

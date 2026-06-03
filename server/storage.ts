@@ -441,6 +441,8 @@ export class DatabaseStorage implements IStorage {
         user_id: cartItems.user_id,
         product_id: cartItems.product_id,
         quantity: cartItems.quantity,
+        selectedWeight: cartItems.selectedWeight,
+        variantPrice: cartItems.variantPrice,
         createdAt: cartItems.createdAt,
         product: products
       })
@@ -450,8 +452,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addToCart(insertCartItem: InsertCartItem): Promise<CartItem> {
-    // Check if item already exists in cart
-    const [existingItem] = await db
+    // Check if same product + same weight variant already exists in cart
+    const existing = await db
       .select()
       .from(cartItems)
       .where(and(
@@ -459,8 +461,14 @@ export class DatabaseStorage implements IStorage {
         eq(cartItems.product_id, insertCartItem.product_id)
       ));
 
+    // Match on selectedWeight so different weights become separate cart rows
+    const existingItem = existing.find(item => {
+      const sameWeight = (item.selectedWeight ?? null) === (insertCartItem.selectedWeight ?? null);
+      return sameWeight;
+    });
+
     if (existingItem) {
-      // Update quantity
+      // Update quantity for the matching row
       const [cartItem] = await db
         .update(cartItems)
         .set({ quantity: existingItem.quantity + insertCartItem.quantity })

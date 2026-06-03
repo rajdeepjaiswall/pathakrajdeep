@@ -1,15 +1,16 @@
 import { Link } from 'wouter';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, ListChecks, Truck, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
-import { formatPrice, getGSTBreakdown, getItemPrice } from '@/lib/cart';
+import { formatPrice, getGSTBreakdown } from '@/lib/cart';
+import ProductCartCard from '@/components/cart/ProductCartCard';
 
 export default function Cart() {
-  const { items, summary, updateQuantity, removeFromCart } = useCart();
+  const { items, summary } = useCart();
 
   const gstBreakdown = getGSTBreakdown(items);
 
@@ -42,129 +43,79 @@ export default function Cart() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/products">
-            <Button variant="ghost" size="sm" className="text-navy">
+            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Continue Shopping
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-navy">Shopping Cart</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Shopping Cart</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={item.product.images[0] || '/placeholder-product.jpg'}
-                      alt={item.product.name}
-                      className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                    />
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-navy text-lg">{item.product.name}</h3>
-                      {item.selectedWeight ? (
-                        <p className="text-sm font-medium text-champagne">Weight: {item.selectedWeight}</p>
-                      ) : item.product.weight ? (
-                        <p className="text-gray-600 text-sm">{item.product.weight}</p>
-                      ) : null}
-                      <p className="text-champagne font-medium">
-                        {formatPrice(getItemPrice(item))} each
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                          className="w-8 h-8 p-0"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="font-medium w-8 text-center">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-8 h-8 p-0"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      
-                      <div className="text-right min-w-0">
-                        <p className="font-bold text-navy text-lg">
-                          {formatPrice(getItemPrice(item) * item.quantity)}
-                        </p>
-                        <p className="text-xs text-green-600">
-                          + {formatPrice(getItemPrice(item) * item.quantity * parseFloat(item.product.gstRate) / 100)} GST
-                        </p>
-                      </div>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFromCart(item.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <ProductCartCard key={item.id} item={item} layout="page" />
             ))}
           </div>
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle className="text-navy">Order Summary</CardTitle>
+            <Card className="sticky top-4 rounded-[20px] border border-gray-100 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-gray-900 text-base">
+                  <ListChecks className="w-4 h-4 text-gray-500" />
+                  Order Summary
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 pt-0">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal ({summary.itemCount} items)</span>
-                  <span className="font-medium">{formatPrice(summary.subtotal)}</span>
+                  <span className="font-medium text-gray-900">{formatPrice(summary.subtotal)}</span>
                 </div>
-                
-                <div className="space-y-2">
+
+                <div className="space-y-1.5">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">CGST</span>
-                    <span className="font-medium">{formatPrice(gstBreakdown.cgst)}</span>
+                    <span className="text-gray-600">CGST (2.5%)</span>
+                    <span className="font-medium text-gray-900">{formatPrice(gstBreakdown.cgst)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">SGST</span>
-                    <span className="font-medium">{formatPrice(gstBreakdown.sgst)}</span>
+                    <span className="text-gray-600">SGST (2.5%)</span>
+                    <span className="font-medium text-gray-900">{formatPrice(gstBreakdown.sgst)}</span>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Delivery</span>
-                  <span className="font-medium text-green-600">
+                  <span className="font-bold text-[#16a34a]">
                     {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
                   </span>
                 </div>
-                
-                <div className="border-t pt-4">
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span className="text-navy">{formatPrice(summary.total)}</span>
+
+                <div className="border-t border-gray-100 pt-3">
+                  <div className="flex justify-between items-baseline">
+                    <span className="font-bold text-base text-gray-900">Total</span>
+                    <span className="font-bold text-xl text-[#9B2335]">{formatPrice(summary.total)}</span>
                   </div>
+                  <p className="text-xs text-gray-500 mt-0.5">Inclusive of all taxes</p>
                 </div>
-                
+
+                {summary.deliveryCharge === 0 && (
+                  <div className="bg-[#ecfdf5] rounded-lg p-2.5 flex items-center gap-2 text-sm text-[#16a34a]">
+                    <Truck className="w-4 h-4 flex-shrink-0" />
+                    <span className="font-medium">Yay! You get FREE delivery on this order</span>
+                  </div>
+                )}
+
                 <Link href="/checkout">
-                  <Button className="w-full bg-champagne text-navy hover:bg-champagne/90 py-3">
+                  <Button className="w-full bg-champagne text-navy hover:bg-champagne/90 py-3 font-semibold">
                     Proceed to Checkout
                   </Button>
                 </Link>
-                
-                <p className="text-xs text-gray-500 text-center">
-                  Free delivery on orders above ₹500
+
+                <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  Secure checkout with SSL encryption
                 </p>
               </CardContent>
             </Card>

@@ -117,13 +117,13 @@ export default function AdminProducts() {
         return sizeInBytes < 500 * 1024;
       });
       
-      // Filter videos - only keep valid non-empty URLs (allow base64 videos up to 5MB)
+      // Filter videos - only keep valid non-empty URLs (allow base64 videos up to 50MB)
       const filteredVideos = (data.videos || []).filter(vid => {
         if (!vid || !vid.trim()) return false;
         if (!vid.startsWith('data:')) return true;
         const base64Data = vid.split(',')[1] || '';
         const sizeInBytes = Math.ceil(base64Data.length * 0.75);
-        return sizeInBytes < 5 * 1024 * 1024; // 5MB limit for videos
+        return sizeInBytes < 50 * 1024 * 1024; // 50MB limit for videos
       });
       
       const submitData = {

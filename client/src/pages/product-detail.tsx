@@ -173,7 +173,7 @@ export default function ProductDetail() {
     if (!product) return [];
     const photos = (product.images || []).filter((url: string) => url && url.trim()).map((url: string) => ({ type: 'image' as const, url }));
     const videos = (product.videos || []).filter((url: string) => url && url.trim()).map((url: string) => ({ type: 'video' as const, url }));
-    return [...photos, ...videos];
+    return [...videos, ...photos];
   })();
 
   useEffect(() => {
@@ -288,18 +288,29 @@ export default function ProductDetail() {
             >
               {mediaItems.length > 0 ? (
                 mediaItems[currentIndex].type === 'video' ? (
-                  <video
-                    ref={videoRef}
-                    key={mediaItems[currentIndex].url}
-                    src={mediaItems[currentIndex].url}
-                    autoPlay
-                    muted
-                    onEnded={handleVideoEnd}
-                    onClick={() => setViewerOpen(true)}
-                    playsInline
-                    className="block w-full h-auto max-h-[70vh] object-contain bg-black cursor-zoom-in"
-                    data-testid="product-video"
-                  />
+                  <div className="relative w-full h-auto max-h-[70vh] bg-black flex items-center justify-center">
+                    <video
+                      ref={videoRef}
+                      key={mediaItems[currentIndex].url}
+                      src={mediaItems[currentIndex].url}
+                      autoPlay
+                      muted
+                      onEnded={handleVideoEnd}
+                      onClick={() => setViewerOpen(true)}
+                      playsInline
+                      className="block w-full h-auto max-h-[70vh] object-contain cursor-zoom-in"
+                      data-testid="product-video"
+                    />
+                    {/* Click-to-play overlay when autoplay is blocked and video is paused */}
+                    <div
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                      onClick={(e) => { e.stopPropagation(); setViewerOpen(true); }}
+                    >
+                      <div className="w-14 h-14 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow-lg pointer-events-auto cursor-pointer transition-colors">
+                        <Play className="w-6 h-6 text-navy ml-1" fill="currentColor" />
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <img
                     src={mediaItems[currentIndex].url}

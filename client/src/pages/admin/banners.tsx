@@ -249,12 +249,17 @@ export default function AdminBanners() {
     },
   });
 
+  const [deleteConfirmBanner, setDeleteConfirmBanner] = useState<Banner | null>(null);
+
   const handleDeleteBanner = (banner: Banner) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${banner.title}"?\n\nThis cannot be undone.`,
-    );
-    if (!confirmed) return;
-    deleteBannerMutation.mutate(banner.id);
+    setDeleteConfirmBanner(banner);
+  };
+
+  const confirmDeleteBanner = () => {
+    if (deleteConfirmBanner) {
+      deleteBannerMutation.mutate(deleteConfirmBanner.id);
+      setDeleteConfirmBanner(null);
+    }
   };
 
   // ===== Popup ad mutations =====
@@ -412,12 +417,17 @@ export default function AdminBanners() {
     }
   };
 
+  const [deleteConfirmPopup, setDeleteConfirmPopup] = useState<PopupBanner | null>(null);
+
   const handleDeletePopup = (popup: PopupBanner) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the popup ad "${popup.title}"?\n\nThis cannot be undone.`,
-    );
-    if (!confirmed) return;
-    deletePopupMutation.mutate(popup.id);
+    setDeleteConfirmPopup(popup);
+  };
+
+  const confirmDeletePopup = () => {
+    if (deleteConfirmPopup) {
+      deletePopupMutation.mutate(deleteConfirmPopup.id);
+      setDeleteConfirmPopup(null);
+    }
   };
 
   const handleImageUpload = (file: File, isNew = false) => {
@@ -425,9 +435,9 @@ export default function AdminBanners() {
     reader.onload = (event) => {
       const imageUrl = event.target?.result as string;
       if (isNew) {
-        setNewBanner((prev) => ({ ...prev, imageUrl }));
+        setNewBanner((prev) => ({ ...prev, imageUrl, videoUrl: '' }));
       } else if (editingBanner) {
-        setEditingBanner((prev) => (prev ? { ...prev, imageUrl } : null));
+        setEditingBanner((prev) => (prev ? { ...prev, imageUrl, videoUrl: '' } : null));
       }
       toast({
         title: 'Image uploaded',
@@ -1347,6 +1357,56 @@ export default function AdminBanners() {
                   : 'Create Popup Ad'}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm — Banner */}
+      <Dialog open={!!deleteConfirmBanner} onOpenChange={() => setDeleteConfirmBanner(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Banner</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Are you sure you want to delete <strong>"{deleteConfirmBanner?.title}"</strong>?
+            This cannot be undone.
+          </p>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmBanner(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmDeleteBanner}
+              disabled={deleteBannerMutation.isPending}
+            >
+              {deleteBannerMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm — Popup */}
+      <Dialog open={!!deleteConfirmPopup} onOpenChange={() => setDeleteConfirmPopup(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Popup Ad</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Are you sure you want to delete <strong>"{deleteConfirmPopup?.title}"</strong>?
+            This cannot be undone.
+          </p>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmPopup(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmDeletePopup}
+              disabled={deletePopupMutation.isPending}
+            >
+              {deletePopupMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

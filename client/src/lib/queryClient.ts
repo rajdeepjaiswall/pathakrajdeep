@@ -51,6 +51,7 @@ export const getQueryFn: <T>(options: {
       method: 'GET',
       headers,
       credentials: "include",
+      cache: "no-store",
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

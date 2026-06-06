@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Star, CheckCircle, XCircle, RotateCcw, Trash2, Star as StarIcon, Clock, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -142,6 +142,12 @@ export default function AdminTestimonials() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('pending');
 
+  useEffect(() => {
+    if (!authLoading && (!user || (user.role !== 'admin' && user.role !== 'super_admin'))) {
+      navigate('/admin/login');
+    }
+  }, [authLoading, user, navigate]);
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -150,7 +156,6 @@ export default function AdminTestimonials() {
     );
   }
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
-    navigate('/admin/login');
     return null;
   }
 
@@ -161,8 +166,13 @@ export default function AdminTestimonials() {
       const res = await fetch('/api/admin/testimonials', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text}`);
+      }
       return res.json();
     },
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin'),
   });
 
   const pending = allTestimonials.filter(t => t.status === 'pending');

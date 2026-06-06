@@ -29,7 +29,8 @@ import {
   PanelBottom,
   ChevronDown,
   ChevronUp,
-  Construction
+  Construction,
+  MessageSquare
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -927,6 +928,7 @@ const DASHBOARD_TILES: DashboardTile[] = [
   { href: '/admin/categories',        label: 'Categories',      icon: Package,      feature: 'categories',       testId: 'button-categories' },
   { href: '/admin/payments',          label: 'Payments',        icon: IndianRupee,  feature: 'payments',         testId: 'button-payments' },
   { href: '/admin/legal-pages',       label: 'Legal Pages',     icon: FileText,     feature: 'legal_pages',      testId: 'button-legal-pages' },
+  { href: '/admin/testimonials',     label: 'Testimonials',    icon: MessageSquare, feature: 'testimonials',     testId: 'button-testimonials' },
   { href: '/admin/reports',           label: 'Reports',         icon: TrendingUp,   feature: 'reports',          testId: 'button-reports' },
   { href: '/admin/account',           label: 'My Account',      icon: UserCog,      feature: 'account',          testId: 'button-account' },
   { href: '/admin/contact-settings',  label: 'Contact Us',      icon: AtSign,       feature: 'contact_settings', testId: 'button-contact-settings' },

@@ -99,6 +99,7 @@ export const orders = pgTable("orders", {
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   gstAmount: decimal("gst_amount", { precision: 10, scale: 2 }).notNull(),
   deliveryCharge: decimal("delivery_charge", { precision: 10, scale: 2 }).default("0.00"),
+  handlingCharge: decimal("handling_charge", { precision: 10, scale: 2 }).default("0.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   paymentMethod: text("payment_method").notNull(), // upi, card, cod, wallet
   paymentStatus: text("payment_status").notNull().default("pending"), // pending, paid, failed
@@ -378,6 +379,51 @@ export const contactDataSchema = z.object({
 export type InsertContactSettings = z.infer<typeof insertContactSettingsSchema>;
 export type ContactSettings = typeof contactSettings.$inferSelect;
 
+// ============== Charges Settings (Delivery + Handling, single-row) ==============
+// Priority model (first enabled wins): Free Threshold -> Percentage -> Fixed.
+// Delivery and Handling are fully independent of each other.
+export const chargesSettings = pgTable("charges_settings", {
+  id: serial("id").primaryKey(),
+  // Delivery charges
+  deliveryEnabled: boolean("delivery_enabled").default(false).notNull(),
+  deliveryFreeThresholdEnabled: boolean("delivery_free_threshold_enabled").default(false).notNull(),
+  deliveryFreeThreshold: decimal("delivery_free_threshold", { precision: 10, scale: 2 }).default("0").notNull(),
+  deliveryPercentageEnabled: boolean("delivery_percentage_enabled").default(false).notNull(),
+  deliveryPercentage: decimal("delivery_percentage", { precision: 5, scale: 2 }).default("0").notNull(),
+  deliveryFixedEnabled: boolean("delivery_fixed_enabled").default(false).notNull(),
+  deliveryFixedCharge: decimal("delivery_fixed_charge", { precision: 10, scale: 2 }).default("0").notNull(),
+  // Handling charges
+  handlingEnabled: boolean("handling_enabled").default(false).notNull(),
+  handlingFreeThresholdEnabled: boolean("handling_free_threshold_enabled").default(false).notNull(),
+  handlingFreeThreshold: decimal("handling_free_threshold", { precision: 10, scale: 2 }).default("0").notNull(),
+  handlingPercentageEnabled: boolean("handling_percentage_enabled").default(false).notNull(),
+  handlingPercentage: decimal("handling_percentage", { precision: 5, scale: 2 }).default("0").notNull(),
+  handlingFixedEnabled: boolean("handling_fixed_enabled").default(false).notNull(),
+  handlingFixedCharge: decimal("handling_fixed_charge", { precision: 10, scale: 2 }).default("0").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Normalized config (numbers + booleans) used by both the public and admin APIs and the frontend.
+export const chargesConfigSchema = z.object({
+  deliveryEnabled: z.boolean().default(false),
+  deliveryFreeThresholdEnabled: z.boolean().default(false),
+  deliveryFreeThreshold: z.coerce.number().min(0).default(0),
+  deliveryPercentageEnabled: z.boolean().default(false),
+  deliveryPercentage: z.coerce.number().min(0).max(100).default(0),
+  deliveryFixedEnabled: z.boolean().default(false),
+  deliveryFixedCharge: z.coerce.number().min(0).default(0),
+  handlingEnabled: z.boolean().default(false),
+  handlingFreeThresholdEnabled: z.boolean().default(false),
+  handlingFreeThreshold: z.coerce.number().min(0).default(0),
+  handlingPercentageEnabled: z.boolean().default(false),
+  handlingPercentage: z.coerce.number().min(0).max(100).default(0),
+  handlingFixedEnabled: z.boolean().default(false),
+  handlingFixedCharge: z.coerce.number().min(0).default(0),
+});
+
+export type ChargesConfig = z.infer<typeof chargesConfigSchema>;
+export type ChargesSettings = typeof chargesSettings.$inferSelect;
+
 // ============== Site Settings (Header + Footer, single-row, draft + published) ==============
 export type HeaderConfig = {
   logo?: string;
@@ -485,6 +531,7 @@ export const ADMIN_FEATURE_KEYS = [
   'payment_gateway',
   'reports',
   'account',
+  'charges',
 ] as const;
 
 export type AdminFeatureKey = (typeof ADMIN_FEATURE_KEYS)[number];
@@ -507,6 +554,7 @@ export const ADMIN_FEATURE_LABELS: Record<AdminFeatureKey, string> = {
   payment_gateway: 'Payment Gateway Config',
   reports: 'Reports & Analytics',
   account: 'My Account / Security',
+  charges: 'Delivery & Handling Charges',
 };
 
 export type AdminPermissionsMap = Partial<Record<AdminFeatureKey, boolean>>;

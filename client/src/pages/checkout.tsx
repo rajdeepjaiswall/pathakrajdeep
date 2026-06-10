@@ -278,6 +278,7 @@ export default function Checkout() {
         subtotal: summary.subtotal.toString(),
         gstAmount: summary.gstAmount.toString(),
         deliveryCharge: summary.deliveryCharge.toString(),
+        handlingCharge: summary.handlingCharge.toString(),
         total: summary.total.toString(),
         paymentMethod: getPaymentMethodName(),
         paymentStatus: isPendingPayment ? 'pending' : 'confirmed',
@@ -324,6 +325,7 @@ export default function Checkout() {
           subtotal: summary.subtotal.toString(),
           gstAmount: summary.gstAmount.toString(),
           deliveryCharge: summary.deliveryCharge.toString(),
+          handlingCharge: summary.handlingCharge.toString(),
         };
         localStorage.setItem('lastOrderDetails', JSON.stringify(orderDetails));
         playSuccessChime();
@@ -1160,12 +1162,22 @@ export default function Checkout() {
             <span className="text-gray-600">SGST</span>
             <span className="font-medium">{formatPrice(gstBreakdown.sgst)}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Delivery</span>
-            <span className="font-medium text-green-600">
-              {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
-            </span>
-          </div>
+          {summary.deliveryActive && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Delivery</span>
+              <span className="font-medium text-green-600">
+                {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
+              </span>
+            </div>
+          )}
+          {summary.handlingActive && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Handling</span>
+              <span className="font-medium text-green-600">
+                {summary.handlingCharge === 0 ? 'FREE' : formatPrice(summary.handlingCharge)}
+              </span>
+            </div>
+          )}
           <div className="border-t pt-2 flex justify-between font-bold text-lg">
             <span>Total</span>
             <span className="text-navy">{formatPrice(summary.total)}</span>

@@ -934,6 +934,7 @@ const DASHBOARD_TILES: DashboardTile[] = [
   { href: '/admin/contact-settings',  label: 'Contact Us',      icon: AtSign,       feature: 'contact_settings', testId: 'button-contact-settings' },
   { href: '/admin/header-settings',   label: 'Header Editor',   icon: PanelTop,     feature: 'header_settings',  testId: 'button-header-settings' },
   { href: '/admin/footer-settings',   label: 'Footer Editor',   icon: PanelBottom,  feature: 'footer_settings',  testId: 'button-footer-settings' },
+  { href: '/admin/charges',           label: 'Charges',         icon: Truck,        feature: 'charges',          testId: 'button-charges' },
 ];
 
 function DashboardTiles() {

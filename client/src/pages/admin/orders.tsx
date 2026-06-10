@@ -470,6 +470,12 @@ export default function AdminOrders() {
                                         <span>Delivery:</span>
                                         <span>{parseFloat(selectedOrder.deliveryCharge) === 0 ? 'FREE' : formatPrice(parseFloat(selectedOrder.deliveryCharge))}</span>
                                       </div>
+                                      {parseFloat((selectedOrder as any).handlingCharge || '0') > 0 && (
+                                        <div className="flex justify-between text-sm">
+                                          <span>Handling:</span>
+                                          <span>{formatPrice(parseFloat((selectedOrder as any).handlingCharge))}</span>
+                                        </div>
+                                      )}
                                       <div className="flex justify-between font-bold text-lg border-t pt-2">
                                         <span>Total:</span>
                                         <span>{formatPrice(parseFloat(selectedOrder.total))}</span>

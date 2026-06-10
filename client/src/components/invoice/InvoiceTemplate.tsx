@@ -29,6 +29,7 @@ export type InvoiceData = {
   sgst: number;
   igst: number;
   deliveryCharge: number;
+  handlingCharge: number;
   total: number;
   companyName: string;
   companyAddress: string;
@@ -185,6 +186,12 @@ const InvoiceTemplate = forwardRef<HTMLDivElement, { data: InvoiceData }>(({ dat
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px' }}>
               <span style={{ color: '#555' }}>Delivery</span>
               <span>₹ {fmt(data.deliveryCharge)}</span>
+            </div>
+          )}
+          {data.handlingCharge > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px' }}>
+              <span style={{ color: '#555' }}>Handling</span>
+              <span>₹ {fmt(data.handlingCharge)}</span>
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 8px', marginTop: '6px', background: '#1a2332', color: '#fff', fontSize: '15px', fontWeight: 700, borderRadius: '4px' }}>

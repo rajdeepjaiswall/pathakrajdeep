@@ -4,6 +4,7 @@ import { CartItem, CartSummary, calculateCartSummary } from '../lib/cart';
 import { apiRequest } from '../lib/queryClient';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
+import { useCharges } from './use-charges';
 
 interface CartContextType {
   items: CartItem[];
@@ -43,9 +44,12 @@ export function CartProvider({ children }: CartProviderProps) {
     queryKey: ['/api/products'],
   });
 
+  // Live delivery + handling charges (admin-configurable, applied as a separate layer)
+  const { charges } = useCharges();
+
   const items = (cartData as CartItem[]) || [];
-  // Calculate cart summary
-  const summary = calculateCartSummary(items);
+  // Calculate cart summary (subtotal + GST + delivery + handling)
+  const summary = calculateCartSummary(items, charges);
 
   const clearLastAddedItem = () => setLastAddedItem(null);
 

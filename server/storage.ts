@@ -9,6 +9,7 @@ import {
   type PaymentGatewayConfig, type InsertPaymentGatewayConfig,
   type PageContent, type InsertPageContent, type PopupBanner, type InsertPopupBanner,
   contactSettings, type ContactSettings, type ContactData,
+  chargesSettings, type ChargesSettings, type ChargesConfig,
   siteSettings, type SiteSettings, type HeaderConfig, type FooterConfig,
   foundationSettings, type FoundationSettings, type FoundationContent, type WhatsappApiConfig,
   foundationEnquiries, type FoundationEnquiry, type InsertFoundationEnquiry,
@@ -143,6 +144,9 @@ export interface IStorage {
   getContactSettings(): Promise<ContactSettings | undefined>;
   saveContactDraft(data: ContactData): Promise<ContactSettings>;
   publishContactSettings(): Promise<ContactSettings>;
+
+  getChargesConfig(): Promise<ChargesConfig>;
+  saveChargesConfig(config: ChargesConfig): Promise<ChargesConfig>;
 
   // Site Settings (Header + Footer, draft + published)
   getSiteSettings(): Promise<SiteSettings | undefined>;
@@ -1199,6 +1203,65 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contactSettings.id, existing.id))
       .returning();
     return updated;
+  }
+
+  // ============== Charges Settings (Delivery + Handling) ==============
+  // Normalize a DB row (decimals stored as strings) into the numeric/boolean config
+  // used by the API + frontend. Returns all-off defaults when no row exists yet.
+  private normalizeCharges(row?: ChargesSettings): ChargesConfig {
+    return {
+      deliveryEnabled: row?.deliveryEnabled ?? false,
+      deliveryFreeThresholdEnabled: row?.deliveryFreeThresholdEnabled ?? false,
+      deliveryFreeThreshold: Number(row?.deliveryFreeThreshold ?? 0),
+      deliveryPercentageEnabled: row?.deliveryPercentageEnabled ?? false,
+      deliveryPercentage: Number(row?.deliveryPercentage ?? 0),
+      deliveryFixedEnabled: row?.deliveryFixedEnabled ?? false,
+      deliveryFixedCharge: Number(row?.deliveryFixedCharge ?? 0),
+      handlingEnabled: row?.handlingEnabled ?? false,
+      handlingFreeThresholdEnabled: row?.handlingFreeThresholdEnabled ?? false,
+      handlingFreeThreshold: Number(row?.handlingFreeThreshold ?? 0),
+      handlingPercentageEnabled: row?.handlingPercentageEnabled ?? false,
+      handlingPercentage: Number(row?.handlingPercentage ?? 0),
+      handlingFixedEnabled: row?.handlingFixedEnabled ?? false,
+      handlingFixedCharge: Number(row?.handlingFixedCharge ?? 0),
+    };
+  }
+
+  async getChargesConfig(): Promise<ChargesConfig> {
+    const [row] = await db.select().from(chargesSettings).limit(1);
+    return this.normalizeCharges(row);
+  }
+
+  async saveChargesConfig(config: ChargesConfig): Promise<ChargesConfig> {
+    // Decimal columns take string values in Drizzle.
+    const values = {
+      deliveryEnabled: config.deliveryEnabled,
+      deliveryFreeThresholdEnabled: config.deliveryFreeThresholdEnabled,
+      deliveryFreeThreshold: config.deliveryFreeThreshold.toString(),
+      deliveryPercentageEnabled: config.deliveryPercentageEnabled,
+      deliveryPercentage: config.deliveryPercentage.toString(),
+      deliveryFixedEnabled: config.deliveryFixedEnabled,
+      deliveryFixedCharge: config.deliveryFixedCharge.toString(),
+      handlingEnabled: config.handlingEnabled,
+      handlingFreeThresholdEnabled: config.handlingFreeThresholdEnabled,
+      handlingFreeThreshold: config.handlingFreeThreshold.toString(),
+      handlingPercentageEnabled: config.handlingPercentageEnabled,
+      handlingPercentage: config.handlingPercentage.toString(),
+      handlingFixedEnabled: config.handlingFixedEnabled,
+      handlingFixedCharge: config.handlingFixedCharge.toString(),
+      updatedAt: new Date(),
+    };
+    const [existing] = await db.select().from(chargesSettings).limit(1);
+    if (existing) {
+      const [updated] = await db
+        .update(chargesSettings)
+        .set(values)
+        .where(eq(chargesSettings.id, existing.id))
+        .returning();
+      return this.normalizeCharges(updated);
+    }
+    const [created] = await db.insert(chargesSettings).values(values).returning();
+    return this.normalizeCharges(created);
   }
 
   // ============== Site Settings ==============

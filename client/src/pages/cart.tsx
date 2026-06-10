@@ -85,12 +85,23 @@ export default function Cart() {
                   </div>
                 </div>
 
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Delivery</span>
-                  <span className="font-bold text-[#16a34a]">
-                    {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
-                  </span>
-                </div>
+                {summary.deliveryActive && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Delivery</span>
+                    <span className="font-bold text-[#16a34a]">
+                      {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
+                    </span>
+                  </div>
+                )}
+
+                {summary.handlingActive && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Handling</span>
+                    <span className="font-bold text-[#16a34a]">
+                      {summary.handlingCharge === 0 ? 'FREE' : formatPrice(summary.handlingCharge)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="border-t border-gray-100 pt-3">
                   <div className="flex justify-between items-baseline">
@@ -100,7 +111,7 @@ export default function Cart() {
                   <p className="text-xs text-gray-500 mt-0.5">Inclusive of all taxes</p>
                 </div>
 
-                {summary.deliveryCharge === 0 && (
+                {summary.deliveryActive && summary.deliveryCharge === 0 && (
                   <div className="bg-[#ecfdf5] rounded-lg p-2.5 flex items-center gap-2 text-sm text-[#16a34a]">
                     <Truck className="w-4 h-4 flex-shrink-0" />
                     <span className="font-medium">Yay! You get FREE delivery on this order</span>

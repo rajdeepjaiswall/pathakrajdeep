@@ -16,6 +16,7 @@ import {
   CheckCircle,
   MessageSquare,
   FileText,
+  Truck,
   Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ const adminNavItems: NavItem[] = [
   { title: 'All Customers', href: '/admin/customers', icon: Users, feature: 'customers' },
   { title: 'Payments', href: '/admin/payments', icon: CreditCard, feature: 'payments' },
   { title: 'Payment Gateway', href: '/admin/payment-gateway', icon: Wallet, feature: 'payment_gateway' },
+  { title: 'Charges', href: '/admin/charges', icon: Truck, feature: 'charges' },
   { title: 'Analytics', href: '/admin/analytics', icon: BarChart3, feature: 'reports' },
   { title: 'Testimonials', href: '/admin/testimonials', icon: MessageSquare, feature: 'testimonials' },
   { title: 'Legal Pages', href: '/admin/legal-pages', icon: FileText, feature: 'legal_pages' },

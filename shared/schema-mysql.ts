@@ -141,6 +141,7 @@ export const orders = mysqlTable(
     subtotal: varchar("subtotal", { length: 20 }).notNull(),
     gstAmount: varchar("gstAmount", { length: 20 }).default("0"),
     deliveryCharge: varchar("deliveryCharge", { length: 20 }).default("0"),
+    handlingCharge: varchar("handlingCharge", { length: 20 }).default("0"),
     total: varchar("total", { length: 20 }).notNull(),
     paymentMethod: varchar("paymentMethod", { length: 50 }).notNull(),
     paymentStatus: varchar("paymentStatus", { length: 50 }).default("pending"),
@@ -158,6 +159,27 @@ export const orders = mysqlTable(
     statusIdx: index("idx_orders_status").on(table.status),
   })
 );
+
+// Delivery + handling charges (single-row config)
+// Priority model (first enabled wins): Free Threshold -> Percentage -> Fixed.
+export const chargesSettings = mysqlTable("charges_settings", {
+  id: int("id").primaryKey().autoincrement(),
+  deliveryEnabled: boolean("delivery_enabled").default(false),
+  deliveryFreeThresholdEnabled: boolean("delivery_free_threshold_enabled").default(false),
+  deliveryFreeThreshold: varchar("delivery_free_threshold", { length: 20 }).default("0"),
+  deliveryPercentageEnabled: boolean("delivery_percentage_enabled").default(false),
+  deliveryPercentage: varchar("delivery_percentage", { length: 20 }).default("0"),
+  deliveryFixedEnabled: boolean("delivery_fixed_enabled").default(false),
+  deliveryFixedCharge: varchar("delivery_fixed_charge", { length: 20 }).default("0"),
+  handlingEnabled: boolean("handling_enabled").default(false),
+  handlingFreeThresholdEnabled: boolean("handling_free_threshold_enabled").default(false),
+  handlingFreeThreshold: varchar("handling_free_threshold", { length: 20 }).default("0"),
+  handlingPercentageEnabled: boolean("handling_percentage_enabled").default(false),
+  handlingPercentage: varchar("handling_percentage", { length: 20 }).default("0"),
+  handlingFixedEnabled: boolean("handling_fixed_enabled").default(false),
+  handlingFixedCharge: varchar("handling_fixed_charge", { length: 20 }).default("0"),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
 
 // Order items table
 export const orderItems = mysqlTable(
@@ -244,6 +266,7 @@ export type Banner = typeof banners.$inferSelect;
 export type InsertBanner = typeof banners.$inferInsert;
 export type Otp = typeof otps.$inferSelect;
 export type InsertOtp = typeof otps.$inferInsert;
+export type ChargesSettings = typeof chargesSettings.$inferSelect;
 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users);

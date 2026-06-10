@@ -96,6 +96,25 @@ async function runStartupMigrations() {
     `ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS selected_weight text`,
     `ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS variant_price numeric(10,2)`,
     `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS selected_weight text`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS handling_charge numeric(10,2) DEFAULT '0.00'`,
+    `CREATE TABLE IF NOT EXISTS charges_settings (
+      id serial PRIMARY KEY,
+      delivery_enabled boolean NOT NULL DEFAULT false,
+      delivery_free_threshold_enabled boolean NOT NULL DEFAULT false,
+      delivery_free_threshold numeric(10,2) NOT NULL DEFAULT '0',
+      delivery_percentage_enabled boolean NOT NULL DEFAULT false,
+      delivery_percentage numeric(5,2) NOT NULL DEFAULT '0',
+      delivery_fixed_enabled boolean NOT NULL DEFAULT false,
+      delivery_fixed_charge numeric(10,2) NOT NULL DEFAULT '0',
+      handling_enabled boolean NOT NULL DEFAULT false,
+      handling_free_threshold_enabled boolean NOT NULL DEFAULT false,
+      handling_free_threshold numeric(10,2) NOT NULL DEFAULT '0',
+      handling_percentage_enabled boolean NOT NULL DEFAULT false,
+      handling_percentage numeric(5,2) NOT NULL DEFAULT '0',
+      handling_fixed_enabled boolean NOT NULL DEFAULT false,
+      handling_fixed_charge numeric(10,2) NOT NULL DEFAULT '0',
+      updated_at timestamp DEFAULT now()
+    )`,
   ];
   for (const sql of migrations) {
     try {

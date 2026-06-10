@@ -34,6 +34,7 @@ function buildInvoiceData(order: any, contact: ContactPublic | undefined): Invoi
   const subtotal = parseFloat(order.subtotal?.toString() || '0');
   const gstAmount = parseFloat(order.gstAmount?.toString() || '0');
   const deliveryCharge = parseFloat(order.deliveryCharge?.toString() || '0');
+  const handlingCharge = parseFloat(order.handlingCharge?.toString() || '0');
   const total = parseFloat(order.total?.toString() || '0');
   const deliveryState = order.deliveryAddress?.state as string | undefined;
   const isIntra = normalizeState(deliveryState) === normalizeState(HOME_STATE);
@@ -70,6 +71,7 @@ function buildInvoiceData(order: any, contact: ContactPublic | undefined): Invoi
     sgst: isIntra ? gstAmount / 2 : 0,
     igst: isIntra ? 0 : gstAmount,
     deliveryCharge,
+    handlingCharge,
     total,
     companyName: contact?.storeName || 'Pathak Bhandar',
     companyAddress: contact?.address || 'Mathura, Uttar Pradesh, India',

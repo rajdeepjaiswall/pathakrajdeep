@@ -171,6 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     [/^\/analytics/, 'reports'],
     [/^\/reports/, 'reports'],
     [/^\/testimonials/, 'testimonials'],
+    [/^\/charges/, 'charges'],
   ];
 
   app.use('/api/admin', async (req, res, next) => {
@@ -2806,6 +2807,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(settings);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // ============== Charges (Delivery + Handling) ==============
+
+  // Public: live charges config read by the cart / checkout / popup
+  app.get("/api/charges", async (_req, res) => {
+    try {
+      const config = await storage.getChargesConfig();
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: read current config (permission enforced by /api/admin path guard -> 'charges')
+  app.get("/api/admin/charges", authenticateUser, requireAdmin, async (_req, res) => {
+    try {
+      const config = await storage.getChargesConfig();
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: save config
+  app.post("/api/admin/charges", authenticateUser, requireAdmin, async (req, res) => {
+    try {
+      const { chargesConfigSchema } = await import("@shared/schema");
+      const parsed = chargesConfigSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid charges configuration",
+          errors: parsed.error.flatten(),
+        });
+      }
+      const saved = await storage.saveChargesConfig(parsed.data);
+      res.json(saved);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

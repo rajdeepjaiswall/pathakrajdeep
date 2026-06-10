@@ -645,6 +645,12 @@ export default function CustomerOrders() {
                                     <span>{formatPrice(parseFloat(selectedOrder.deliveryCharge))}</span>
                                   </div>
                                 )}
+                                {parseFloat(selectedOrder.handlingCharge || '0') > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>Handling Charge</span>
+                                    <span>{formatPrice(parseFloat(selectedOrder.handlingCharge))}</span>
+                                  </div>
+                                )}
                                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                                   <span>Total</span>
                                   <span>{formatPrice(parseFloat(selectedOrder.total))}</span>

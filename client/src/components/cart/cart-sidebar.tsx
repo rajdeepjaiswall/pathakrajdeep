@@ -1,7 +1,7 @@
 import { X, ShoppingBag, Shield, Truck, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
-import { formatPrice, getGSTBreakdown } from '@/lib/cart';
+import { chargeMethodSuffix, formatPrice, getGSTBreakdown } from '@/lib/cart';
 import { Link } from 'wouter';
 import ProductCartCard from './ProductCartCard';
 
@@ -74,7 +74,7 @@ export default function CartSidebar() {
 
               {summary.deliveryActive && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Delivery</span>
+                  <span className="text-gray-600">Delivery{chargeMethodSuffix(summary.deliveryMethod, summary.deliveryPercentage, summary.deliveryCharge)}</span>
                   <span className="font-bold text-[#16a34a]">
                     {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
                   </span>
@@ -83,7 +83,7 @@ export default function CartSidebar() {
 
               {summary.handlingActive && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Handling</span>
+                  <span className="text-gray-600">Handling{chargeMethodSuffix(summary.handlingMethod, summary.handlingPercentage, summary.handlingCharge)}</span>
                   <span className="font-bold text-[#16a34a]">
                     {summary.handlingCharge === 0 ? 'FREE' : formatPrice(summary.handlingCharge)}
                   </span>

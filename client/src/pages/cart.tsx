@@ -6,7 +6,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
-import { formatPrice, getGSTBreakdown } from '@/lib/cart';
+import { chargeMethodSuffix, formatPrice, getGSTBreakdown } from '@/lib/cart';
 import ProductCartCard from '@/components/cart/ProductCartCard';
 
 export default function Cart() {
@@ -87,7 +87,7 @@ export default function Cart() {
 
                 {summary.deliveryActive && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Delivery</span>
+                    <span className="text-gray-600">Delivery{chargeMethodSuffix(summary.deliveryMethod, summary.deliveryPercentage, summary.deliveryCharge)}</span>
                     <span className="font-bold text-[#16a34a]">
                       {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
                     </span>
@@ -96,7 +96,7 @@ export default function Cart() {
 
                 {summary.handlingActive && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Handling</span>
+                    <span className="text-gray-600">Handling{chargeMethodSuffix(summary.handlingMethod, summary.handlingPercentage, summary.handlingCharge)}</span>
                     <span className="font-bold text-[#16a34a]">
                       {summary.handlingCharge === 0 ? 'FREE' : formatPrice(summary.handlingCharge)}
                     </span>

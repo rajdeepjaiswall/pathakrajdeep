@@ -33,13 +33,27 @@ export interface CartSummary {
   deliveryActive: boolean;
   /** Whether the handling charge category is enabled by the admin (controls row visibility). */
   handlingActive: boolean;
+  /** Pricing rule that produced the delivery charge (drives the "(5%)" / "(Fixed)" hint). */
+  deliveryMethod: ChargeMethod;
+  /** Pricing rule that produced the handling charge. */
+  handlingMethod: ChargeMethod;
+  /** Delivery percentage rate when deliveryMethod === 'percentage'. */
+  deliveryPercentage: number;
+  /** Handling percentage rate when handlingMethod === 'percentage'. */
+  handlingPercentage: number;
   total: number;
   itemCount: number;
 }
 
+export type ChargeMethod = 'free_threshold' | 'percentage' | 'fixed' | 'none';
+
 export interface ComputedCharge {
   amount: number;
   active: boolean;
+  /** Which pricing rule produced this charge. */
+  method: ChargeMethod;
+  /** The percentage rate applied when method === 'percentage' (otherwise 0). */
+  percentage: number;
 }
 
 function round2(n: number): number {
@@ -61,19 +75,24 @@ function computeOneCharge(
   fixedEnabled: boolean,
   fixedCharge: number,
 ): ComputedCharge {
-  if (!enabled) return { amount: 0, active: false };
+  if (!enabled) return { amount: 0, active: false, method: 'none', percentage: 0 };
   // Waiver: free above threshold (threshold must be a positive amount to apply).
   if (freeThresholdEnabled && freeThreshold > 0 && subtotal >= freeThreshold) {
-    return { amount: 0, active: true };
+    return { amount: 0, active: true, method: 'free_threshold', percentage: 0 };
   }
   if (percentageEnabled) {
-    return { amount: round2((subtotal * percentage) / 100), active: true };
+    return {
+      amount: round2((subtotal * percentage) / 100),
+      active: true,
+      method: 'percentage',
+      percentage,
+    };
   }
   if (fixedEnabled) {
-    return { amount: round2(fixedCharge), active: true };
+    return { amount: round2(fixedCharge), active: true, method: 'fixed', percentage: 0 };
   }
   // Enabled but no charge method configured -> nothing to add (shows as FREE).
-  return { amount: 0, active: true };
+  return { amount: 0, active: true, method: 'none', percentage: 0 };
 }
 
 export interface ComputedCharges {
@@ -84,7 +103,10 @@ export interface ComputedCharges {
 /** Compute both delivery and handling charges for a given subtotal from the admin config. */
 export function computeCharges(subtotal: number, charges?: ChargesConfig | null): ComputedCharges {
   if (!charges) {
-    return { delivery: { amount: 0, active: false }, handling: { amount: 0, active: false } };
+    return {
+      delivery: { amount: 0, active: false, method: 'none', percentage: 0 },
+      handling: { amount: 0, active: false, method: 'none', percentage: 0 },
+    };
   }
   return {
     delivery: computeOneCharge(
@@ -136,9 +158,30 @@ export function calculateCartSummary(items: CartItem[], charges?: ChargesConfig 
     handlingCharge,
     deliveryActive: computed.delivery.active,
     handlingActive: computed.handling.active,
+    deliveryMethod: computed.delivery.method,
+    handlingMethod: computed.handling.method,
+    deliveryPercentage: computed.delivery.percentage,
+    handlingPercentage: computed.handling.percentage,
     total,
     itemCount,
   };
+}
+
+/**
+ * Short hint shown in brackets next to a charge label so customers can see how
+ * it was derived, e.g. " (5%)" for a percentage charge or " (Fixed)" for a flat
+ * fee. Returns an empty string when there is nothing meaningful to explain
+ * (waived/free or no charge), so the label stays clean.
+ */
+export function chargeMethodSuffix(
+  method: ChargeMethod,
+  percentage: number,
+  amount: number,
+): string {
+  if (amount <= 0) return '';
+  if (method === 'percentage') return ` (${percentage}%)`;
+  if (method === 'fixed') return ' (Fixed)';
+  return '';
 }
 
 export function formatPrice(price: number): string {

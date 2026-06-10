@@ -16,7 +16,7 @@ import MobileNav from '@/components/layout/mobile-nav';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { formatPrice, getGSTBreakdown, getItemPrice } from '@/lib/cart';
+import { chargeMethodSuffix, formatPrice, getGSTBreakdown, getItemPrice } from '@/lib/cart';
 import { apiRequest, queryClient as globalQueryClient } from '@/lib/queryClient';
 import { playSuccessChime, initializeAudioContext } from '@/lib/sounds';
 import { useForm } from 'react-hook-form';
@@ -1164,7 +1164,7 @@ export default function Checkout() {
           </div>
           {summary.deliveryActive && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Delivery</span>
+              <span className="text-gray-600">Delivery{chargeMethodSuffix(summary.deliveryMethod, summary.deliveryPercentage, summary.deliveryCharge)}</span>
               <span className="font-medium text-green-600">
                 {summary.deliveryCharge === 0 ? 'FREE' : formatPrice(summary.deliveryCharge)}
               </span>
@@ -1172,7 +1172,7 @@ export default function Checkout() {
           )}
           {summary.handlingActive && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Handling</span>
+              <span className="text-gray-600">Handling{chargeMethodSuffix(summary.handlingMethod, summary.handlingPercentage, summary.handlingCharge)}</span>
               <span className="font-medium text-green-600">
                 {summary.handlingCharge === 0 ? 'FREE' : formatPrice(summary.handlingCharge)}
               </span>

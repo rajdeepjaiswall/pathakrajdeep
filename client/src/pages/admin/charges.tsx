@@ -171,9 +171,11 @@ function ChargeCard({ config, set, kind }: ChargeCardProps) {
             <div className="flex items-start gap-2 rounded-lg bg-amber-100/60 p-3 text-xs text-amber-900">
               <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
               <span>
-                Methods apply by priority — the first one turned on wins:
-                <strong> Free Threshold</strong> &rarr; <strong>Percentage</strong> &rarr;{' '}
-                <strong>Fixed</strong>. If none is on, the charge shows as FREE.
+                Choose how this charge is calculated: <strong>Percentage</strong> or{' '}
+                <strong>Fixed</strong> — turning one on automatically turns the other off. The
+                optional <strong>Free Threshold</strong> works alongside them and waives the charge
+                once the cart subtotal reaches your set amount. If no method is on, the charge shows
+                as FREE.
               </span>
             </div>
 
@@ -193,7 +195,10 @@ function ChargeCard({ config, set, kind }: ChargeCardProps) {
               title="Percentage of Subtotal"
               description="Charge a percentage of the cart subtotal."
               enabled={config[pctEnabledKey]}
-              onToggle={(v) => set(pctEnabledKey, v)}
+              onToggle={(v) => {
+                set(pctEnabledKey, v);
+                if (v) set(fixedEnabledKey, false);
+              }}
               value={config[pctKey]}
               onValue={(v) => set(pctKey, v)}
               suffix="%"
@@ -204,7 +209,10 @@ function ChargeCard({ config, set, kind }: ChargeCardProps) {
               title="Fixed Amount"
               description="Charge a flat fixed amount on every order."
               enabled={config[fixedEnabledKey]}
-              onToggle={(v) => set(fixedEnabledKey, v)}
+              onToggle={(v) => {
+                set(fixedEnabledKey, v);
+                if (v) set(pctEnabledKey, false);
+              }}
               value={config[fixedKey]}
               onValue={(v) => set(fixedKey, v)}
               prefix="₹"
@@ -240,7 +248,18 @@ export default function AdminCharges() {
   }, [authLoading, allowed, setLocation]);
 
   useEffect(() => {
-    if (data) setConfig({ ...DEFAULT_CONFIG, ...data });
+    if (!data) return;
+    const merged = { ...DEFAULT_CONFIG, ...data };
+    // Percentage and Fixed are mutually exclusive. If a legacy config has both
+    // turned on, keep Percentage (matches the calculation priority) and clear
+    // Fixed so the UI never shows a contradictory state.
+    if (merged.deliveryPercentageEnabled && merged.deliveryFixedEnabled) {
+      merged.deliveryFixedEnabled = false;
+    }
+    if (merged.handlingPercentageEnabled && merged.handlingFixedEnabled) {
+      merged.handlingFixedEnabled = false;
+    }
+    setConfig(merged);
   }, [data]);
 
   const set = <K extends keyof ChargesConfig>(key: K, value: ChargesConfig[K]) => {
